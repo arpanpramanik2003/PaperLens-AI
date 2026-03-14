@@ -124,6 +124,7 @@ The upload field name for analysis endpoints is `file`.
 ## Documentation
 
 - See [WORKFLOW.md](WORKFLOW.md) for the full processing pipeline.
+- See [DEPLOYMENT.md](DEPLOYMENT.md) for prototype cloud deployment with Vercel and Render.
 - See [backend/README.md](backend/README.md) for backend setup and API details.
 - See [frontend/README.md](frontend/README.md) for frontend setup and scripts.
 
