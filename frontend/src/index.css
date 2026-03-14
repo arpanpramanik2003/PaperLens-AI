@@ -1,0 +1,219 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #0f172a;
+  --ink-soft: #3b4254;
+  --muted: #6b7280;
+  --bg: #f6f4ef;
+  --panel: #ffffff;
+  --panel-border: #e7e2d8;
+  --accent: #e09f3e;
+  --accent-2: #2a9d8f;
+  --accent-3: #0b3c49;
+}
+
+body {
+  @apply min-h-screen font-["Source_Serif_4"] text-[var(--ink)] bg-[var(--bg)];
+  background:
+    radial-gradient(circle at top left, rgba(42, 157, 143, 0.14), transparent 55%),
+    radial-gradient(circle at 20% 50%, rgba(224, 159, 62, 0.18), transparent 60%),
+    linear-gradient(135deg, #f6f4ef 0%, #f2efe7 45%, #efe7db 100%);
+}
+
+#root {
+  @apply min-h-screen;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(0px);
+  opacity: 0.7;
+  z-index: 0;
+  animation: float 10s ease-in-out infinite;
+}
+
+.orb-one {
+  width: 280px;
+  height: 280px;
+  top: -80px;
+  right: -60px;
+  background: conic-gradient(from 120deg, rgba(42, 157, 143, 0.25), rgba(224, 159, 62, 0.25), rgba(11, 60, 73, 0.2));
+}
+
+.orb-two {
+  width: 220px;
+  height: 220px;
+  bottom: 120px;
+  left: -70px;
+  background: radial-gradient(circle, rgba(11, 60, 73, 0.24), rgba(11, 60, 73, 0));
+  animation-delay: -3s;
+}
+
+.orb-three {
+  width: 180px;
+  height: 180px;
+  top: 45%;
+  right: -40px;
+  background: radial-gradient(circle, rgba(224, 159, 62, 0.3), rgba(224, 159, 62, 0));
+  animation-delay: -6s;
+}
+
+.glass-panel {
+  @apply bg-white/80 border border-[var(--panel-border)] shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-md;
+  position: relative;
+  z-index: 1;
+}
+
+.panel-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.panel-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+}
+
+.fade-in {
+  animation: fadeInUp 0.8s ease both;
+}
+
+.chip {
+  @apply inline-flex items-center rounded-full border border-emerald-200/60 bg-emerald-100/50 px-4 py-1 text-xs font-semibold tracking-[0.18em] uppercase text-[var(--accent-3)];
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.headline {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.markdown h2 {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.4rem;
+  color: var(--accent-3);
+  margin: 1.2rem 0 0.6rem;
+}
+
+.markdown h3 {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
+  color: var(--accent-2);
+  margin: 1rem 0 0.4rem;
+}
+
+.markdown p {
+  margin: 0.5rem 0;
+}
+
+.markdown ul {
+  margin: 0.5rem 0 0.8rem 1.1rem;
+  list-style: disc;
+}
+
+.markdown li {
+  margin: 0.3rem 0;
+}
+
+.btn-primary {
+  background: var(--accent-3);
+  box-shadow: 0 14px 30px rgba(11, 60, 73, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  background: #0f4a58;
+  box-shadow: 0 18px 34px rgba(11, 60, 73, 0.3);
+}
+
+.btn-secondary {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  border-color: rgba(11, 60, 73, 0.35);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent-3);
+  animation: blink 1.2s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(12px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+
+@keyframes blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 640px) {
+  .orb-one,
+  .orb-two,
+  .orb-three {
+    display: none;
+  }
+}

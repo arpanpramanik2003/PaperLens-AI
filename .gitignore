@@ -1,0 +1,33 @@
+# Python environments
+myenv/
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Secrets and local config
+.env
+*.env
+!.env.example
+
+# Uploads and generated files
+uploads/
+backend/uploads/
+
+# Frontend build artifacts
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Editors and OS files
+.idea/
+.DS_Store
+Thumbs.db
