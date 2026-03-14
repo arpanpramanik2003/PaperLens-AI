@@ -1,41 +1,40 @@
 # PaperLens AI
 
-PaperLens AI is an AI-powered research paper explainer that accepts PDF and DOCX files, generates a structured paper analysis, and supports grounded question answering over the uploaded document.
+PaperLens AI is a research paper explainer built with React and FastAPI. Upload a PDF or DOCX, get a structured AI-generated analysis, and ask follow-up questions grounded in the document content.
 
-The project is split into a React frontend and a FastAPI backend. The backend parses the document, chunks it into semantically sized passages, builds a hybrid retrieval index, and uses Groq-hosted LLM responses to produce summaries and answers with citations.
+It is designed for fast academic reading workflows where you want the key idea, methodology, results, limitations, and future work without manually digging through every section first.
 
-## Features
+![PaperLens AI Screenshot](frontend/public/image.png)
 
-- Upload PDF and DOCX research papers
-- Stream structured paper analysis to the UI
-- Ask follow-up questions grounded in extracted paper content
-- Hybrid retrieval using dense embeddings plus BM25
-- Cross-encoder reranking for more relevant context selection
-- Lightweight in-memory document cache keyed by document hash
-- Simple React interface for analysis and Q&A
+## Highlights
+
+- Upload research papers in PDF or DOCX format
+- Generate structured markdown analysis in the UI
+- Ask follow-up questions against the uploaded document
+- Use hybrid retrieval with semantic search and BM25
+- Improve relevance with cross-encoder reranking
+- Reuse document state with hash-based in-memory caching
+- Stream analysis and answers for a more responsive experience
 
 ## Tech Stack
 
-### Frontend
+| Layer | Tools |
+|---|---|
+| Frontend | React 19, Vite 8, Tailwind CSS, react-markdown, remark-gfm |
+| Backend | FastAPI, Uvicorn, Groq API |
+| Retrieval | sentence-transformers, FAISS, rank-bm25, CrossEncoder |
+| Parsing | pdfplumber, python-docx |
 
-- React 19
-- Vite 8
-- Tailwind CSS
-- react-markdown
-- remark-gfm
+## How It Works
 
-### Backend
+1. The frontend uploads a document to the FastAPI backend.
+2. The backend extracts text from PDF or DOCX.
+3. The text is split into overlapping semantic chunks.
+4. Dense embeddings and a BM25 index are created.
+5. Relevant chunks are reranked before being used for analysis or Q and A.
+6. The model returns structured markdown analysis and grounded answers.
 
-- FastAPI
-- Uvicorn
-- Groq API
-- sentence-transformers
-- FAISS
-- rank-bm25
-- pdfplumber
-- python-docx
-
-## Project Structure
+## Repository Structure
 
 ```text
 paper_explainer/
@@ -45,27 +44,24 @@ paper_explainer/
 |   |   |-- core/
 |   |   |-- models/
 |   |   `-- services/
+|   |-- .env.example
 |   |-- requirements.txt
 |   `-- README.md
 |-- frontend/
+|   |-- public/
 |   |-- src/
+|   |-- .env.example
 |   |-- package.json
 |   `-- README.md
-|-- requirements.txt
-|-- uploads/
+|-- .gitignore
 |-- README.md
-`-- WORKFLOW.md
+|-- WORKFLOW.md
+`-- requirements.txt
 ```
-
-## Recommended Runtime
-
-Use the FastAPI backend in the backend folder together with the Vite frontend in the frontend folder.
-
-This repository has already been migrated away from the earlier Flask version. The active backend is the FastAPI app under backend/app, and the root requirements file now points to the backend requirements for convenience.
 
 ## Quick Start
 
-### 1. Backend setup
+### Backend
 
 ```powershell
 cd backend
@@ -75,106 +71,69 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Set your Groq API key in backend/.env.
-
-### 2. Start backend
+Set your Groq API key in `backend/.env`, then start the server:
 
 ```powershell
-cd backend
 uvicorn app.main:app --reload
 ```
 
-Backend endpoints will be available at http://localhost:8000.
+Backend URL:
 
-### 3. Frontend setup
+- http://localhost:8000
+
+### Frontend
 
 ```powershell
 cd frontend
 npm install
 Copy-Item .env.example .env
-```
-
-### 4. Start frontend
-
-```powershell
-cd frontend
 npm run dev
 ```
 
-The frontend runs on the Vite development server, usually at http://localhost:5173.
+Frontend URL:
+
+- http://localhost:5173
 
 ## Environment Variables
 
 ### Backend
 
-Defined in backend/.env:
-
-- GROQ_API_KEY: required Groq API key
-- GROQ_MODEL: optional, defaults to llama-3.1-8b-instant
-- EMBEDDING_MODEL: optional, defaults to all-MiniLM-L6-v2
-- RERANKER_MODEL: optional, defaults to cross-encoder/ms-marco-MiniLM-L-6-v2
-- UPLOAD_FOLDER: optional upload temp folder, defaults to uploads
-- CHUNK_SIZE: optional semantic chunk size, defaults to 1200
-- CHUNK_OVERLAP: optional chunk overlap, defaults to 220
-- TOP_K: optional retrieval result count, defaults to 5
+- GROQ_API_KEY
+- GROQ_MODEL
+- EMBEDDING_MODEL
+- RERANKER_MODEL
+- UPLOAD_FOLDER
+- CHUNK_SIZE
+- CHUNK_OVERLAP
+- TOP_K
 
 ### Frontend
 
-Defined in frontend/.env:
+- VITE_API_URL
 
-- VITE_API_URL: backend base URL, defaults to http://localhost:8000 if omitted
-
-## API Overview
-
-### Health
+## API Endpoints
 
 - GET /health
-
-Returns a simple status response.
-
-### Analyze document
-
 - POST /api/analyze
 - POST /api/analyze_stream
-
-Accepts a multipart upload field named file. Supported formats are PDF and DOCX.
-
-Returns or streams:
-
-- analysis markdown
-- doc_id for caching and follow-up Q&A
-
-### Ask questions
-
 - POST /api/ask
 - POST /api/ask_stream
 
-JSON body:
-
-```json
-{
-  "question": "What methodology does the paper use?",
-  "doc_id": "optional-document-id"
-}
-```
+The upload field name for analysis endpoints is `file`.
 
 ## Documentation
 
-- See WORKFLOW.md for the detailed processing pipeline and architecture notes.
-- See backend/README.md for backend setup, API behavior, and implementation notes.
-- See frontend/README.md for frontend development and deployment notes.
+- See [WORKFLOW.md](WORKFLOW.md) for the full processing pipeline.
+- See [backend/README.md](backend/README.md) for backend setup and API details.
+- See [frontend/README.md](frontend/README.md) for frontend setup and scripts.
 
-## Known Constraints
+## Current Limitations
 
-- Document state is stored in memory, so cached papers are lost when the backend restarts.
-- Very large papers may be slower because embedding, reranking, and LLM summarization happen in the request lifecycle.
-- Scanned PDFs without extractable text may fail or produce incomplete analysis.
-- The current cache is process-local and not suitable for multi-instance deployment.
+- Cache is in memory only and resets when the backend restarts.
+- Scanned PDFs without extractable text are not handled well yet.
+- There is no authentication or per-user document isolation.
+- Large papers may take longer because indexing and analysis happen inside the request flow.
 
-## Future Improvement Areas
+## Migration Note
 
-- Persistent document storage and cache eviction
-- Background task processing for long analyses
-- Authentication and per-user document isolation
-- Better OCR support for scanned documents
-- Tests for API routes and service modules
+This project started with Flask and was later migrated to FastAPI plus React. The active runtime is now the FastAPI backend in `backend/app` and the React frontend in `frontend`.
