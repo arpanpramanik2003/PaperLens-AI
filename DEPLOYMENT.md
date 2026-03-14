@@ -52,6 +52,11 @@ Create a new Web Service on Render connected to your GitHub repository.
 pip install -r backend/requirements.txt
 ```
 
+Note:
+
+- backend/requirements.txt is configured for CPU-only PyTorch using the PyTorch CPU wheel index.
+- This avoids large NVIDIA CUDA package installs on Render.
+
 - Start command:
 
 ```bash

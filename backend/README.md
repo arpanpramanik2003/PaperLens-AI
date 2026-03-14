@@ -38,6 +38,8 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+Dependencies are pinned in requirements.txt and configured to use CPU-only PyTorch wheels, which is better for Render prototype deployments.
+
 Add your Groq API key to the created .env file.
 
 ## Run
