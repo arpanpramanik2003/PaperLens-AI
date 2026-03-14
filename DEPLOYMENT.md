@@ -67,6 +67,7 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend
 
 Set these in Render Dashboard:
 
+- PYTHON_VERSION=3.10.14
 - GROQ_API_KEY=your_key
 - GROQ_MODEL=llama-3.1-8b-instant
 - EMBEDDING_MODEL=all-MiniLM-L6-v2
@@ -75,6 +76,11 @@ Set these in Render Dashboard:
 - CHUNK_SIZE=1200
 - CHUNK_OVERLAP=220
 - TOP_K=5
+
+Python version notes:
+
+- This repo includes both .python-version and runtime.txt pinned to Python 3.10.14.
+- Keeping PYTHON_VERSION on Render ensures the service does not silently move to Python 3.14.
 
 ### Verify backend
 
