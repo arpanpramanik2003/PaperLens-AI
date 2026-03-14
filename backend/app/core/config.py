@@ -7,6 +7,22 @@ backend_root = Path(__file__).resolve().parents[2]
 load_dotenv(dotenv_path=backend_root / ".env")
 
 
+def _as_bool(value, default=False):
+
+    if value is None:
+        return default
+
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _as_int(value, default):
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 class Settings:
 
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -17,6 +33,11 @@ class Settings:
     CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1200"))
     CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "220"))
     TOP_K = int(os.getenv("TOP_K", "5"))
+    MAX_UPLOAD_MB = _as_int(os.getenv("MAX_UPLOAD_MB", "12"), 12)
+    MAX_CHUNKS = _as_int(os.getenv("MAX_CHUNKS", "220"), 220)
+    EMBEDDING_BATCH_SIZE = _as_int(os.getenv("EMBEDDING_BATCH_SIZE", "16"), 16)
+    ENABLE_RERANKER = _as_bool(os.getenv("ENABLE_RERANKER", "false"), False)
+    MAX_CACHED_DOCS = _as_int(os.getenv("MAX_CACHED_DOCS", "1"), 1)
 
 
 settings = Settings()

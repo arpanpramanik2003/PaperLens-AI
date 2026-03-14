@@ -1,3 +1,5 @@
+from app.core.config import settings
+
 doc_cache = {}
 current_doc_id = None
 _active = {
@@ -8,6 +10,15 @@ _active = {
 
 
 def store_doc(doc_id, payload):
+
+    max_cached = max(1, settings.MAX_CACHED_DOCS)
+
+    if max_cached == 1:
+        doc_cache.clear()
+    else:
+        while len(doc_cache) >= max_cached:
+            oldest_doc_id = next(iter(doc_cache))
+            doc_cache.pop(oldest_doc_id, None)
 
     doc_cache[doc_id] = payload
 

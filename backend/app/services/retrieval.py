@@ -8,8 +8,31 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.core.config import settings
 from app.services.cache import get_active_indexes
 
-embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
-reranker_model = CrossEncoder(settings.RERANKER_MODEL)
+embedding_model = None
+reranker_model = None
+
+
+def get_embedding_model():
+
+    global embedding_model
+
+    if embedding_model is None:
+        embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
+
+    return embedding_model
+
+
+def get_reranker_model():
+
+    global reranker_model
+
+    if not settings.ENABLE_RERANKER:
+        return None
+
+    if reranker_model is None:
+        reranker_model = CrossEncoder(settings.RERANKER_MODEL)
+
+    return reranker_model
 
 
 def tokenize_text(text):
@@ -21,7 +44,14 @@ def create_embeddings(chunks):
 
     texts = [c["text"] for c in chunks]
 
-    embeddings = embedding_model.encode(texts, normalize_embeddings=True)
+    model = get_embedding_model()
+
+    embeddings = model.encode(
+        texts,
+        normalize_embeddings=True,
+        batch_size=settings.EMBEDDING_BATCH_SIZE,
+        show_progress_bar=False
+    )
 
     return np.array(embeddings)
 
@@ -51,7 +81,14 @@ def search_chunks(query, top_k=None):
     if vector_index is None or bm25_index is None or not paper_chunks:
         return []
 
-    query_embedding = embedding_model.encode([query], normalize_embeddings=True)
+    model = get_embedding_model()
+
+    query_embedding = model.encode(
+        [query],
+        normalize_embeddings=True,
+        batch_size=1,
+        show_progress_bar=False
+    )
 
     dense_scores, dense_indices = vector_index.search(
         np.array(query_embedding), min(12, len(paper_chunks))
@@ -80,9 +117,13 @@ def search_chunks(query, top_k=None):
 
     candidates = [paper_chunks[idx] for idx, _ in ranked[: max(top_k * 3, 8)]]
 
-    rerank_pairs = [(query, c["text"]) for c in candidates]
+    reranker = get_reranker_model()
 
-    rerank_scores = reranker_model.predict(rerank_pairs)
+    if reranker is None:
+        return candidates[:top_k]
+
+    rerank_pairs = [(query, c["text"]) for c in candidates]
+    rerank_scores = reranker.predict(rerank_pairs)
 
     reranked = sorted(
         zip(candidates, rerank_scores),

@@ -76,6 +76,11 @@ Set these in Render Dashboard:
 - CHUNK_SIZE=1200
 - CHUNK_OVERLAP=220
 - TOP_K=5
+- MAX_UPLOAD_MB=12
+- MAX_CHUNKS=220
+- EMBEDDING_BATCH_SIZE=16
+- ENABLE_RERANKER=false
+- MAX_CACHED_DOCS=1
 
 Python version notes:
 

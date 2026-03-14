@@ -1,5 +1,6 @@
 import hashlib
 import os
+import shutil
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -30,9 +31,14 @@ async def analyze(file: UploadFile = File(...)):
 
         os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
 
-        file_bytes = await file.read()
-        doc_id = hashlib.sha256(file_bytes).hexdigest()[:12]
+        file.file.seek(0, os.SEEK_END)
+        size_bytes = file.file.tell()
         file.file.seek(0)
+
+        if settings.MAX_UPLOAD_MB > 0 and size_bytes > settings.MAX_UPLOAD_MB * 1024 * 1024:
+            return JSONResponse({"error": f"File too large. Max allowed is {settings.MAX_UPLOAD_MB} MB."}, status_code=413)
+
+        doc_id = hashlib.sha256(f"{file.filename}:{size_bytes}".encode("utf-8")).hexdigest()[:12]
 
         if has_doc(doc_id):
             set_active_doc(doc_id)
@@ -45,7 +51,9 @@ async def analyze(file: UploadFile = File(...)):
         path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
 
         with open(path, "wb") as handle:
-            handle.write(file_bytes)
+            shutil.copyfileobj(file.file, handle)
+
+        file.file.seek(0)
 
         if ext == ".pdf":
             pages = extract_pdf_pages(path)
@@ -56,6 +64,9 @@ async def analyze(file: UploadFile = File(...)):
             return JSONResponse({"error": "Could not extract text"}, status_code=400)
 
         chunks = chunk_text_semantic(pages)
+
+        if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
+            chunks = chunks[:settings.MAX_CHUNKS]
 
         index, bm25 = build_vector_store(chunks)
 
@@ -98,9 +109,14 @@ async def analyze_stream(file: UploadFile = File(...)):
 
         os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
 
-        file_bytes = await file.read()
-        doc_id = hashlib.sha256(file_bytes).hexdigest()[:12]
+        file.file.seek(0, os.SEEK_END)
+        size_bytes = file.file.tell()
         file.file.seek(0)
+
+        if settings.MAX_UPLOAD_MB > 0 and size_bytes > settings.MAX_UPLOAD_MB * 1024 * 1024:
+            return JSONResponse({"error": f"File too large. Max allowed is {settings.MAX_UPLOAD_MB} MB."}, status_code=413)
+
+        doc_id = hashlib.sha256(f"{file.filename}:{size_bytes}".encode("utf-8")).hexdigest()[:12]
 
         if has_doc(doc_id):
             set_active_doc(doc_id)
@@ -115,7 +131,9 @@ async def analyze_stream(file: UploadFile = File(...)):
         path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
 
         with open(path, "wb") as handle:
-            handle.write(file_bytes)
+            shutil.copyfileobj(file.file, handle)
+
+        file.file.seek(0)
 
         if ext == ".pdf":
             pages = extract_pdf_pages(path)
@@ -126,6 +144,9 @@ async def analyze_stream(file: UploadFile = File(...)):
             return JSONResponse({"error": "Could not extract text"}, status_code=400)
 
         chunks = chunk_text_semantic(pages)
+
+        if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
+            chunks = chunks[:settings.MAX_CHUNKS]
 
         index, bm25 = build_vector_store(chunks)
 
