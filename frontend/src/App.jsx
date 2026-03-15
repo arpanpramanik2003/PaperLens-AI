@@ -174,7 +174,21 @@ function App() {
       <div className="orb orb-three" aria-hidden="true" />
 
       <header className="glass-panel panel-lift fade-in rounded-3xl px-6 py-8 sm:px-10">
-        <span className="chip">PaperLens AI</span>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="logo-badge" aria-hidden="true">
+              <img src="/favicon.svg" alt="" className="logo-mark" />
+            </div>
+            <div>
+              <span className="chip">PaperLens AI</span>
+              <p className="mt-2 text-sm text-[var(--muted)]">Research paper explainer and grounded Q&amp;A</p>
+            </div>
+          </div>
+          <div className="hidden rounded-2xl border border-[var(--panel-border)] bg-white/70 px-4 py-3 text-right sm:block">
+            <p className="headline text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-2)]">Brand Assets</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">Favicons and app icons are now connected.</p>
+          </div>
+        </div>
         <h1 className="headline mt-4 text-3xl font-semibold text-[var(--accent-3)] sm:text-5xl">
           Decode research papers in minutes.
         </h1>
