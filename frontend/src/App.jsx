@@ -19,9 +19,9 @@ function App() {
 
   const stats = useMemo(
     () => [
-      { label: "Summary", value: "PDF →" },
-      { label: "Q&A", value: "Grounded" },
-      { label: "Citations", value: "Chunks" }
+      { label: "Summaries", value: "Structured" },
+      { label: "Answers", value: "Grounded" },
+      { label: "Evidence", value: "Cited" }
     ],
     []
   );
@@ -174,26 +174,20 @@ function App() {
       <div className="orb orb-three" aria-hidden="true" />
 
       <header className="glass-panel panel-lift fade-in rounded-3xl px-6 py-8 sm:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <div className="logo-badge" aria-hidden="true">
               <img src="/favicon.svg" alt="" className="logo-mark" />
             </div>
             <div>
               <span className="chip">PaperLens AI</span>
-              <p className="mt-2 text-sm text-[var(--muted)]">Research paper explainer and grounded Q&amp;A</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">Research paper analysis and grounded Q&amp;A</p>
             </div>
-          </div>
-          <div className="hidden rounded-2xl border border-[var(--panel-border)] bg-white/70 px-4 py-3 text-right sm:block">
-            <p className="headline text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-2)]">Brand Assets</p>
-            <p className="mt-1 text-sm text-[var(--muted)]">Favicons and app icons are now connected.</p>
-          </div>
         </div>
         <h1 className="headline mt-4 text-3xl font-semibold text-[var(--accent-3)] sm:text-5xl">
-          Decode research papers in minutes.
+          Research paper intelligence, in minutes.
         </h1>
         <p className="mt-3 max-w-2xl text-base text-[var(--ink-soft)] sm:text-lg">
-          Upload a PDF or DOCX to get a structured summary, then ask questions grounded only in the paper.
+          Upload a PDF or DOCX to get a structured summary and ask evidence-grounded questions from your document.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           {stats.map((stat) => (
@@ -242,7 +236,6 @@ function App() {
             </div>
             <p className="text-xs text-[var(--muted)]">PDF or DOCX recommended. Scanned PDFs may be blank.</p>
           </div>
-          <p className="text-xs text-[var(--muted)]">Best with text-based PDFs. Scanned PDFs may be blank.</p>
           {fileMeta && (
             <div className="rounded-2xl border border-[var(--panel-border)] bg-white/70 px-4 py-3 text-sm text-[var(--ink-soft)]">
               <div className="font-semibold break-words leading-5">{formatFileName(fileMeta.name)}</div>
