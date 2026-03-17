@@ -75,6 +75,9 @@ Environment variables are loaded in app/core/config.py.
 | CHUNK_SIZE | No | 1200 | Chunk size in characters |
 | CHUNK_OVERLAP | No | 220 | Overlap between chunks |
 | TOP_K | No | 5 | Final number of retrieved chunks |
+| MAX_UPLOAD_MB | No | 12 | Reject files above this upload size |
+| MAX_PAGES | No | 12 | Reject documents above this page count |
+| MAX_TOTAL_CHARS | No | 120000 | Reject documents with too much extracted text |
 
 ## API Contract
 

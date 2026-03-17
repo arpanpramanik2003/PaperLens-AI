@@ -34,6 +34,8 @@ class Settings:
     CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "220"))
     TOP_K = int(os.getenv("TOP_K", "5"))
     MAX_UPLOAD_MB = _as_int(os.getenv("MAX_UPLOAD_MB", "12"), 12)
+    MAX_PAGES = _as_int(os.getenv("MAX_PAGES", "12"), 12)
+    MAX_TOTAL_CHARS = _as_int(os.getenv("MAX_TOTAL_CHARS", "120000"), 120000)
     MAX_CHUNKS = _as_int(os.getenv("MAX_CHUNKS", "220"), 220)
     EMBEDDING_BATCH_SIZE = _as_int(os.getenv("EMBEDDING_BATCH_SIZE", "16"), 16)
     ENABLE_RERANKER = _as_bool(os.getenv("ENABLE_RERANKER", "false"), False)

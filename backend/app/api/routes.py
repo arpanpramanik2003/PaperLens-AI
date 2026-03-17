@@ -16,6 +16,40 @@ from app.services.retrieval import build_vector_store
 router = APIRouter()
 
 
+class PaperTooLengthyError(Exception):
+
+    def __init__(self, detail):
+        super().__init__(detail)
+        self.detail = detail
+
+
+def _raise_if_paper_too_lengthy(pages):
+
+    page_count = len(pages)
+
+    if settings.MAX_PAGES > 0 and page_count > settings.MAX_PAGES:
+        raise PaperTooLengthyError(
+            f"Paper is too lengthy ({page_count} pages). Please upload up to {settings.MAX_PAGES} pages."
+        )
+
+    total_chars = sum(len(page.get("text", "")) for page in pages)
+
+    if settings.MAX_TOTAL_CHARS > 0 and total_chars > settings.MAX_TOTAL_CHARS:
+        raise PaperTooLengthyError(
+            "Paper is too lengthy for this deployment. Please upload a shorter paper."
+        )
+
+
+def _lengthy_response(message):
+    return JSONResponse(
+        {
+            "error": message,
+            "code": "PAPER_TOO_LENGTHY"
+        },
+        status_code=413
+    )
+
+
 @router.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
 
@@ -63,6 +97,8 @@ async def analyze(file: UploadFile = File(...)):
         if not pages:
             return JSONResponse({"error": "Could not extract text"}, status_code=400)
 
+        _raise_if_paper_too_lengthy(pages)
+
         chunks = chunk_text_semantic(pages)
 
         if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
@@ -88,6 +124,14 @@ async def analyze(file: UploadFile = File(...)):
             pass
 
         return {"result": result, "doc_id": doc_id}
+
+    except PaperTooLengthyError as exc:
+
+        return _lengthy_response(exc.detail)
+
+    except MemoryError:
+
+        return _lengthy_response("Paper is too lengthy for this deployment. Please upload a shorter paper.")
 
     except Exception as exc:
 
@@ -143,6 +187,8 @@ async def analyze_stream(file: UploadFile = File(...)):
         if not pages:
             return JSONResponse({"error": "Could not extract text"}, status_code=400)
 
+        _raise_if_paper_too_lengthy(pages)
+
         chunks = chunk_text_semantic(pages)
 
         if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
@@ -181,6 +227,14 @@ async def analyze_stream(file: UploadFile = File(...)):
                 pass
 
         return StreamingResponse(stream_response(), media_type="text/plain")
+
+    except PaperTooLengthyError as exc:
+
+        return _lengthy_response(exc.detail)
+
+    except MemoryError:
+
+        return _lengthy_response("Paper is too lengthy for this deployment. Please upload a shorter paper.")
 
     except Exception as exc:
 
