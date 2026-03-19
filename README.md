@@ -1,16 +1,37 @@
 # PaperLens AI
 
-PaperLens AI is a full-stack research assistant that helps users analyze papers, ask grounded questions, detect research gaps, and generate experiments/problem statements.
+<p align="center">
+  <img src="frontend/public/demo.png" alt="PaperLens AI Landing Page" width="100%" />
+</p>
 
-## What it includes
+<p align="center">
+  <b>Turn research papers into insights, plans, and ideas.</b>
+</p>
 
-- **Frontend**: React + TypeScript dashboard (`frontend/`)
-- **Backend**: FastAPI + Hybrid RAG pipeline (`backend/`)
-- **Auth**: Clerk JWT-based API authentication
-- **Data layer**: SQLAlchemy models on PostgreSQL (Supabase-compatible)
-- **LLM**: Groq for analysis and generation features
+<p align="center">
+  <img src="https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-61DAFB?logo=react&logoColor=black" alt="Frontend" />
+  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white" alt="Backend" />
+  <img src="https://img.shields.io/badge/Auth-Clerk-6C47FF" alt="Auth" />
+  <img src="https://img.shields.io/badge/LLM-Groq-F55036" alt="LLM" />
+</p>
 
-## Repository structure
+PaperLens AI is a full-stack research assistant that helps you analyze papers, ask grounded questions, detect gaps, and generate experiment plans or research problem statements.
+
+## ✨ Highlights
+
+- **Paper Analyzer**: Upload PDF/DOCX, get structured analysis, and chat with document context.
+- **Gap Detection**: Find missing opportunities from project text or uploaded papers.
+- **Experiment Planner**: Generate actionable, step-wise research execution plans.
+- **Problem Generator**: Create domain-aware research ideas with complexity control.
+- **Dashboard Metrics**: Track analyzed papers and activity stats.
+
+## 🧱 Architecture
+
+- **Frontend**: React + Vite + TypeScript + Tailwind + shadcn/ui
+- **Backend**: FastAPI + SQLAlchemy + Hybrid RAG (FAISS + BM25)
+- **Auth**: Clerk JWT-based API auth
+- **Data**: PostgreSQL (Supabase compatible)
+- **LLM**: Groq
 
 ```text
 paper_explainer/
@@ -22,50 +43,17 @@ paper_explainer/
 └─ README.md
 ```
 
-## Core features
-
-1. **Paper Analyzer** (`/dashboard/analyzer`)
-  - Upload PDF/DOCX
-  - Generate structured analysis
-  - Ask follow-up questions grounded in extracted chunks
-
-2. **Experiment Planner** (`/dashboard/planner`)
-  - Generate step-by-step experiment plans from a topic + difficulty
-
-3. **Problem Generator** (`/dashboard/generator`)
-  - Generate research problem statements from domain + subdomain + complexity
-
-4. **Gap Detection** (`/dashboard/gaps`)
-  - Detect gaps from either text input or uploaded paper
-
-5. **Dashboard Metrics** (`/dashboard`)
-  - Displays user-level activity and recent analyzed documents
-
-## Tech stack
-
-### Frontend
-- React + Vite + TypeScript
-- Tailwind CSS + shadcn/ui
-- Clerk React SDK
-
-### Backend
-- FastAPI + Uvicorn
-- SQLAlchemy + PostgreSQL
-- sentence-transformers + FAISS + BM25
-- Groq API
-- pdfplumber + python-docx
-
-## Quick start
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Python 3.10+
 - Node.js 18+
 - Clerk account
-- PostgreSQL database URL (Supabase recommended)
+- PostgreSQL URL
 - Groq API key
 
-### 1) Backend setup
+### 1) Backend
 
 ```powershell
 cd backend
@@ -82,33 +70,33 @@ CLERK_SECRET_KEY=sk_...
 GROQ_API_KEY=gsk_...
 ```
 
-Run backend:
+Run:
 
 ```powershell
 uvicorn app.main:app --reload
 ```
 
-### 2) Frontend setup
+### 2) Frontend
 
 ```powershell
 cd frontend
 npm install
 ```
 
-Create/update `frontend/.env.local`:
+Create `frontend/.env.local`:
 
 ```env
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 VITE_API_URL=http://localhost:8000
 ```
 
-Run frontend:
+Run:
 
 ```powershell
 npm run dev
 ```
 
-## API summary
+## 🔌 API Snapshot
 
 Public:
 - `GET /health`
@@ -125,20 +113,20 @@ Protected:
 - `POST /api/generate-problems`
 - `POST /api/detect-gaps`
 
-Full contracts are documented in `docs/API_REFERENCE.md`.
+See full contracts in `docs/API_REFERENCE.md`.
 
-## Deployment
+## 🌍 Deployment
 
-- **Backend**: Render Blueprint via `render.yaml`
-- **Frontend**: Vercel + SPA rewrite via `vercel.json`
+- **Backend**: Render (`render.yaml`)
+- **Frontend**: Vercel (`vercel.json`)
 
-## Documentation index
+## 📚 Docs
 
 - Project analysis: `docs/PROJECT_ANALYSIS.md`
 - API reference: `docs/API_REFERENCE.md`
 - Backend guide: `backend/README.md`
 - Frontend guide: `frontend/README.md`
 
-## License
+## 📄 License
 
 MIT License. See `LICENSE`.
