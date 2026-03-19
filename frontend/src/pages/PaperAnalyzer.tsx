@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2 } from "lucide-react";
+import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -167,10 +167,32 @@ export default function PaperAnalyzer() {
     }
   };
 
+  const handleResetAnalyzer = () => {
+    setFile(null);
+    setAnalyzing(false);
+    setAnalyzed(false);
+    setAnalysisResult("");
+    setDocId("");
+    setChatMessages([]);
+    setChatInput("");
+    setAiGenerating(false);
+    setWarningMessage(null);
+    setAnalyzingStep(0);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Paper Analyzer</h1>
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Paper Analyzer</h1>
+          {(analyzed || file) && !analyzing && (
+            <Button variant="outline" size="sm" onClick={handleResetAnalyzer} className="gap-2">
+              <RefreshCw className="w-3.5 h-3.5" />
+              New Upload
+            </Button>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground mb-6">Upload a paper and get structured AI-powered insights.</p>
       </motion.div>
 
