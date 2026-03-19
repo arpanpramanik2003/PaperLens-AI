@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 fastapi==0.115.12
-pydantic==2.10.6
+pydantic==2.9.2
 uvicorn==0.34.0
 python-dotenv==1.0.1
 pdfplumber==0.11.5
