@@ -1,12 +1,18 @@
 import hashlib
 import os
 import shutil
+from typing import Optional
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, Depends, Form
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.core.security import get_current_user
+from app.core.database import get_db
+from app.models.domain import Document, Activity
 
 from app.core.config import settings
-from app.models.schemas import AskRequest
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
@@ -51,7 +57,7 @@ def _lengthy_response(message):
 
 
 @router.post("/analyze")
-async def analyze(file: UploadFile = File(...)):
+async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
 
     try:
 
@@ -117,6 +123,14 @@ async def analyze(file: UploadFile = File(...)):
         })
 
         set_active_doc(doc_id)
+        
+        db_doc = db.query(Document).filter(Document.id == doc_id).first()
+        if not db_doc:
+            db_doc = Document(id=doc_id, user_id=user_id, filename=file.filename, title=file.filename, status="Analyzed")
+            db.add(db_doc)
+        db_activity = Activity(user_id=user_id, action_type="analyze_paper", metadata_json={"filename": file.filename})
+        db.add(db_activity)
+        db.commit()
 
         try:
             os.remove(path)
@@ -139,7 +153,7 @@ async def analyze(file: UploadFile = File(...)):
 
 
 @router.post("/analyze_stream")
-async def analyze_stream(file: UploadFile = File(...)):
+async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
 
     try:
 
@@ -220,6 +234,14 @@ async def analyze_stream(file: UploadFile = File(...)):
             })
 
             set_active_doc(doc_id)
+            
+            db_doc = db.query(Document).filter(Document.id == doc_id).first()
+            if not db_doc:
+                db_doc = Document(id=doc_id, user_id=user_id, filename=file.filename, title=file.filename, status="Analyzed")
+                db.add(db_doc)
+            db_activity = Activity(user_id=user_id, action_type="analyze_paper", metadata_json={"filename": file.filename})
+            db.add(db_activity)
+            db.commit()
 
             try:
                 os.remove(path)
@@ -242,7 +264,7 @@ async def analyze_stream(file: UploadFile = File(...)):
 
 
 @router.post("/ask")
-async def ask(payload: AskRequest):
+async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
 
     if not payload.question:
         return JSONResponse({"error": "Question required"}, status_code=400)
@@ -261,7 +283,7 @@ async def ask(payload: AskRequest):
 
 
 @router.post("/ask_stream")
-async def ask_stream(payload: AskRequest):
+async def ask_stream(payload: AskRequest, user_id: str = Depends(get_current_user)):
 
     if not payload.question:
         return JSONResponse({"error": "Question required"}, status_code=400)
@@ -277,3 +299,91 @@ async def ask_stream(payload: AskRequest):
             yield token
 
     return StreamingResponse(stream_response(), media_type="text/plain")
+
+
+@router.post("/plan-experiment")
+async def plan_experiment(payload: ExperimentPlanRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        from app.services.llm import generate_experiment_plan
+        plan = generate_experiment_plan(payload.topic, payload.difficulty)
+        
+        db_activity = Activity(user_id=user_id, action_type="plan_experiment", metadata_json={"topic": payload.topic, "difficulty": payload.difficulty})
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(plan)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/generate-problems")
+async def generate_problems(payload: ProblemGeneratorRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        from app.services.llm import generate_research_problems
+        ideas = generate_research_problems(payload.domain, payload.subdomain, payload.complexity)
+        
+        db_activity = Activity(user_id=user_id, action_type="generate_problems", metadata_json={"domain": payload.domain, "subdomain": payload.subdomain})
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(ideas)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.get("/documents")
+async def get_documents(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    docs = db.query(Document).filter(Document.user_id == user_id).all()
+    return [{"id": d.id, "filename": d.filename} for d in docs]
+
+
+@router.post("/detect-gaps")
+async def detect_gaps(
+    file: Optional[UploadFile] = File(None),
+    text: Optional[str] = Form(None),
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        content_to_analyze = ""
+        
+        if file and file.filename:
+            ext = os.path.splitext(file.filename.lower())[1]
+            if ext not in [".pdf", ".docx"]:
+                return JSONResponse({"error": "Only PDF or DOCX files allowed"}, status_code=400)
+            
+            os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+            path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
+            with open(path, "wb") as handle:
+                shutil.copyfileobj(file.file, handle)
+            
+            if ext == ".pdf":
+                pages = extract_pdf_pages(path)
+            else:
+                pages = extract_docx_pages(path)
+            
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            
+            if not pages:
+                return JSONResponse({"error": "Could not extract text"}, status_code=400)
+            
+            chunks = chunk_text_semantic(pages)
+            content_to_analyze = summarize_chunks(chunks)
+        elif text:
+            content_to_analyze = text
+        else:
+            return JSONResponse({"error": "No file or text provided"}, status_code=400)
+
+        from app.services.llm import detect_research_gaps
+        gaps = detect_research_gaps(content_to_analyze)
+        
+        db_activity = Activity(user_id=user_id, action_type="detect_gaps", metadata_json={"method": "direct_input"})
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(gaps)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
