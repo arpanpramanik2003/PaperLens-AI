@@ -22,6 +22,13 @@ const MarkdownComponents: any = {
   li: ({node, ...props}: any) => <li className="text-foreground/90" {...props} />,
 };
 
+const normalizeMarkdown = (value: string) => {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/([^\n])\s*(##\s+)/g, "$1\n\n$2")
+    .replace(/^\s*\*\*(.*?)\*\*\s*$/gm, "## $1");
+};
+
 export default function PaperAnalyzer() {
   const { getToken, userId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -265,7 +272,7 @@ export default function PaperAnalyzer() {
               <div className="text-sm">
                 {analysisResult ? (
                   <ReactMarkdown components={MarkdownComponents}>
-                    {analysisResult.replace(/^\s*\*\*(.*?)\*\*\s*$/gm, '## $1')}
+                    {normalizeMarkdown(analysisResult)}
                   </ReactMarkdown>
                 ) : (
                   <span className="text-muted-foreground whitespace-pre-wrap">No analysis generated.</span>
