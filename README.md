@@ -124,6 +124,7 @@ See full contracts in `docs/API_REFERENCE.md`.
 
 - Project analysis: `docs/PROJECT_ANALYSIS.md`
 - API reference: `docs/API_REFERENCE.md`
+- Paper analyzer flow: `docs/PAPER_ANALYZER_LLM_FLOW.md`
 - Backend guide: `backend/README.md`
 - Frontend guide: `frontend/README.md`
 

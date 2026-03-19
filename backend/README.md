@@ -99,6 +99,7 @@ Configured in `app/core/config.py`.
 | `MAX_TOTAL_CHARS` | No | `120000` | Max extracted chars |
 | `MAX_CHUNKS` | No | `220` | Max chunks processed |
 | `EMBEDDING_BATCH_SIZE` | No | `16` | Embedding batch size |
+| `ENABLE_VECTOR_RETRIEVAL` | No | `false` | Enable FAISS + embedding retrieval path |
 | `ENABLE_RERANKER` | No | `false` | Enable CrossEncoder reranking |
 | `MAX_CACHED_DOCS` | No | `1` | In-memory cached docs |
 
@@ -107,7 +108,7 @@ Configured in `app/core/config.py`.
 1. Validate uploaded PDF/DOCX and enforce limits.
 2. Extract text (`pdfplumber` / `python-docx`).
 3. Sentence-aware chunking with overlap.
-4. Build dense (FAISS) + sparse (BM25) indexes.
+4. Build sparse BM25 index, plus dense FAISS index when `ENABLE_VECTOR_RETRIEVAL=true`.
 5. Generate structured analysis via Groq.
 6. Cache analysis + indexes in memory.
 7. Answer follow-up questions via hybrid retrieval.
