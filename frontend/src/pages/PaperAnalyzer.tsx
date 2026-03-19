@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
 import ReactMarkdown from "react-markdown";
+import { apiClient } from "@/lib/api-client";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -59,13 +60,10 @@ export default function PaperAnalyzer() {
       const formData = new FormData();
       formData.append("file", selectedFile);
       
-      const res = await fetch("http://localhost:8000/api/analyze", {
+      const res = await apiClient.fetch("/api/analyze", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
         body: formData
-      });
+      }, getToken);
       
       if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -103,14 +101,13 @@ export default function PaperAnalyzer() {
     
     try {
       const token = await getToken();
-      const res = await fetch("http://localhost:8000/api/ask", {
+      const res = await apiClient.fetch("/api/ask", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ question: input, doc_id: docId })
-      });
+      }, getToken);
       
       if (!res.ok) throw new Error("Chat failed");
       const data = await res.json();

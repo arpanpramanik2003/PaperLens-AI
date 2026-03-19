@@ -4,6 +4,7 @@ import { FileText, FlaskConical, Lightbulb, ScanSearch, Clock, ArrowUpRight } fr
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
+import { apiClient } from "@/lib/api-client";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -59,9 +60,7 @@ export default function DashboardHome() {
 
         const token = await getToken();
         if (!token) return;
-        const res = await fetch("http://localhost:8000/api/dashboard", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
+        const res = await apiClient.fetch("/api/dashboard", {}, getToken);
         if (res.ok) {
           const data = await res.json();
           setDashboardData(data);

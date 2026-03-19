@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
+import { apiClient } from "@/lib/api-client";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -50,14 +51,13 @@ export default function ExperimentPlanner() {
     try {
       setLoading(true);
       const token = await getToken();
-      const res = await fetch("http://localhost:8000/api/plan-experiment", {
+      const res = await apiClient.fetch("/api/plan-experiment", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ topic, difficulty })
-      });
+      }, getToken);
       
       if (!res.ok) throw new Error("Failed to generate plan");
       const data = await res.json();

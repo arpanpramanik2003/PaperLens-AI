@@ -53,7 +53,18 @@ Default local URL:
 
 - http://localhost:8000
 
-Useful endpoints:
+## Deployment (Render)
+
+The backend is configured for deployment on [Render](https://render.com/) via the `render.yaml` file in the project root.
+
+1. Create a new **Blueprint** service on Render.
+2. Connect your GitHub repository.
+3. Configure environment variables in the Render dashboard:
+   - `DATABASE_URL`
+   - `CLERK_SECRET_KEY`
+   - `GROQ_API_KEY`
+
+## Useful endpoints
 
 - GET /health
 - POST /api/analyze

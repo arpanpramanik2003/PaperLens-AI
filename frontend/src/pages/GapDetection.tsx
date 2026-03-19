@@ -4,6 +4,7 @@ import { ScanSearch, Info, Sparkles, FileText, Upload, Copy, Check } from "lucid
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
+import { apiClient } from "@/lib/api-client";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -53,13 +54,10 @@ export default function GapDetection() {
         formData.append("text", inputText);
       }
 
-      const res = await fetch("http://localhost:8000/api/detect-gaps", {
+      const res = await apiClient.fetch("/api/detect-gaps", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
         body: formData
-      });
+      }, getToken);
 
       if (!res.ok) throw new Error("Failed to detect gaps");
       const data = await res.json();
