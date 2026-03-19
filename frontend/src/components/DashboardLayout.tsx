@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Settings, LogOut, Menu, X, Sun, Moon, User } from "lucide-react";
+import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,8 +109,20 @@ export default function DashboardLayout() {
         {/* Top Navbar */}
         <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-border/50 glass-surface sticky top-0 z-20 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <span className="lg:hidden">
+                {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </span>
+              <span className="hidden lg:block">
+                {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+              </span>
             </Button>
             <div className="lg:hidden flex items-center gap-2">
               <img src="/favicon.svg" alt="PaperLens Logo" className="w-6 h-6" />

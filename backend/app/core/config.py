@@ -38,6 +38,7 @@ class Settings:
     MAX_TOTAL_CHARS = _as_int(os.getenv("MAX_TOTAL_CHARS", "120000"), 120000)
     MAX_CHUNKS = _as_int(os.getenv("MAX_CHUNKS", "220"), 220)
     EMBEDDING_BATCH_SIZE = _as_int(os.getenv("EMBEDDING_BATCH_SIZE", "16"), 16)
+    ENABLE_VECTOR_RETRIEVAL = _as_bool(os.getenv("ENABLE_VECTOR_RETRIEVAL", "false"), False)
     ENABLE_RERANKER = _as_bool(os.getenv("ENABLE_RERANKER", "false"), False)
     MAX_CACHED_DOCS = _as_int(os.getenv("MAX_CACHED_DOCS", "1"), 1)
 

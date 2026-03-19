@@ -3,7 +3,6 @@ import re
 import faiss
 import numpy as np
 from rank_bm25 import BM25Okapi
-from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from app.core.config import settings
 from app.services.cache import get_active_indexes
@@ -16,7 +15,11 @@ def get_embedding_model():
 
     global embedding_model
 
+    if not settings.ENABLE_VECTOR_RETRIEVAL:
+        return None
+
     if embedding_model is None:
+        from sentence_transformers import SentenceTransformer
         embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
 
     return embedding_model
@@ -30,6 +33,7 @@ def get_reranker_model():
         return None
 
     if reranker_model is None:
+        from sentence_transformers import CrossEncoder
         reranker_model = CrossEncoder(settings.RERANKER_MODEL)
 
     return reranker_model
@@ -46,6 +50,9 @@ def create_embeddings(chunks):
 
     model = get_embedding_model()
 
+    if model is None:
+        return None
+
     embeddings = model.encode(
         texts,
         normalize_embeddings=True,
@@ -57,14 +64,15 @@ def create_embeddings(chunks):
 
 
 def build_vector_store(chunks):
+    index = None
 
-    embeddings = create_embeddings(chunks)
+    if settings.ENABLE_VECTOR_RETRIEVAL:
+        embeddings = create_embeddings(chunks)
 
-    dimension = embeddings.shape[1]
-
-    index = faiss.IndexFlatIP(dimension)
-
-    index.add(embeddings)
+        if embeddings is not None and len(embeddings) > 0:
+            dimension = embeddings.shape[1]
+            index = faiss.IndexFlatIP(dimension)
+            index.add(embeddings)
 
     tokenized_corpus = [tokenize_text(c["text"]) for c in chunks]
     bm25 = BM25Okapi(tokenized_corpus)
@@ -78,27 +86,31 @@ def search_chunks(query, top_k=None):
 
     vector_index, bm25_index, paper_chunks = get_active_indexes()
 
-    if vector_index is None or bm25_index is None or not paper_chunks:
+    if bm25_index is None or not paper_chunks:
         return []
 
-    model = get_embedding_model()
+    dense_hits = {}
 
-    query_embedding = model.encode(
-        [query],
-        normalize_embeddings=True,
-        batch_size=1,
-        show_progress_bar=False
-    )
+    if settings.ENABLE_VECTOR_RETRIEVAL and vector_index is not None:
+        model = get_embedding_model()
 
-    dense_scores, dense_indices = vector_index.search(
-        np.array(query_embedding), min(12, len(paper_chunks))
-    )
+        if model is not None:
+            query_embedding = model.encode(
+                [query],
+                normalize_embeddings=True,
+                batch_size=1,
+                show_progress_bar=False
+            )
 
-    dense_hits = {
-        int(idx): float(score)
-        for idx, score in zip(dense_indices[0], dense_scores[0])
-        if idx != -1
-    }
+            dense_scores, dense_indices = vector_index.search(
+                np.array(query_embedding), min(12, len(paper_chunks))
+            )
+
+            dense_hits = {
+                int(idx): float(score)
+                for idx, score in zip(dense_indices[0], dense_scores[0])
+                if idx != -1
+            }
 
     bm25_scores = bm25_index.get_scores(tokenize_text(query))
 
@@ -111,7 +123,10 @@ def search_chunks(query, top_k=None):
     for idx, score in enumerate(bm25_scores):
         dense_score = dense_hits.get(idx, 0.0)
         bm25_score = float(score) / max_bm25
-        combined[idx] = (0.6 * dense_score) + (0.4 * bm25_score)
+        if settings.ENABLE_VECTOR_RETRIEVAL and vector_index is not None:
+            combined[idx] = (0.6 * dense_score) + (0.4 * bm25_score)
+        else:
+            combined[idx] = bm25_score
 
     ranked = sorted(combined.items(), key=lambda item: item[1], reverse=True)
 

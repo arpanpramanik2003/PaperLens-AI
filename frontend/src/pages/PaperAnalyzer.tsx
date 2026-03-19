@@ -1,12 +1,13 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Upload, FileText, Sparkles, Send, Bot } from "lucide-react";
+import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
 import ReactMarkdown from "react-markdown";
 import { apiClient } from "@/lib/api-client";
+import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -31,9 +32,33 @@ export default function PaperAnalyzer() {
   
   const [analysisResult, setAnalysisResult] = useState<string>("");
   const [docId, setDocId] = useState<string>("");
+  const [analyzingStep, setAnalyzingStep] = useState(0);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   
   const [chatMessages, setChatMessages] = useState<{role: "user" | "ai", text: string}[]>([]);
   const [chatInput, setChatInput] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  const analysisSteps = [
+    "Uploading file",
+    "Extracting sections",
+    "Generating analysis",
+    "Finalizing result"
+  ];
+
+  const parseAnalyzeError = (status: number, payload: any) => {
+    const message = payload?.error || "Analysis failed. Please try again.";
+
+    if (status === 413 || payload?.code === "PAPER_TOO_LENGTHY") {
+      return "This paper is too long for the current deployment limits. Please upload a shorter paper or reduce file size.";
+    }
+
+    if (message.toLowerCase().includes("memory") || message.toLowerCase().includes("too lengthy")) {
+      return "The file is too large to process on the current server plan. Please upload a shorter paper.";
+    }
+
+    return message;
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -41,8 +66,14 @@ export default function PaperAnalyzer() {
     
     setFile(selectedFile.name);
     setAnalyzing(true);
+    setAnalyzingStep(0);
     setAnalyzed(false);
+    setWarningMessage(null);
     setChatMessages([]);
+
+    const stepTimer = window.setInterval(() => {
+      setAnalyzingStep((prev) => (prev < analysisSteps.length - 1 ? prev + 1 : prev));
+    }, 1200);
     
     if (!userId) {
       setTimeout(() => {
@@ -67,7 +98,7 @@ export default function PaperAnalyzer() {
       
       if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || "Analysis failed. Ensure the server is running.");
+          throw { status: res.status, payload: err };
       }
       
       const data = await res.json();
@@ -76,10 +107,16 @@ export default function PaperAnalyzer() {
       setAnalyzed(true);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      const message = parseAnalyzeError(error?.status ?? 0, error?.payload ?? {});
+      setWarningMessage(message);
+      toast.error("Analysis could not be completed", {
+        description: message
+      });
       setFile(null);
     } finally {
+      window.clearInterval(stepTimer);
       setAnalyzing(false);
+      setAnalyzingStep(0);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -91,10 +128,12 @@ export default function PaperAnalyzer() {
     const input = chatInput;
     setChatMessages((prev) => [...prev, { role: "user", text: input }]);
     setChatInput("");
+    setAiGenerating(true);
     
     if (!userId) {
       setTimeout(() => {
         setChatMessages((prev) => [...prev, { role: "ai", text: `Based on the analysis, this relates to the attention mechanisms described in the paper.` }]);
+        setAiGenerating(false);
       }, 1000);
       return;
     }
@@ -116,6 +155,8 @@ export default function PaperAnalyzer() {
     } catch(error) {
       console.error(error);
       setChatMessages((prev) => [...prev, { role: "ai", text: "Sorry, I encountered an error answering that." }]);
+    } finally {
+      setAiGenerating(false);
     }
   };
 
@@ -150,12 +191,46 @@ export default function PaperAnalyzer() {
         </>
       )}
 
+      {warningMessage && !analyzing && (
+        <motion.div
+          className="mb-4 rounded-xl border border-border/50 bg-card p-4"
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <p className="text-sm font-medium text-foreground">Upload limit reached</p>
+          <p className="text-sm text-muted-foreground mt-1">{warningMessage}</p>
+        </motion.div>
+      )}
+
       {analyzing && (
         <div className="space-y-4">
           <div className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-card">
             <FileText className="w-5 h-5 text-accent" />
                         <span className="text-sm text-foreground font-medium truncate max-w-[200px] sm:max-w-xs">{file}</span>
             <span className="text-xs text-accent font-mono ml-auto">Analyzing...</span>
+          </div>
+          <div className="rounded-xl border border-border/50 bg-card p-4">
+            <p className="text-sm font-medium text-foreground mb-3">Processing steps</p>
+            <div className="space-y-2">
+              {analysisSteps.map((step, index) => {
+                const isDone = index < analyzingStep;
+                const isActive = index === analyzingStep;
+
+                return (
+                  <div key={step} className="flex items-center gap-2.5">
+                    {isDone ? (
+                      <CheckCircle2 className="h-4 w-4 text-accent" />
+                    ) : isActive ? (
+                      <Loader2 className="h-4 w-4 text-accent animate-spin" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border border-border/70" />
+                    )}
+                    <span className={`text-sm ${isActive ? "text-foreground" : "text-muted-foreground"}`}>{step}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="space-y-3">
             {["Summary", "Methodology", "Results"].map((s) => (
@@ -170,7 +245,7 @@ export default function PaperAnalyzer() {
       )}
 
       {analyzed && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-0 lg:gap-6">
           {/* Analysis */}
           <div className="lg:col-span-3 space-y-4">
             <div className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-card">
@@ -201,46 +276,69 @@ export default function PaperAnalyzer() {
 
           {/* Chat */}
           <div className="lg:col-span-2">
-            <div className="rounded-xl border border-border/50 bg-card flex flex-col h-[600px] sticky top-20">
+            <div className="rounded-xl border border-border/50 bg-card flex flex-col lg:h-[540px] lg:sticky lg:top-20">
               <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-accent" />
                 <span className="text-sm font-medium text-foreground">Chat with Paper</span>
                 <span className="text-xs text-muted-foreground font-mono ml-auto">Context: This Document</span>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {chatMessages.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center mt-10">Ask a question about the document.</p>
-                )}
-                {chatMessages.map((msg, i) => (
-                  <motion.div
-                    key={i}
-                    className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {msg.role === "ai" && (
+              <div className="overflow-y-auto p-4 max-h-[38vh] sm:max-h-[42vh] lg:flex-1 lg:max-h-none">
+                <div className="flex flex-col gap-4 lg:min-h-full lg:justify-end">
+                  {chatMessages.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center">Ask a question about the document.</p>
+                  )}
+                  {chatMessages.map((msg, i) => (
+                    <motion.div
+                      key={i}
+                      className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {msg.role === "ai" && (
+                        <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Bot className="w-3.5 h-3.5 text-accent" />
+                        </div>
+                      )}
+                      <div className={`max-w-[85%] ${msg.role === "user" ? "bg-secondary rounded-2xl rounded-br-md px-4 py-2.5" : ""}`}>
+                        {msg.role === "ai" ? (
+                          <div className="text-sm">
+                            <ReactMarkdown components={MarkdownComponents}>
+                              {msg.text}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {aiGenerating && (
+                    <motion.div
+                      className="flex gap-3"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Bot className="w-3.5 h-3.5 text-accent" />
                       </div>
-                    )}
-                    <div className={`max-w-[85%] ${msg.role === "user" ? "bg-secondary rounded-2xl rounded-br-md px-4 py-2.5" : ""}`}>
-                      {msg.role === "ai" ? (
-                        <div className="text-sm">
-                          <ReactMarkdown components={MarkdownComponents}>
-                            {msg.text}
-                          </ReactMarkdown>
+                      <div className="rounded-2xl rounded-bl-md px-3 py-2 border border-border/50 bg-secondary/30">
+                        <div className="flex items-center gap-1">
+                          <motion.span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" animate={{ opacity: [0.2, 1, 0.2] }} transition={{ duration: 1, repeat: Infinity, delay: 0 }} />
+                          <motion.span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" animate={{ opacity: [0.2, 1, 0.2] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} />
+                          <motion.span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" animate={{ opacity: [0.2, 1, 0.2] }} transition={{ duration: 1, repeat: Infinity, delay: 0.4 }} />
+                          <span className="text-xs text-muted-foreground ml-2">AI is generating…</span>
                         </div>
-                      ) : (
-                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
               </div>
 
-              <form onSubmit={handleChat} className="p-3 border-t border-border/50">
+              <form onSubmit={handleChat} className="p-3 border-t border-border/50 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <div className="flex gap-2">
                   <Input
                     value={chatInput}

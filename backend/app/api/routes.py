@@ -16,7 +16,7 @@ from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGenerat
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
-from app.services.parsing import extract_docx_pages, extract_pdf_pages
+from app.services.parsing import extract_docx_pages, extract_pdf_pages, ParsingLimitError
 from app.services.retrieval import build_vector_store
 
 router = APIRouter()
@@ -96,9 +96,17 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
         file.file.seek(0)
 
         if ext == ".pdf":
-            pages = extract_pdf_pages(path)
+            pages = extract_pdf_pages(
+                path,
+                max_pages=settings.MAX_PAGES,
+                max_total_chars=settings.MAX_TOTAL_CHARS
+            )
         else:
-            pages = extract_docx_pages(path)
+            pages = extract_docx_pages(
+                path,
+                max_pages=settings.MAX_PAGES,
+                max_total_chars=settings.MAX_TOTAL_CHARS
+            )
 
         if not pages:
             return JSONResponse({"error": "Could not extract text"}, status_code=400)
@@ -147,6 +155,10 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
 
         return _lengthy_response("Paper is too lengthy for this deployment. Please upload a shorter paper.")
 
+    except ParsingLimitError as exc:
+
+        return _lengthy_response(exc.detail)
+
     except Exception as exc:
 
         return JSONResponse({"error": str(exc)}, status_code=500)
@@ -194,9 +206,17 @@ async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(ge
         file.file.seek(0)
 
         if ext == ".pdf":
-            pages = extract_pdf_pages(path)
+            pages = extract_pdf_pages(
+                path,
+                max_pages=settings.MAX_PAGES,
+                max_total_chars=settings.MAX_TOTAL_CHARS
+            )
         else:
-            pages = extract_docx_pages(path)
+            pages = extract_docx_pages(
+                path,
+                max_pages=settings.MAX_PAGES,
+                max_total_chars=settings.MAX_TOTAL_CHARS
+            )
 
         if not pages:
             return JSONResponse({"error": "Could not extract text"}, status_code=400)
@@ -257,6 +277,10 @@ async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(ge
     except MemoryError:
 
         return _lengthy_response("Paper is too lengthy for this deployment. Please upload a shorter paper.")
+
+    except ParsingLimitError as exc:
+
+        return _lengthy_response(exc.detail)
 
     except Exception as exc:
 
@@ -358,9 +382,17 @@ async def detect_gaps(
                 shutil.copyfileobj(file.file, handle)
             
             if ext == ".pdf":
-                pages = extract_pdf_pages(path)
+                pages = extract_pdf_pages(
+                    path,
+                    max_pages=settings.MAX_PAGES,
+                    max_total_chars=settings.MAX_TOTAL_CHARS
+                )
             else:
-                pages = extract_docx_pages(path)
+                pages = extract_docx_pages(
+                    path,
+                    max_pages=settings.MAX_PAGES,
+                    max_total_chars=settings.MAX_TOTAL_CHARS
+                )
             
             try:
                 os.remove(path)
@@ -385,5 +417,7 @@ async def detect_gaps(
         db.commit()
 
         return JSONResponse(gaps)
+    except ParsingLimitError as exc:
+        return _lengthy_response(exc.detail)
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
