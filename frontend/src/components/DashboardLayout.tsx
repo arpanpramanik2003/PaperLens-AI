@@ -42,11 +42,9 @@ export default function DashboardLayout() {
       >
         <div className="h-full flex flex-col w-64 lg:w-auto">
           {/* Logo */}
-          <div className="h-14 flex items-center gap-2 px-4 border-b border-border/50 flex-shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-              <Search className="w-4 h-4 text-accent-foreground" />
-            </div>
-            {sidebarOpen && <span className="font-semibold text-foreground text-sm whitespace-nowrap">PaperLens AI</span>}
+          <div className="h-14 flex items-center justify-center px-4 border-b border-border/50 flex-shrink-0">
+            <img src="/favicon.svg" alt="PaperLens Logo" className="w-8 h-8 flex-shrink-0" />
+            {sidebarOpen && <span className="font-semibold text-foreground whitespace-nowrap ml-2">PaperLens AI</span>}
           </div>
 
           {/* Nav */}
@@ -111,9 +109,13 @@ export default function DashboardLayout() {
         {/* Top Navbar */}
         <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-border/50 glass-surface sticky top-0 z-20 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
+            <div className="lg:hidden flex items-center gap-2">
+              <img src="/favicon.svg" alt="PaperLens Logo" className="w-6 h-6" />
+              <span className="font-semibold text-sm">PaperLens AI</span>
+            </div>
             <div className="hidden sm:flex items-center">
               <span className="font-mono text-xs text-muted-foreground">
                 {navItems.find((i) => i.path === location.pathname)?.title || "Dashboard"}

@@ -34,9 +34,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 glass-surface border-b border-border/50">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-              <Search className="w-4 h-4 text-accent-foreground" />
-            </div>
+            <img src="/favicon.svg" alt="PaperLens Logo" className="w-7 h-7" />
             <span className="font-semibold text-foreground">PaperLens AI</span>
           </Link>
           <div className="flex items-center gap-3">
