@@ -1,46 +1,46 @@
-# Backend Guide
+# PaperLens AI Backend
 
-This backend exposes the document analysis and grounded question answering API for PaperLens AI.
+FastAPI backend for document analysis, grounded Q&A, experiment planning, problem generation, and gap detection.
 
 ## Stack
 
-- FastAPI
-- Uvicorn
-- Groq Python SDK
-- sentence-transformers
-- FAISS CPU
-- rank-bm25
-- pdfplumber
-- python-docx
+- FastAPI + Uvicorn
+- SQLAlchemy + PostgreSQL (Supabase)
+- Clerk JWT authentication
+- Groq LLM API
+- sentence-transformers + FAISS + BM25
+- pdfplumber + python-docx
 
 ## Directory Layout
 
 ```text
 backend/
-|-- app/
-|   |-- api/
-|   |-- core/
-|   |-- models/
-|   `-- services/
-|-- requirements.txt
-|-- uploads/
-|-- .env.example
-`-- README.md
+├─ app/
+│  ├─ api/
+│  ├─ core/
+│  ├─ models/
+│  └─ services/
+├─ requirements.txt
+├─ uploads/
+└─ README.md
 ```
 
-## Setup
+## Setup (Windows PowerShell)
 
 ```powershell
 cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-Copy-Item .env.example .env
 ```
 
-Dependencies are pinned in requirements.txt and configured to use CPU-only PyTorch wheels, which is better for Render prototype deployments.
+Create `backend/.env` manually with at least:
 
-Add your Groq API key to the created .env file.
+```env
+DATABASE_URL=postgresql://...
+CLERK_SECRET_KEY=sk_...
+GROQ_API_KEY=gsk_...
+```
 
 ## Run
 
@@ -49,123 +49,80 @@ cd backend
 uvicorn app.main:app --reload
 ```
 
-Default local URL:
+Default URL: `http://localhost:8000`
 
-- http://localhost:8000
+## Authentication
 
-## Deployment (Render)
+- Most `/api/*` routes require `Authorization: Bearer <Clerk JWT>`.
+- Token verification uses Clerk JWKS (`app/core/security.py`).
+- Public endpoint: `GET /health`.
 
-The backend is configured for deployment on [Render](https://render.com/) via the `render.yaml` file in the project root.
+## API Endpoints
 
-1. Create a new **Blueprint** service on Render.
-2. Connect your GitHub repository.
-3. Configure environment variables in the Render dashboard:
-   - `DATABASE_URL`
-   - `CLERK_SECRET_KEY`
-   - `GROQ_API_KEY`
+### Public
 
-## Useful endpoints
+- `GET /health`
 
-- GET /health
-- POST /api/analyze
-- POST /api/analyze_stream
-- POST /api/ask
-- POST /api/ask_stream
+### Protected
 
-## Configuration
+- `GET /api/test-auth`
+- `GET /api/dashboard`
+- `GET /api/documents`
+- `POST /api/analyze`
+- `POST /api/analyze_stream`
+- `POST /api/ask`
+- `POST /api/ask_stream`
+- `POST /api/plan-experiment`
+- `POST /api/generate-problems`
+- `POST /api/detect-gaps`
 
-Environment variables are loaded in app/core/config.py.
+For full request/response contracts, see `../docs/API_REFERENCE.md`.
+
+## Environment Variables
+
+Configured in `app/core/config.py`.
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| GROQ_API_KEY | Yes | empty | Authentication for Groq API |
-| GROQ_MODEL | No | llama-3.1-8b-instant | Chat model used for analysis and Q and A |
-| EMBEDDING_MODEL | No | all-MiniLM-L6-v2 | Dense embedding model |
-| RERANKER_MODEL | No | cross-encoder/ms-marco-MiniLM-L-6-v2 | Reranking model |
-| UPLOAD_FOLDER | No | uploads | Temporary uploaded file storage |
-| CHUNK_SIZE | No | 1200 | Chunk size in characters |
-| CHUNK_OVERLAP | No | 220 | Overlap between chunks |
-| TOP_K | No | 5 | Final number of retrieved chunks |
-| MAX_UPLOAD_MB | No | 12 | Reject files above this upload size |
-| MAX_PAGES | No | 12 | Reject documents above this page count |
-| MAX_TOTAL_CHARS | No | 120000 | Reject documents with too much extracted text |
-
-## API Contract
-
-### POST /api/analyze
-
-Request:
-
-- multipart form data
-- file field name must be file
-
-Response:
-
-```json
-{
-  "result": "markdown analysis",
-  "doc_id": "12charhash"
-}
-```
-
-### POST /api/analyze_stream
-
-Request:
-
-- multipart form data
-- file field name must be file
-
-Response:
-
-- plain text stream
-- first line starts with __DOC_ID__:
-- subsequent text is the streamed analysis body
-
-### POST /api/ask
-
-Request:
-
-```json
-{
-  "question": "What results are reported?",
-  "doc_id": "12charhash"
-}
-```
-
-Response:
-
-```json
-{
-  "answer": "..."
-}
-```
-
-### POST /api/ask_stream
-
-Request body matches /api/ask and returns a plain text stream.
+| `DATABASE_URL` | Yes | none | PostgreSQL/Supabase connection string |
+| `CLERK_SECRET_KEY` | Yes | none | Clerk key used to fetch JWKS |
+| `GROQ_API_KEY` | Yes | none | Groq API auth |
+| `GROQ_MODEL` | No | `llama-3.1-8b-instant` | LLM model name |
+| `EMBEDDING_MODEL` | No | `all-MiniLM-L6-v2` | Embedding model |
+| `RERANKER_MODEL` | No | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Cross-encoder reranker |
+| `UPLOAD_FOLDER` | No | `uploads` | Temporary upload directory |
+| `CHUNK_SIZE` | No | `1200` | Chunk size (chars) |
+| `CHUNK_OVERLAP` | No | `220` | Chunk overlap (chars) |
+| `TOP_K` | No | `5` | Retrieved chunk count |
+| `MAX_UPLOAD_MB` | No | `12` | Max upload size |
+| `MAX_PAGES` | No | `12` | Max extracted pages |
+| `MAX_TOTAL_CHARS` | No | `120000` | Max extracted chars |
+| `MAX_CHUNKS` | No | `220` | Max chunks processed |
+| `EMBEDDING_BATCH_SIZE` | No | `16` | Embedding batch size |
+| `ENABLE_RERANKER` | No | `false` | Enable CrossEncoder reranking |
+| `MAX_CACHED_DOCS` | No | `1` | In-memory cached docs |
 
 ## Processing Pipeline
 
-1. Parse PDF or DOCX content.
-2. Split text into sentence-aware overlapping chunks.
-3. Encode chunks using sentence-transformers.
-4. Build FAISS and BM25 indexes.
-5. Select paper sections and metrics for analysis generation.
-6. Cache the finished analysis and retrieval structures by document ID.
-7. Answer follow-up questions from retrieved chunk context.
+1. Validate uploaded PDF/DOCX and enforce limits.
+2. Extract text (`pdfplumber` / `python-docx`).
+3. Sentence-aware chunking with overlap.
+4. Build dense (FAISS) + sparse (BM25) indexes.
+5. Generate structured analysis via Groq.
+6. Cache analysis + indexes in memory.
+7. Answer follow-up questions via hybrid retrieval.
 
-## Implementation Notes
+## Deployment (Render)
 
-- CORS is configured permissively for local development.
-- Cache storage is in memory only.
-- Uploaded files are deleted after successful processing when possible.
-- The retrieval layer combines dense and sparse search before reranking.
-- Some answers may include inferred content, and the prompt instructs the model to label that explicitly.
+Root-level `render.yaml` deploys this backend with:
 
-## Limitations
+- build: `pip install -r requirements.txt`
+- start: `uvicorn app.main:app --host 0.0.0.0 --port 10000`
+- env vars: `DATABASE_URL`, `CLERK_SECRET_KEY`, `GROQ_API_KEY`
 
-- No persistent database
-- No authentication
-- No test suite yet
-- No OCR pipeline for image-only PDFs
-- Model loading can increase cold-start time
+## Notes & Limitations
+
+- In-memory cache is not persistent across restarts.
+- No OCR pipeline for image-only PDFs.
+- CORS is permissive by default; tighten for production.
+- Model loading can cause first-request latency.
