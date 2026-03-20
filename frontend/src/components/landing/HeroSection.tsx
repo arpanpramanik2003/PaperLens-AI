@@ -25,14 +25,13 @@ export default function HeroSection() {
         </motion.div>
 
         <motion.h1
-          className="text-3xl sm:text-4xl lg:text-6xl font-semibold tracking-tighter text-balance leading-[1.1] mb-6"
+          className="text-3xl sm:text-4xl lg:text-6xl font-semibold tracking-tighter text-balance leading-[1.0] mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease }}
         >
           <span className="text-shimmer">Understand Research Papers</span>
-          <br />
-          <span className="text-foreground">in Minutes, Not Hours</span>
+          <span className="block text-foreground mt-0">in Minutes, Not Hours</span>
         </motion.h1>
 
         <motion.p
