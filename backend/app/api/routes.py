@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.models.domain import Document, Activity
 
 from app.core.config import settings
-from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
@@ -351,6 +351,35 @@ async def generate_problems(payload: ProblemGeneratorRequest, user_id: str = Dep
         db.commit()
 
         return JSONResponse(ideas)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/expand-problem")
+async def expand_problem(payload: ProblemDetailRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        from app.services.llm import expand_problem_details
+
+        details = expand_problem_details(
+            payload.domain,
+            payload.subdomain,
+            payload.complexity,
+            payload.idea,
+        )
+
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="expand_problem",
+            metadata_json={
+                "domain": payload.domain,
+                "subdomain": payload.subdomain,
+                "title": payload.idea.get("title", "") if isinstance(payload.idea, dict) else ""
+            },
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(details)
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
 

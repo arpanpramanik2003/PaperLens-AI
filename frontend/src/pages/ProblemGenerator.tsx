@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lightbulb, Star, ArrowRight, Sparkles } from "lucide-react";
+import { Lightbulb, Star, ArrowRight, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,14 +15,22 @@ export default function ProblemGenerator() {
   const [subdomain, setSubdomain] = useState("");
   const [complexity, setComplexity] = useState("medium");
   const [ideas, setIdeas] = useState<any[]>([]);
+  const [ideaDetails, setIdeaDetails] = useState<Record<number, any>>({});
+  const [expandedIdeaIndex, setExpandedIdeaIndex] = useState<number | null>(null);
+  const [expandingIdeaIndex, setExpandingIdeaIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
+
+  const selectedIdea = expandedIdeaIndex !== null ? ideas[expandedIdeaIndex] : null;
+  const selectedIdeaDetails = expandedIdeaIndex !== null ? ideaDetails[expandedIdeaIndex] : null;
 
   const handleGenerate = async () => {
     if (!domain.trim()) return;
 
     setGenerated(false);
     setIdeas([]);
+    setIdeaDetails({});
+    setExpandedIdeaIndex(null);
 
     if (!userId) {
       setLoading(true);
@@ -58,6 +66,71 @@ export default function ProblemGenerator() {
       alert("Failed to generate research problems.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const buildDemoDetails = (idea: any) => ({
+    title: idea.title,
+    problem_statement: idea.desc,
+    objective: "Build and validate a reproducible solution pipeline for this exact problem statement.",
+    step_by_step: [
+      { step: 1, title: "Scope the exact research gap", details: "Define baseline limitations and specify what improvement is expected." },
+      { step: 2, title: "Prepare dataset and inputs", details: "Select benchmark datasets and create train/validation/test splits." },
+      { step: 3, title: "Design model pipeline", details: "Implement a baseline and a proposed improved architecture." },
+      { step: 4, title: "Train and tune", details: "Run controlled experiments with tracked hyperparameters and ablations." },
+      { step: 5, title: "Evaluate with metrics", details: "Compare against baselines using domain-appropriate metrics." },
+      { step: 6, title: "Document outcomes", details: "Summarize gains, failures, and next iteration targets." }
+    ],
+    datasets: ["Domain benchmark dataset", "Validation split"],
+    evaluation_metrics: ["Primary task metric", "Inference efficiency"],
+    expected_outcomes: ["Validated improvement over baseline", "Clear roadmap for next iteration"]
+  });
+
+  const handleUseIdea = async (idea: any, index: number) => {
+    if (expandedIdeaIndex === index) {
+      setExpandedIdeaIndex(null);
+      return;
+    }
+
+    if (ideaDetails[index]) {
+      setExpandedIdeaIndex(index);
+      return;
+    }
+
+    if (!domain.trim()) return;
+
+    if (!userId) {
+      const demoDetails = buildDemoDetails(idea);
+      setIdeaDetails((prev) => ({ ...prev, [index]: demoDetails }));
+      setExpandedIdeaIndex(index);
+      return;
+    }
+
+    try {
+      setExpandingIdeaIndex(index);
+      const res = await apiClient.fetch("/api/expand-problem", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          domain,
+          subdomain,
+          complexity,
+          idea
+        })
+      }, getToken);
+
+      if (!res.ok) throw new Error("Failed to expand problem details");
+
+      const data = await res.json();
+      setIdeaDetails((prev) => ({ ...prev, [index]: data }));
+      setExpandedIdeaIndex(index);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load detailed problem statement.");
+    } finally {
+      setExpandingIdeaIndex(null);
     }
   };
 
@@ -136,12 +209,95 @@ export default function ProblemGenerator() {
                     <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{tag}</span>
                   ))}
                 </div>
-                <Button size="sm" variant="outline" className="gap-1.5 text-xs group-hover:border-accent/30 group-hover:text-accent transition-colors">
-                  Use this idea <ArrowRight className="w-3 h-3" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-xs border-border/60 bg-secondary/40 text-foreground hover:bg-secondary hover:text-foreground hover:border-border transition-colors"
+                  onClick={() => handleUseIdea(idea, i)}
+                  disabled={expandingIdeaIndex === i}
+                >
+                  {expandingIdeaIndex === i ? "Loading details..." : expandedIdeaIndex === i ? "Hide details" : "Use this idea"}
+                  <ArrowRight className="w-3 h-3" />
                 </Button>
               </motion.div>
             ))}
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedIdea && selectedIdeaDetails && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/40 p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setExpandedIdeaIndex(null)}
+          >
+            <motion.div
+              className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-xl border border-border/50 bg-card p-5 sm:p-6"
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.2, ease }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground leading-snug">{selectedIdeaDetails.title || selectedIdea.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Detailed problem brief</p>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => setExpandedIdeaIndex(null)} className="h-8 w-8">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Problem Statement</p>
+                  <p className="text-sm text-foreground/90 leading-relaxed">{selectedIdeaDetails.problem_statement || selectedIdea.desc}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Objective</p>
+                  <p className="text-sm text-foreground/90 leading-relaxed">{selectedIdeaDetails.objective || "Not provided"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Step-by-step Plan</p>
+                  <ol className="list-decimal pl-5 space-y-1.5 text-sm text-foreground/90">
+                    {(selectedIdeaDetails.step_by_step || []).map((step: any, stepIndex: number) => (
+                      <li key={`${step.title || "step"}-${stepIndex}`}>
+                        <span className="font-medium text-foreground">{step.title || `Step ${step.step || stepIndex + 1}`}: </span>
+                        <span>{step.details || "Details not provided."}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Datasets/Tools</p>
+                    <ul className="list-disc pl-4 text-xs text-foreground/80 space-y-0.5">
+                      {(selectedIdeaDetails.datasets || []).map((item: string, idx: number) => <li key={`${item}-${idx}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Metrics</p>
+                    <ul className="list-disc pl-4 text-xs text-foreground/80 space-y-0.5">
+                      {(selectedIdeaDetails.evaluation_metrics || []).map((item: string, idx: number) => <li key={`${item}-${idx}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Expected Outcomes</p>
+                    <ul className="list-disc pl-4 text-xs text-foreground/80 space-y-0.5">
+                      {(selectedIdeaDetails.expected_outcomes || []).map((item: string, idx: number) => <li key={`${item}-${idx}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

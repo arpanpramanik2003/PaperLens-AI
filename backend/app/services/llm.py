@@ -545,6 +545,74 @@ Guidelines:
     return json.loads(response.choices[0].message.content)
 
 
+def expand_problem_details(domain: str, subdomain: str, complexity: str, idea: dict) -> dict:
+
+        title = idea.get("title", "")
+        description = idea.get("desc", "")
+        tags = idea.get("tags", [])
+
+        prompt = f"""
+You are an expert AI research mentor.
+
+Given an EXISTING research problem idea, expand it into a practical, step-by-step execution brief.
+
+Important constraints:
+- Keep the SAME core problem statement; do not invent a different problem.
+- Keep the same research intent as the provided title and description.
+- Be concrete, practical, and implementation-oriented.
+
+You MUST respond strictly in JSON format matching this structure exactly:
+{{
+    "title": "Original problem title",
+    "problem_statement": "Refined one-paragraph statement of the same problem",
+    "objective": "Primary measurable objective",
+    "step_by_step": [
+        {{
+            "step": 1,
+            "title": "Step title",
+            "details": "What to do in this step"
+        }}
+    ],
+    "datasets": ["Dataset/tool 1"],
+    "evaluation_metrics": ["Metric 1"],
+    "expected_outcomes": ["Outcome 1"]
+}}
+
+Rules:
+- Generate 6 to 8 steps in step_by_step.
+- Keep each step clear and actionable.
+- Include only technically relevant datasets/tools.
+- Keep metrics aligned with the problem domain.
+
+Context:
+- Domain: {domain}
+- Subdomain: {subdomain}
+- Complexity: {complexity}
+- Title: {title}
+- Description: {description}
+- Tags: {", ".join(tags) if isinstance(tags, list) else str(tags)}
+"""
+
+        response = client.chat.completions.create(
+                model=settings.MODEL_NAME,
+                messages=[
+                        {
+                                "role": "system",
+                                "content": "You expand existing research ideas into detailed execution plans and return strict JSON."
+                        },
+                        {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
+        )
+
+        result = json.loads(response.choices[0].message.content)
+
+        if not result.get("title"):
+                result["title"] = title
+
+        return result
+
+
 def detect_research_gaps(analysis_text: str) -> dict:
 
     prompt = f"""

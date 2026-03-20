@@ -22,6 +22,14 @@ class ProblemGeneratorRequest(BaseModel):
     complexity: str
 
 
+class ProblemDetailRequest(BaseModel):
+
+    domain: str
+    subdomain: str
+    complexity: str
+    idea: dict
+
+
 class GapDetectionRequest(BaseModel):
 
     doc_id: str
