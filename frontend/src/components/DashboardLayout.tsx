@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
@@ -20,12 +20,106 @@ export default function DashboardLayout() {
   const { isLoaded, userId } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDark, setIsDark] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchInputRef = useRef(null);
+  const searchContainerRef = useRef(null);
 
   useEffect(() => {
     if (isLoaded && !userId) {
       navigate("/login", { replace: true });
     }
   }, [isLoaded, userId, navigate]);
+
+  // Get search results based on current page and query
+  const getSearchResults = () => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return [];
+
+    const currentPath = location.pathname;
+    const results = [];
+
+    // Always include navigation items
+    navItems.forEach((item) => {
+      if (item.title.toLowerCase().includes(query)) {
+        results.push({
+          title: item.title,
+          path: item.path,
+          description: `Navigate to ${item.title}`,
+        });
+      }
+    });
+
+    // Add page-specific search results
+    if (currentPath.includes("analyzer")) {
+      const analyzerItems = [
+        { title: "Upload Paper", path: "/dashboard/analyzer", description: "Upload and analyze research papers" },
+        { title: "View Analysis", path: "/dashboard/analyzer", description: "View paper analysis results" },
+        { title: "Ask Questions", path: "/dashboard/analyzer", description: "Ask follow-up questions about papers" },
+      ];
+      analyzerItems.forEach((item) => {
+        if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
+          if (!results.find(r => r.title === item.title)) {
+            results.push(item);
+          }
+        }
+      });
+    } else if (currentPath.includes("planner")) {
+      const plannerItems = [
+        { title: "Generate Plan", path: "/dashboard/planner", description: "Create experiment plans" },
+        { title: "View Steps", path: "/dashboard/planner", description: "See step-by-step instructions" },
+        { title: "Export Plan", path: "/dashboard/planner", description: "Download experiment plan" },
+      ];
+      plannerItems.forEach((item) => {
+        if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
+          if (!results.find(r => r.title === item.title)) {
+            results.push(item);
+          }
+        }
+      });
+    } else if (currentPath.includes("generator")) {
+      const generatorItems = [
+        { title: "Generate Problems", path: "/dashboard/generator", description: "Generate research problems" },
+        { title: "View Ideas", path: "/dashboard/generator", description: "Browse research ideas" },
+        { title: "Expand Idea", path: "/dashboard/generator", description: "Get detailed problem briefs" },
+      ];
+      generatorItems.forEach((item) => {
+        if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
+          if (!results.find(r => r.title === item.title)) {
+            results.push(item);
+          }
+        }
+      });
+    } else if (currentPath.includes("gaps")) {
+      const gapsItems = [
+        { title: "Detect Gaps", path: "/dashboard/gaps", description: "Identify research gaps" },
+        { title: "Analyze", path: "/dashboard/gaps", description: "Run gap detection analysis" },
+      ];
+      gapsItems.forEach((item) => {
+        if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
+          if (!results.find(r => r.title === item.title)) {
+            results.push(item);
+          }
+        }
+      });
+    }
+
+    return results.slice(0, 6); // Limit to 6 results
+  };
+
+  const searchResults = getSearchResults();
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   if (!isLoaded || !userId) {
     return null;
@@ -148,9 +242,34 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input placeholder="Search..." className="pl-9 h-8 w-56 text-sm bg-secondary/50 border-border/50" />
+            <div className="relative hidden md:block" ref={searchContainerRef}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Search..."
+                className="pl-9 h-8 w-56 text-sm bg-secondary/50 border-border/50"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSearchResults(true)}
+              />
+              {showSearchResults && searchQuery && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 mt-2 w-56 bg-card border border-border/50 rounded-lg shadow-lg overflow-hidden z-50">
+                  {searchResults.map((result, idx) => (
+                    <Link
+                      key={`${result.path}-${idx}`}
+                      to={result.path}
+                      onClick={() => {
+                        setSearchQuery("");
+                        setShowSearchResults(false);
+                      }}
+                      className="block px-4 py-2.5 text-sm text-foreground hover:bg-secondary/50 border-b border-border/30 last:border-b-0 transition-colors"
+                    >
+                      <div className="font-medium">{result.title}</div>
+                      <div className="text-xs text-muted-foreground">{result.description}</div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

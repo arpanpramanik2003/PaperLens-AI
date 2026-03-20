@@ -228,72 +228,168 @@ export default function ProblemGenerator() {
       <AnimatePresence>
         {selectedIdea && selectedIdeaDetails && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/40 p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setExpandedIdeaIndex(null)}
           >
             <motion.div
-              className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-xl border border-border/50 bg-card p-5 sm:p-6"
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/50 bg-gradient-to-b from-card to-card/95 shadow-2xl"
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.98 }}
-              transition={{ duration: 0.2, ease }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.25, ease }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground leading-snug">{selectedIdeaDetails.title || selectedIdea.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Detailed problem brief</p>
+              {/* Header */}
+              <div className="sticky top-0 z-10 bg-gradient-to-r from-card via-card to-accent/5 px-6 sm:px-8 py-5 border-b border-border/30 flex items-start justify-between gap-4 backdrop-blur-sm">
+                <div className="min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight truncate">
+                    {selectedIdeaDetails.title || selectedIdea.title}
+                  </h2>
+                  <p className="text-xs text-accent mt-1.5 font-medium uppercase tracking-wide">Detailed Execution Brief</p>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setExpandedIdeaIndex(null)} className="h-8 w-8">
-                  <X className="w-4 h-4" />
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={() => setExpandedIdeaIndex(null)} 
+                  className="h-9 w-9 flex-shrink-0 hover:bg-secondary/50"
+                >
+                  <X className="w-5 h-5" />
                 </Button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Problem Statement</p>
-                  <p className="text-sm text-foreground/90 leading-relaxed">{selectedIdeaDetails.problem_statement || selectedIdea.desc}</p>
+              {/* Content */}
+              <div className="px-6 sm:px-8 py-7 space-y-7">
+                {/* Problem Statement Section */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-6 bg-accent rounded-full" />
+                    <p className="text-xs uppercase tracking-widest font-semibold text-accent">Problem Statement</p>
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground/90 pl-2 border-l-2 border-accent/20 py-2">
+                    {selectedIdeaDetails.problem_statement || selectedIdea.desc}
+                  </p>
                 </div>
 
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Objective</p>
-                  <p className="text-sm text-foreground/90 leading-relaxed">{selectedIdeaDetails.objective || "Not provided"}</p>
+                {/* Objective Section */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-6 bg-accent rounded-full" />
+                    <p className="text-xs uppercase tracking-widest font-semibold text-accent">Primary Objective</p>
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground/90 pl-2 border-l-2 border-accent/20 py-2 font-medium">
+                    {selectedIdeaDetails.objective || "Not provided"}
+                  </p>
                 </div>
 
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Step-by-step Plan</p>
-                  <ol className="list-decimal pl-5 space-y-1.5 text-sm text-foreground/90">
-                    {(selectedIdeaDetails.step_by_step || []).map((step: any, stepIndex: number) => (
-                      <li key={`${step.title || "step"}-${stepIndex}`}>
-                        <span className="font-medium text-foreground">{step.title || `Step ${step.step || stepIndex + 1}`}: </span>
-                        <span>{step.details || "Details not provided."}</span>
-                      </li>
-                    ))}
-                  </ol>
+                {/* Step-by-Step Plan Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-1.5 h-6 bg-accent rounded-full" />
+                    <p className="text-xs uppercase tracking-widest font-semibold text-accent">Execution Roadmap</p>
+                  </div>
+                  
+                  <div className="space-y-2.5 pl-2">
+                    {(selectedIdeaDetails.step_by_step || []).map((step: any, stepIndex: number) => {
+                      const isLast = stepIndex === (selectedIdeaDetails.step_by_step || []).length - 1;
+                      return (
+                        <div key={`${step.title || "step"}-${stepIndex}`} className="relative">
+                          {/* Connector line */}
+                          {!isLast && (
+                            <div className="absolute left-6 top-12 h-4 w-0.5 bg-gradient-to-b from-accent/40 to-accent/10" />
+                          )}
+                          
+                          {/* Step card */}
+                          <div className="rounded-lg border border-border/40 bg-secondary/40 hover:bg-secondary/60 hover:border-accent/40 transition-all p-3.5 pl-12">
+                            {/* Step number circle */}
+                            <div className="absolute left-2.5 top-3.5 w-7 h-7 rounded-full bg-accent/20 border-2 border-accent flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-accent">
+                                {step.step || stepIndex + 1}
+                              </span>
+                            </div>
+                            
+                            <h4 className="font-semibold text-sm text-foreground mb-1">
+                              {step.title || `Step ${step.step || stepIndex + 1}`}
+                            </h4>
+                            <p className="text-xs leading-relaxed text-foreground/80">
+                              {step.details || "Details not provided."}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Datasets/Tools</p>
-                    <ul className="list-disc pl-4 text-xs text-foreground/80 space-y-0.5">
-                      {(selectedIdeaDetails.datasets || []).map((item: string, idx: number) => <li key={`${item}-${idx}`}>{item}</li>)}
+                {/* Resources Grid Section */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                  {/* Datasets */}
+                  <div className="rounded-xl border border-border/30 bg-secondary/30 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-4 bg-accent rounded" />
+                      <p className="text-xs uppercase tracking-widest font-semibold text-accent">Datasets & Tools</p>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {(selectedIdeaDetails.datasets || []).map((item: string, idx: number) => (
+                        <li key={`${item}-${idx}`} className="text-xs text-foreground/80 flex items-start gap-2">
+                          <span className="text-accent mt-1">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Metrics</p>
-                    <ul className="list-disc pl-4 text-xs text-foreground/80 space-y-0.5">
-                      {(selectedIdeaDetails.evaluation_metrics || []).map((item: string, idx: number) => <li key={`${item}-${idx}`}>{item}</li>)}
+
+                  {/* Metrics */}
+                  <div className="rounded-xl border border-border/30 bg-secondary/30 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-4 bg-accent rounded" />
+                      <p className="text-xs uppercase tracking-widest font-semibold text-accent">Evaluation Metrics</p>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {(selectedIdeaDetails.evaluation_metrics || []).map((item: string, idx: number) => (
+                        <li key={`${item}-${idx}`} className="text-xs text-foreground/80 flex items-start gap-2">
+                          <span className="text-accent mt-1">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Expected Outcomes</p>
-                    <ul className="list-disc pl-4 text-xs text-foreground/80 space-y-0.5">
-                      {(selectedIdeaDetails.expected_outcomes || []).map((item: string, idx: number) => <li key={`${item}-${idx}`}>{item}</li>)}
+
+                  {/* Outcomes */}
+                  <div className="rounded-xl border border-border/30 bg-secondary/30 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-4 bg-accent rounded" />
+                      <p className="text-xs uppercase tracking-widest font-semibold text-accent">Expected Outcomes</p>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {(selectedIdeaDetails.expected_outcomes || []).map((item: string, idx: number) => (
+                        <li key={`${item}-${idx}`} className="text-xs text-foreground/80 flex items-start gap-2">
+                          <span className="text-accent mt-1">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
+                </div>
+
+                {/* Footer CTA */}
+                <div className="pt-4 border-t border-border/20 flex gap-3">
+                  <Button 
+                    className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 flex-1"
+                    onClick={() => setExpandedIdeaIndex(null)}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Start Research
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setExpandedIdeaIndex(null)}
+                  >
+                    Export Brief
+                  </Button>
                 </div>
               </div>
             </motion.div>
