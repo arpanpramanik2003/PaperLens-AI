@@ -7,7 +7,7 @@ const ease = [0.2, 0, 0, 1] as const;
 
 export default function HeroSection() {
   return (
-    <section className="relative pt-32 pb-24 overflow-hidden">
+    <section id="home" className="relative pt-32 pb-24 overflow-hidden scroll-mt-20">
       <div className="absolute inset-0 grid-pattern" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-accent/5 blur-[120px]" />

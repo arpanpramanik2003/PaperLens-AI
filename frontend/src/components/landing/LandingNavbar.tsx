@@ -7,6 +7,13 @@ type LandingNavbarProps = {
   onToggleTheme: () => void;
 };
 
+const navLinks = [
+  { label: "Home", href: "#home" },
+  { label: "Explore", href: "#features" },
+  { label: "How it works", href: "#how-it-works" },
+  { label: "About", href: "#about" },
+];
+
 export default function LandingNavbar({ isDark, onToggleTheme }: LandingNavbarProps) {
   return (
     <nav className="fixed top-0 w-full z-50 glass-surface border-b border-border/50">
@@ -15,6 +22,18 @@ export default function LandingNavbar({ isDark, onToggleTheme }: LandingNavbarPr
           <img src="/favicon.svg" alt="PaperLens Logo" className="w-7 h-7 flex-shrink-0" />
           <span className="font-semibold text-foreground hidden sm:inline">PaperLens AI</span>
         </Link>
+
+        <div className="hidden md:flex items-center gap-5">
+          {navLinks.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <Button
