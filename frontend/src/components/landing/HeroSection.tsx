@@ -1,7 +1,6 @@
-import { motion } from "framer-motion";
-import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
+﻿import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -44,21 +43,35 @@ export default function HeroSection() {
         </motion.p>
 
         <motion.div
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3, ease }}
         >
-          <Link to="/signup" className="w-full sm:w-auto">
-            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 w-full">
-              Get Started <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-          <Link to="/dashboard" className="w-full sm:w-auto">
-            <Button size="lg" variant="outline" className="gap-2 w-full">
-              Try Demo <ChevronRight className="w-4 h-4" />
-            </Button>
-          </Link>
+          <div className="flex-shrink-0">
+            <Link to="/signup" className="inline-block">
+              <button className="btn-get-started" type="button">
+                Get started
+                <div className="icon">
+                  <svg height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M16.172 11l-5.364-5.364 1.414-1.414L20 12l-7.778 7.778-1.414-1.414L16.172 13H4v-2z" fill="currentColor"></path>
+                  </svg>
+                </div>
+              </button>
+            </Link>
+          </div>
+          <div className="flex-shrink-0">
+            <a href="#features" className="inline-block">
+              <button className="btn-explore" type="button">
+                <span className="btn-explore-layer"></span>
+                <span className="btn-explore-layer"></span>
+                <span className="btn-explore-layer"></span>
+                <span className="btn-explore-text">Explore</span>
+                <span className="btn-explore-text-hover">Go!</span>
+              </button>
+            </a>
+          </div>
         </motion.div>
       </div>
     </section>
