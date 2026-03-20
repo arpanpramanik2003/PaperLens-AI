@@ -25,7 +25,8 @@ const MarkdownComponents: any = {
 const normalizeMarkdown = (value: string) => {
   return value
     .replace(/\r\n/g, "\n")
-    .replace(/([^\n])\s*(##\s+)/g, "$1\n\n$2")
+    .replace(/([^\n])\s*(#{2,6})(?!#)\s*/g, "$1\n\n$2 ")
+    .replace(/^(\s*#{2,6})([^\s#])/gm, "$1 $2")
     .replace(/^\s*\*\*(.*?)\*\*\s*$/gm, "## $1");
 };
 
@@ -334,7 +335,7 @@ export default function PaperAnalyzer() {
                         {msg.role === "ai" ? (
                           <div className="text-sm">
                             <ReactMarkdown components={MarkdownComponents}>
-                              {msg.text}
+                              {normalizeMarkdown(msg.text)}
                             </ReactMarkdown>
                           </div>
                         ) : (

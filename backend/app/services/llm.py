@@ -9,6 +9,28 @@ from app.services.retrieval import search_chunks
 client = Groq(api_key=settings.GROQ_API_KEY)
 
 
+def enforce_strict_analysis_format(text):
+
+    if not text:
+        return text
+
+    cleaned = text.replace("\r\n", "\n")
+
+    cleaned = re.sub(r"([^\n])\s*(#{2,6})(?!#)\s*", r"\1\n\n\2 ", cleaned)
+    cleaned = re.sub(r"^(\s*#{2,6})([^\s#])", r"\1 \2", cleaned, flags=re.MULTILINE)
+
+    first_heading = re.search(
+        r"^\s*##\s*(Summary|Problem Statement|Methodology|Results(?:\s*\(.*?\))?|Limitations|Future Work)\b",
+        cleaned,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+
+    if first_heading:
+        cleaned = cleaned[first_heading.start():]
+
+    return cleaned.strip()
+
+
 def summarize_chunks(chunks):
 
     summaries = []
@@ -220,6 +242,11 @@ You are a research assistant.
 Write a structured analysis of the paper using ONLY the context provided for each section.
 
 Rules:
+- Output MUST start with exactly "## Summary" as the first non-whitespace text.
+- Do NOT include any title, preface, greeting, or text before "## Summary".
+- Use each required section heading exactly once and in this order.
+- Put every heading on its own line using markdown (## Heading).
+- Leave one blank line between sections.
 - If a section context is empty, you may infer likely points, but label them clearly as "Inferred:".
 - Use citations like [Page 2] to support any explicit claims.
 - Keep each section concise and specific.
@@ -261,13 +288,13 @@ Context:
         messages=[
             {
                 "role": "system",
-                "content": "You write structured research summaries with citations and label inferred items clearly."
+                "content": "You write strict markdown research summaries. Never add a title before the first required heading."
             },
             {"role": "user", "content": prompt}
         ]
     )
 
-    return response.choices[0].message.content
+    return enforce_strict_analysis_format(response.choices[0].message.content)
 
 
 def stream_completion(prompt, system_text):
