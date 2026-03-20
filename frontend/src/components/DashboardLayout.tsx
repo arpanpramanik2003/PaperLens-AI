@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton } from "@clerk/clerk-react";
+import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -16,8 +16,20 @@ const navItems = [
 
 export default function DashboardLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isLoaded, userId } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    if (isLoaded && !userId) {
+      navigate("/login", { replace: true });
+    }
+  }, [isLoaded, userId, navigate]);
+
+  if (!isLoaded || !userId) {
+    return null;
+  }
 
   const toggleTheme = () => {
     setIsDark(!isDark);

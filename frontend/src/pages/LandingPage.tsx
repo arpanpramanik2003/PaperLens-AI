@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FileText, Lightbulb, FlaskConical, Search, ArrowRight, Upload, Sparkles, MessageSquare, Star, ChevronRight, Github, Mail, X, Linkedin } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 
 const ease = [0.2, 0, 0, 1] as const;
@@ -28,6 +29,14 @@ const testimonials = [
 export default function LandingPage() {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
   const [showAbout, setShowAbout] = useState(false);
+  const navigate = useNavigate();
+  const { isLoaded, userId } = useAuth();
+
+  useEffect(() => {
+    if (isLoaded && userId) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isLoaded, userId, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
