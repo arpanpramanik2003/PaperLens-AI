@@ -13,6 +13,7 @@ import PaperAnalyzer from "./pages/PaperAnalyzer";
 import ExperimentPlanner from "./pages/ExperimentPlanner";
 import ProblemGenerator from "./pages/ProblemGenerator";
 import GapDetection from "./pages/GapDetection";
+import DatasetBenchmarkFinder from "./pages/DatasetBenchmarkFinder";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="planner" element={<ExperimentPlanner />} />
               <Route path="generator" element={<ProblemGenerator />} />
               <Route path="gaps" element={<GapDetection />} />
+              <Route path="dataset-benchmarks" element={<DatasetBenchmarkFinder />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />

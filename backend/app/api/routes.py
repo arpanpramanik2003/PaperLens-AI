@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.models.domain import Document, Activity
 
 from app.core.config import settings
-from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
@@ -448,5 +448,41 @@ async def detect_gaps(
         return JSONResponse(gaps)
     except ParsingLimitError as exc:
         return _lengthy_response(exc.detail)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/find-datasets-benchmarks")
+async def find_datasets_benchmarks(
+    payload: DatasetBenchmarkFinderRequest,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        project_title = (payload.project_title or "").strip()
+        project_plan = (payload.project_plan or "").strip()
+
+        if not project_title and not project_plan:
+            return JSONResponse(
+                {"error": "Please provide project title or project plan."},
+                status_code=400
+            )
+
+        from app.services.llm import generate_dataset_benchmark_finder
+
+        recommendations = generate_dataset_benchmark_finder(project_title, project_plan)
+
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="find_datasets_benchmarks",
+            metadata_json={
+                "project_title": project_title,
+                "has_project_plan": bool(project_plan),
+            }
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(recommendations)
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)

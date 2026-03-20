@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
-import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Database, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ const navItems = [
   { title: "Experiment Planner", path: "/dashboard/planner", icon: FlaskConical },
   { title: "Problem Generator", path: "/dashboard/generator", icon: Lightbulb },
   { title: "Gap Detection", path: "/dashboard/gaps", icon: ScanSearch },
+  { title: "Dataset & Benchmark Finder", path: "/dashboard/dataset-benchmarks", icon: Database },
   { title: "Settings", path: "/dashboard/settings", icon: Settings },
 ];
 
@@ -96,6 +97,19 @@ export default function DashboardLayout() {
         { title: "Analyze", path: "/dashboard/gaps", description: "Run gap detection analysis" },
       ];
       gapsItems.forEach((item) => {
+        if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
+          if (!results.find(r => r.title === item.title)) {
+            results.push(item);
+          }
+        }
+      });
+    } else if (currentPath.includes("dataset-benchmarks")) {
+      const finderItems = [
+        { title: "Find Datasets", path: "/dashboard/dataset-benchmarks", description: "Get domain-specific dataset recommendations" },
+        { title: "Find Benchmarks", path: "/dashboard/dataset-benchmarks", description: "Discover suitable benchmark suites and metrics" },
+        { title: "Technology Stack", path: "/dashboard/dataset-benchmarks", description: "See commonly used frameworks and tools" },
+      ];
+      finderItems.forEach((item) => {
         if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
           if (!results.find(r => r.title === item.title)) {
             results.push(item);

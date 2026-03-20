@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, FlaskConical, Lightbulb, ScanSearch, Clock, ArrowUpRight } from "lucide-react";
+import { FileText, FlaskConical, Lightbulb, ScanSearch, Database, Clock, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
@@ -27,6 +27,7 @@ const quickActions = [
   { title: "Plan Experiment", desc: "Create a research plan", path: "/dashboard/planner", icon: FlaskConical },
   { title: "Generate Ideas", desc: "Get problem statements", path: "/dashboard/generator", icon: Lightbulb },
   { title: "Detect Gaps", desc: "Find research gaps", path: "/dashboard/gaps", icon: ScanSearch },
+  { title: "Dataset Finder", desc: "Find datasets & benchmarks", path: "/dashboard/dataset-benchmarks", icon: Database },
 ];
 
 export default function DashboardHome() {

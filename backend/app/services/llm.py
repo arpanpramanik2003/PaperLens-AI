@@ -650,3 +650,86 @@ Paper Summary:
     )
     
     return json.loads(response.choices[0].message.content)
+
+
+def generate_dataset_benchmark_finder(project_title: str, project_plan: str) -> dict:
+
+        prompt = f"""
+You are an expert AI research advisor.
+
+Given a project title and/or project plan, recommend the most suitable:
+1) Datasets
+2) Benchmarks
+3) Commonly used technologies/frameworks in this domain
+
+You MUST return strict JSON in this exact structure:
+{{
+    "domain_summary": "1-2 line understanding of the project domain",
+    "datasets": [
+        {{
+            "name": "Dataset name",
+            "fit_score": 4.7,
+            "short_description": "Why this dataset is useful",
+            "best_for": ["use-case 1", "use-case 2"],
+            "details": {{
+                "modality": "Text/Image/Audio/Multimodal/etc",
+                "size": "Approx size or sample count",
+                "license": "Known license or 'Varies'",
+                "tasks": ["task 1", "task 2"],
+                "pros": ["pro 1", "pro 2"],
+                "limitations": ["limitation 1", "limitation 2"],
+                "source_hint": "Where users can usually find it"
+            }}
+        }}
+    ],
+    "benchmarks": [
+        {{
+            "name": "Benchmark name",
+            "fit_score": 4.6,
+            "short_description": "Why this benchmark matches the project",
+            "details": {{
+                "primary_metrics": ["metric 1", "metric 2"],
+                "evaluation_protocol": "How evaluation is typically performed",
+                "baselines": ["baseline 1", "baseline 2"],
+                "what_good_looks_like": "What constitutes strong performance",
+                "pitfalls": ["pitfall 1", "pitfall 2"]
+            }}
+        }}
+    ],
+    "technologies": [
+        {{
+            "name": "Technology name",
+            "category": "Framework/Library/Tool/MLOps",
+            "reason": "Why this is commonly used",
+            "used_for": ["purpose 1", "purpose 2"]
+        }}
+    ]
+}}
+
+Rules:
+- Use project title and plan jointly when available.
+- If one is missing, infer carefully from the available input.
+- Return 4-6 datasets.
+- Return 3-5 benchmarks.
+- Return 5-8 technologies.
+- fit_score must be a number from 1.0 to 5.0.
+- Keep details practical and specific for implementation decisions.
+- No markdown, no prose outside JSON.
+
+Project title:
+{project_title}
+
+Project plan:
+{project_plan}
+"""
+
+        response = client.chat.completions.create(
+                model=settings.MODEL_NAME,
+                messages=[
+                        {"role": "system", "content": "You return strictly valid JSON for AI project dataset and benchmark recommendations."},
+                        {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
+        )
+
+        return json.loads(response.choices[0].message.content)

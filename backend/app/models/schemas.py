@@ -33,3 +33,9 @@ class ProblemDetailRequest(BaseModel):
 class GapDetectionRequest(BaseModel):
 
     doc_id: str
+
+
+class DatasetBenchmarkFinderRequest(BaseModel):
+
+    project_title: Optional[str] = None
+    project_plan: Optional[str] = None
