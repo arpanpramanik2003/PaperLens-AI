@@ -5,33 +5,70 @@
 </p>
 
 <p align="center">
-  <b>Turn research papers into insights, plans, and ideas.</b>
+  <b>Understand papers faster. Generate stronger ideas. Build research with confidence.</b>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-61DAFB?logo=react&logoColor=black" alt="Frontend" />
   <img src="https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white" alt="Backend" />
   <img src="https://img.shields.io/badge/Auth-Clerk-6C47FF" alt="Auth" />
+  <img src="https://img.shields.io/badge/Data-PostgreSQL%20(Supabase)-3ECF8E" alt="Data" />
   <img src="https://img.shields.io/badge/LLM-Groq-F55036" alt="LLM" />
 </p>
 
-PaperLens AI is a full-stack research assistant that helps you analyze papers, ask grounded questions, detect gaps, and generate experiment plans or research problem statements.
+---
 
-## ✨ Highlights
+## Why PaperLens AI
 
-- **Paper Analyzer**: Upload PDF/DOCX, get structured analysis, and chat with document context.
-- **Gap Detection**: Find missing opportunities from project text or uploaded papers.
-- **Experiment Planner**: Generate actionable, step-wise research execution plans.
-- **Problem Generator**: Create domain-aware research ideas with complexity control.
-- **Dashboard Metrics**: Track analyzed papers and activity stats.
+PaperLens AI is a full-stack research assistant for students, researchers, and builders who need to move from raw papers to actionable output quickly.
 
-## 🧱 Architecture
+It combines document analysis, grounded Q&A, research gap discovery, experiment planning, problem ideation, and dataset/benchmark recommendations in one workflow-driven platform.
 
-- **Frontend**: React + Vite + TypeScript + Tailwind + shadcn/ui
-- **Backend**: FastAPI + SQLAlchemy + Hybrid RAG (FAISS + BM25)
-- **Auth**: Clerk JWT-based API auth
-- **Data**: PostgreSQL (Supabase compatible)
-- **LLM**: Groq
+---
+
+## Core Capabilities
+
+### 1) Paper Analyzer
+- Upload PDF/DOCX and receive structured markdown analysis.
+- Ask follow-up questions grounded in parsed paper context.
+- Supports both non-streaming and streaming backend endpoints.
+
+### 2) Experiment Planner
+- Generate step-wise execution plans from topic and difficulty.
+- Includes practical details, params, and risk notes.
+
+### 3) Problem Generator
+- Generate domain/subdomain-aware research problems.
+- Expand a selected idea into a deeper execution brief.
+
+### 4) Gap Detection
+- Detect research gaps from uploaded files or pasted text.
+- Returns severity + actionable suggestions.
+
+### 5) Dataset & Benchmark Finder
+- Recommends suitable datasets, benchmarks, and common technologies.
+- Includes fit scores and practical detail objects for implementation decisions.
+
+### 6) Dashboard Analytics
+- Tracks key activity (papers analyzed, plans, ideas, gaps, etc.).
+- Shows recent documents and usage summaries.
+
+---
+
+## Tech Stack
+
+| Layer | Stack |
+|---|---|
+| Frontend | React, Vite, TypeScript, Tailwind, shadcn/ui, framer-motion |
+| Backend | FastAPI, SQLAlchemy |
+| Auth | Clerk JWT |
+| Retrieval | BM25 + optional FAISS + optional reranker |
+| Data | PostgreSQL (Supabase-compatible) |
+| LLM | Groq |
+
+---
+
+## Project Structure
 
 ```text
 paper_explainer/
@@ -43,17 +80,19 @@ paper_explainer/
 └─ README.md
 ```
 
-## 🚀 Quick Start
+---
+
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.10+
 - Node.js 18+
-- Clerk account
-- PostgreSQL URL
+- Clerk account (publishable + secret keys)
+- PostgreSQL connection URL
 - Groq API key
 
-### 1) Backend
+### 1) Backend setup
 
 ```powershell
 cd backend
@@ -70,13 +109,13 @@ CLERK_SECRET_KEY=sk_...
 GROQ_API_KEY=gsk_...
 ```
 
-Run:
+Run backend:
 
 ```powershell
 uvicorn app.main:app --reload
 ```
 
-### 2) Frontend
+### 2) Frontend setup
 
 ```powershell
 cd frontend
@@ -90,18 +129,20 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 VITE_API_URL=http://localhost:8000
 ```
 
-Run:
+Run frontend:
 
 ```powershell
 npm run dev
 ```
 
-## 🔌 API Snapshot
+---
 
-Public:
+## API Snapshot
+
+### Public
 - `GET /health`
 
-Protected:
+### Protected
 - `GET /api/test-auth`
 - `GET /api/dashboard`
 - `GET /api/documents`
@@ -111,23 +152,56 @@ Protected:
 - `POST /api/ask_stream`
 - `POST /api/plan-experiment`
 - `POST /api/generate-problems`
+- `POST /api/expand-problem`
 - `POST /api/detect-gaps`
+- `POST /api/find-datasets-benchmarks`
 
-See full contracts in `docs/API_REFERENCE.md`.
+For full contracts, examples, and validation notes, see `docs/API_REFERENCE.md`.
 
-## 🌍 Deployment
+---
 
-- **Backend**: Render (`render.yaml`)
-- **Frontend**: Vercel (`vercel.json`)
+## Configuration (Important)
 
-## 📚 Docs
+### Required backend env
+- `DATABASE_URL`
+- `CLERK_SECRET_KEY`
+- `GROQ_API_KEY`
 
-- Project analysis: `docs/PROJECT_ANALYSIS.md`
+### Common backend tuning
+- `GROQ_MODEL`, `EMBEDDING_MODEL`, `RERANKER_MODEL`
+- `TOP_K`, `CHUNK_SIZE`, `CHUNK_OVERLAP`
+- `MAX_UPLOAD_MB`, `MAX_PAGES`, `MAX_TOTAL_CHARS`, `MAX_CHUNKS`
+- `ENABLE_VECTOR_RETRIEVAL`, `ENABLE_RERANKER`, `MAX_CACHED_DOCS`
+
+### Required frontend env
+- `VITE_CLERK_PUBLISHABLE_KEY`
+
+### Recommended frontend env
+- `VITE_API_URL`
+
+---
+
+## Deploy
+
+- Backend: Render via `render.yaml`
+- Frontend: Vercel via `vercel.json`
+
+---
+
+## Documentation Hub
+
+- Primary analysis: `docs/PROJECT_ANALYSIS.md`
 - API reference: `docs/API_REFERENCE.md`
-- Paper analyzer flow: `docs/PAPER_ANALYZER_LLM_FLOW.md`
+- Paper Analyzer workflow: `docs/1_PAPER_ANALYZER.md`
+- Experiment Planner workflow: `docs/2_EXPERIMENT_PLANNER.md`
+- Problem Generator workflow: `docs/3_PROBLEM_GENERATOR.md`
+- Gap Detection workflow: `docs/4_GAP_DETECTION.md`
+- Dataset & Benchmark Finder workflow: `docs/5_DATASET_BENCHMARK_FINDER.md`
 - Backend guide: `backend/README.md`
 - Frontend guide: `frontend/README.md`
 
-## 📄 License
+---
+
+## License
 
 MIT License. See `LICENSE`.
