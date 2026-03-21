@@ -1,4 +1,4 @@
-import { Brain, FileText, FlaskConical, Lightbulb, Search } from "lucide-react";
+import { BarChart3, Brain, FileText, FlaskConical, Lightbulb, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type Feature = {
@@ -50,6 +50,14 @@ export const features: Feature[] = [
     desc: "Discover optimal datasets and benchmarks for your research projects. Get intelligent recommendations tailored to your specific research needs and domain.",
     highlights: ["Dataset discovery", "Benchmark recommendations", "Domain matching"],
     color: "from-indigo-500 to-blue-500",
+  },
+  {
+    id: 5,
+    icon: BarChart3,
+    title: "Citation Intelligence",
+    desc: "Extract references from papers, enrich them with Semantic Scholar citation metadata, and get AI-guided reading recommendations for faster literature review.",
+    highlights: ["Reference extraction", "Citation ranking", "AI reading guidance"],
+    color: "from-blue-500 to-violet-500",
   },
 ];
 

@@ -5,6 +5,7 @@ import ExperimentPlannerWindow from "./windows/ExperimentPlannerWindow";
 import GapDetectionWindow from "./windows/GapDetectionWindow";
 import PaperAnalyzerWindow from "./windows/PaperAnalyzerWindow";
 import ProblemGeneratorWindow from "./windows/ProblemGeneratorWindow";
+import CitationIntelligenceWindow from "./windows/CitationIntelligenceWindow";
 
 type FeatureDemoWindowProps = {
   feature: Feature;
@@ -17,5 +18,6 @@ export default function FeatureDemoWindow({ feature, index }: FeatureDemoWindowP
   if (index === 2) return <ExperimentPlannerWindow />;
   if (index === 3) return <GapDetectionWindow />;
   if (index === 4) return <DatasetBenchmarkWindow />;
+  if (index === 5) return <CitationIntelligenceWindow />;
   return <AnimatedWindowCard feature={feature} index={index} />;
 }
