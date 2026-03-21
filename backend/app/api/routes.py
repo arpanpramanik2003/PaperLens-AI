@@ -12,13 +12,13 @@ from app.core.database import get_db
 from app.models.domain import Document, Activity
 
 from app.core.config import settings
-from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest, CitationDiscoveryRequest
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
 from app.services.parsing import extract_docx_pages, extract_pdf_pages, ParsingLimitError
 from app.services.retrieval import build_vector_store
-from app.services.citation_intelligence import run_citation_intelligence
+from app.services.citation_intelligence import run_citation_intelligence, discover_citations_by_topic
 
 router = APIRouter()
 
@@ -587,6 +587,7 @@ async def citation_intelligence_recommendations(
             paper_context=(payload.paper_context or "").strip(),
             top_cited=payload.top_cited or [],
             missing_references=payload.missing_references or [],
+            recommendation_mode=(payload.recommendation_mode or "upload"),
         )
 
         db_activity = Activity(
@@ -601,5 +602,50 @@ async def citation_intelligence_recommendations(
         db.commit()
 
         return JSONResponse(recommendations)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/citation-intelligence/discover")
+async def citation_intelligence_discover(
+    payload: CitationDiscoveryRequest,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        project_title = (payload.project_title or "").strip()
+        basic_details = (payload.basic_details or "").strip()
+        limit = payload.limit or 35
+
+        if not project_title:
+            return JSONResponse({"error": "Project title is required."}, status_code=400)
+
+        if not settings.SEMANTIC_SCHOLAR_API_KEY:
+            return JSONResponse(
+                {"error": "Semantic Scholar API key is not configured on the server."},
+                status_code=500,
+            )
+
+        report = discover_citations_by_topic(
+            semantic_scholar_api_key=settings.SEMANTIC_SCHOLAR_API_KEY,
+            project_title=project_title,
+            basic_details=basic_details,
+            limit=limit,
+        )
+
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="citation_discovery",
+            metadata_json={
+                "project_title": project_title,
+                "references_processed": report.get("references_processed", 0),
+            },
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(report)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)

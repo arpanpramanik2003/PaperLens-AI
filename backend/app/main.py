@@ -37,7 +37,10 @@ async def get_dashboard(user_id: str = Depends(get_current_user), db: Session = 
     experiments_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "plan_experiment").count()
     ideas_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "generate_problems").count()
     gaps_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "detect_gaps").count()
-    citation_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "citation_intelligence").count()
+    citation_count = db.query(Activity).filter(
+        Activity.user_id == user_id,
+        Activity.action_type.in_(["citation_intelligence", "citation_discovery"])
+    ).count()
     
     recent_docs = db.query(Document).filter(Document.user_id == user_id).order_by(Document.created_at.desc()).limit(5).all()
     

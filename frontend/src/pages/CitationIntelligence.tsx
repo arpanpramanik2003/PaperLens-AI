@@ -44,23 +44,59 @@ type CitationRecommendations = {
 export default function CitationIntelligence() {
   const { getToken } = useAuth();
 
+  const [mode, setMode] = useState<"upload" | "discover">("upload");
   const [file, setFile] = useState<File | null>(null);
+  const [projectTitle, setProjectTitle] = useState("");
+  const [basicDetails, setBasicDetails] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [report, setReport] = useState<CitationReport | null>(null);
+  const [resultMode, setResultMode] = useState<"upload" | "discover" | null>(null);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
   const [recommendations, setRecommendations] = useState<CitationRecommendations | null>(null);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const processSteps = [
-    "Uploading file",
-    "Extracting references section",
-    "Parsing bibliography entries",
-    "Matching with Semantic Scholar",
-    "Ranking by citation count",
-  ];
+  const processStepsByMode = {
+    upload: [
+      "Uploading file",
+      "Extracting references section",
+      "Parsing bibliography entries",
+      "Matching with Semantic Scholar",
+      "Ranking by citation count",
+    ],
+    discover: [
+      "Understanding project context",
+      "Searching Semantic Scholar",
+      "Collecting 30+ related papers",
+      "Ranking by citation and year",
+      "Generating AI reading recommendations",
+    ],
+  } as const;
+
+  const processSteps = processStepsByMode[mode];
+
+  const modeIntro = {
+    upload: {
+      title: "Paper-based citation analysis",
+      description: "Upload a research paper to extract its references, match them with Semantic Scholar, and rank citations for faster literature review.",
+      points: [
+        "Extract references directly from uploaded PDF/DOCX",
+        "Match references with Semantic Scholar metadata",
+        "Filter by newest, oldest, and citation impact",
+      ],
+    },
+    discover: {
+      title: "Project-domain paper discovery",
+      description: "Share a project title with optional context to discover 30+ relevant papers, then prioritize what to read using citation-based ranking and AI guidance.",
+      points: [
+        "Searches related papers for your project domain",
+        "Returns structured references with citation counts",
+        "Generates AI recommendations on what to read first",
+      ],
+    },
+  } as const;
 
   useEffect(() => {
     if (!loading) {
@@ -73,7 +109,7 @@ export default function CitationIntelligence() {
     }, 1200);
 
     return () => window.clearInterval(timer);
-  }, [loading]);
+  }, [loading, processSteps.length]);
 
   const getYear = (value: number | null) => (typeof value === "number" ? value : null);
 
@@ -113,6 +149,21 @@ export default function CitationIntelligence() {
     return items;
   }, [report, sortOrder]);
 
+  const yearwiseCounts = useMemo(() => {
+    if (!report) return [] as Array<{ year: number; count: number }>;
+
+    const counts = new Map<number, number>();
+    for (const entry of report.references || []) {
+      if (typeof entry.year === "number") {
+        counts.set(entry.year, (counts.get(entry.year) || 0) + 1);
+      }
+    }
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[0] - a[0])
+      .map(([year, count]) => ({ year, count }));
+  }, [report]);
+
   const buildPaperContext = (currentReport: CitationReport) => {
     const matchedTitles = currentReport.top_cited
       .slice(0, 12)
@@ -128,7 +179,7 @@ export default function CitationIntelligence() {
     return `Matched reference titles: ${matchedTitles}\n\nReference sample:\n${referenceSample}`;
   };
 
-  const fetchRecommendations = async (currentReport: CitationReport) => {
+  const fetchRecommendations = async (currentReport: CitationReport, recommendationMode: "upload" | "discover") => {
     setRecommendationLoading(true);
     setRecommendationError(null);
     setRecommendations(null);
@@ -150,6 +201,7 @@ export default function CitationIntelligence() {
             paper_context: buildPaperContext(currentReport),
             top_cited: currentReport.top_cited || [],
             missing_references: missingReferences,
+            recommendation_mode: recommendationMode,
           }),
         },
         getToken
@@ -169,7 +221,7 @@ export default function CitationIntelligence() {
     }
   };
 
-  const handleRun = async () => {
+  const handleUploadRun = async () => {
     if (!file) return;
 
     try {
@@ -198,9 +250,52 @@ export default function CitationIntelligence() {
 
       const parsedReport = data as CitationReport;
       setReport(parsedReport);
-      await fetchRecommendations(parsedReport);
+      setResultMode("upload");
+      await fetchRecommendations(parsedReport, "upload");
     } catch (err: any) {
       setError(err?.message || "Failed to run citation intelligence.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDiscoverRun = async () => {
+    if (!projectTitle.trim()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      setReport(null);
+      setRecommendations(null);
+      setRecommendationError(null);
+
+      const res = await apiClient.fetch(
+        "/api/citation-intelligence/discover",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            project_title: projectTitle,
+            basic_details: basicDetails,
+            limit: 35,
+          }),
+        },
+        getToken
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to discover citations for this project.");
+      }
+
+      const parsedReport = data as CitationReport;
+      setReport(parsedReport);
+      setResultMode("discover");
+      await fetchRecommendations(parsedReport, "discover");
+    } catch (err: any) {
+      setError(err?.message || "Failed to discover citations for this project.");
     } finally {
       setLoading(false);
     }
@@ -213,7 +308,7 @@ export default function CitationIntelligence() {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
         <h1 className="text-2xl font-semibold tracking-tight mb-1">Citation Intelligence</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Upload a paper to extract references, match them with Semantic Scholar, and rank citations from highest to lowest.
+          {modeIntro[mode].description}
         </p>
       </motion.div>
 
@@ -223,36 +318,103 @@ export default function CitationIntelligence() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease }}
       >
-        <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <input
-            type="file"
-            id="citation-file"
-            className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            accept=".pdf,.docx"
-          />
-          <label
-            htmlFor="citation-file"
-            className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-md border border-border/60 bg-secondary/40 text-sm cursor-pointer hover:bg-secondary/60 transition-colors"
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/50 border border-border/50 w-fit mb-3">
+          <button
+            onClick={() => setMode("upload")}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+              mode === "upload" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <Upload className="w-4 h-4" />
-            Choose File
-          </label>
-
-          <div className="min-w-0 flex-1 h-10 rounded-md border border-border/60 bg-background/50 px-3 flex items-center">
-            <p className="text-sm text-foreground truncate">{file ? file.name : "No file selected"}</p>
-          </div>
-
-          <Button onClick={handleRun} disabled={!file || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8">
-            <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
-            {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
-          </Button>
+            Upload Paper
+          </button>
+          <button
+            onClick={() => setMode("discover")}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+              mode === "discover" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Project Discovery
+          </button>
         </div>
 
-        <p className="text-xs text-muted-foreground mt-2">PDF/DOCX • Max 12MB</p>
+        {mode === "upload" ? (
+          <>
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <input
+                type="file"
+                id="citation-file"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                accept=".pdf,.docx"
+              />
+              <label
+                htmlFor="citation-file"
+                className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-md border border-border/60 bg-secondary/40 text-sm cursor-pointer hover:bg-secondary/60 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Choose File
+              </label>
+
+              <div className="min-w-0 flex-1 h-10 rounded-md border border-border/60 bg-background/50 px-3 flex items-center">
+                <p className="text-sm text-foreground truncate">{file ? file.name : "No file selected"}</p>
+              </div>
+
+              <Button onClick={handleUploadRun} disabled={!file || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8">
+                <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+                {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-2">PDF/DOCX • Max 12MB</p>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-3">
+              <input
+                type="text"
+                value={projectTitle}
+                onChange={(e) => setProjectTitle(e.target.value)}
+                placeholder="Project title (required)"
+                className="h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+              />
+              <input
+                type="text"
+                value={basicDetails}
+                onChange={(e) => setBasicDetails(e.target.value)}
+                placeholder="Basic details (optional): domain, method, dataset"
+                className="h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+              />
+              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8">
+                <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+                {loading ? "Discovering papers..." : "Discover 30+ Papers"}
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-2">Finds up to 35 related papers from Semantic Scholar for your topic</p>
+          </>
+        )}
 
         {error && <p className="text-sm text-destructive mt-3">{error}</p>}
       </motion.div>
+
+      {!report && !loading && (
+        <motion.div
+          className="rounded-xl border border-border/50 bg-card p-4 mb-6"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <p className="text-sm font-semibold text-foreground mb-1">{modeIntro[mode].title}</p>
+          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{modeIntro[mode].description}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {modeIntro[mode].points.map((point) => (
+              <div key={point} className="rounded-lg border border-border/50 bg-secondary/30 px-3 py-2">
+                <p className="text-xs text-foreground/90 leading-relaxed">{point}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {loading && (
         <motion.div
@@ -288,24 +450,54 @@ export default function CitationIntelligence() {
 
       {report && (
         <div className="space-y-8">
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-border/50 bg-card p-4">
-              <p className="text-xs text-muted-foreground">Extracted</p>
-              <p className="text-xl font-semibold">{report.total_references_extracted}</p>
-            </div>
-            <div className="rounded-xl border border-border/50 bg-card p-4">
-              <p className="text-xs text-muted-foreground">Processed</p>
-              <p className="text-xl font-semibold">{report.references_processed}</p>
-            </div>
-            <div className="rounded-xl border border-border/50 bg-card p-4">
-              <p className="text-xs text-muted-foreground">Matched</p>
-              <p className="text-xl font-semibold">{report.matched_count}</p>
-            </div>
-            <div className="rounded-xl border border-border/50 bg-card p-4">
-              <p className="text-xs text-muted-foreground">Missing</p>
-              <p className="text-xl font-semibold">{report.missing_count}</p>
-            </div>
-          </section>
+          {resultMode === "discover" ? (
+            <section className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border/50 bg-card p-4">
+                  <p className="text-xs text-muted-foreground">Papers Gathered</p>
+                  <p className="text-xl font-semibold">{report.references_processed}</p>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-card p-4">
+                  <p className="text-xs text-muted-foreground">Year Buckets</p>
+                  <p className="text-xl font-semibold">{yearwiseCounts.length}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/50 bg-card p-4">
+                <p className="text-xs text-muted-foreground mb-2">Year-wise Count</p>
+                {yearwiseCounts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Year metadata not available in discovered papers.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {yearwiseCounts.map((item) => (
+                      <span key={item.year} className="text-xs px-2.5 py-1 rounded-full border border-border/60 bg-secondary/40 text-foreground/90">
+                        {item.year}: {item.count}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          ) : (
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-border/50 bg-card p-4">
+                <p className="text-xs text-muted-foreground">Extracted</p>
+                <p className="text-xl font-semibold">{report.total_references_extracted}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-card p-4">
+                <p className="text-xs text-muted-foreground">Processed</p>
+                <p className="text-xl font-semibold">{report.references_processed}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-card p-4">
+                <p className="text-xs text-muted-foreground">Matched</p>
+                <p className="text-xl font-semibold">{report.matched_count}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-card p-4">
+                <p className="text-xs text-muted-foreground">Missing</p>
+                <p className="text-xl font-semibold">{report.missing_count}</p>
+              </div>
+            </section>
+          )}
 
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
             <div className="xl:col-span-3 space-y-6">
@@ -425,10 +617,10 @@ export default function CitationIntelligence() {
 
                 {!recommendationLoading && !recommendationError && recommendations && (
                   <div className="space-y-4">
-                    {recommendations.paper_focus && (
+                    {(recommendations.paper_focus || (recommendations as any).topic_focus) && (
                       <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Paper Focus</p>
-                        <p className="text-sm text-foreground/90 leading-relaxed">{recommendations.paper_focus}</p>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{resultMode === "discover" ? "Topic Focus" : "Paper Focus"}</p>
+                        <p className="text-sm text-foreground/90 leading-relaxed">{(recommendations as any).topic_focus || recommendations.paper_focus}</p>
                       </div>
                     )}
 

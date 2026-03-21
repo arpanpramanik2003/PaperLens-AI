@@ -46,3 +46,11 @@ class CitationRecommendationRequest(BaseModel):
     paper_context: Optional[str] = None
     top_cited: list[dict] = []
     missing_references: list[str] = []
+    recommendation_mode: Optional[str] = "upload"
+
+
+class CitationDiscoveryRequest(BaseModel):
+
+    project_title: str
+    basic_details: Optional[str] = None
+    limit: Optional[int] = 35

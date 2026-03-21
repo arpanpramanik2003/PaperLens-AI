@@ -407,3 +407,97 @@ def run_citation_intelligence(
         "references": results,
         "top_cited": top_cited,
     }
+
+
+def _build_reference_text_from_paper(paper: dict[str, Any]) -> str:
+
+    authors = [author.get("name", "") for author in (paper.get("authors") or []) if author.get("name")]
+    authors_text = ", ".join(authors[:6]) if authors else "Unknown authors"
+    title = paper.get("title") or "Untitled"
+    venue = paper.get("venue") or "Unknown venue"
+    year = paper.get("year")
+
+    if year:
+        return f"{authors_text}: {title}. {venue} ({year})"
+
+    return f"{authors_text}: {title}. {venue}"
+
+
+def discover_citations_by_topic(
+    semantic_scholar_api_key: str,
+    project_title: str,
+    basic_details: str = "",
+    limit: int = 35,
+) -> dict[str, Any]:
+
+    normalized_title = (project_title or "").strip()
+    normalized_details = (basic_details or "").strip()
+
+    if not normalized_title:
+        raise ValueError("Project title is required.")
+
+    requested_limit = max(30, min(limit or 35, 60))
+    query = f"{normalized_title} {normalized_details}".strip()
+
+    client = SemanticScholarClient(semantic_scholar_api_key)
+
+    try:
+        client._throttle()
+
+        headers = {}
+        if semantic_scholar_api_key:
+            headers["x-api-key"] = semantic_scholar_api_key
+
+        response = client._client.get(
+            "https://api.semanticscholar.org/graph/v1/paper/search",
+            params={
+                "query": query,
+                "limit": requested_limit,
+                "fields": "title,authors,year,citationCount,url,venue,paperId,abstract",
+            },
+            headers=headers,
+        )
+
+        client._last_request_time = time.monotonic()
+
+        if response.status_code in {401, 403}:
+            raise RuntimeError("Semantic Scholar API authentication failed.")
+
+        if response.status_code in {429, 503}:
+            raise RuntimeError("Semantic Scholar API rate limit reached. Please try again in a moment.")
+
+        response.raise_for_status()
+        payload = response.json()
+        papers = payload.get("data") or []
+
+        references = []
+        for index, paper in enumerate(papers, start=1):
+            authors = [author.get("name", "") for author in (paper.get("authors") or []) if author.get("name")]
+            references.append(
+                {
+                    "reference_index": index,
+                    "reference_text": _build_reference_text_from_paper(paper),
+                    "matched": True,
+                    "paper_id": paper.get("paperId"),
+                    "title": paper.get("title"),
+                    "year": paper.get("year"),
+                    "citation_count": paper.get("citationCount") or 0,
+                    "url": paper.get("url"),
+                    "venue": paper.get("venue"),
+                    "authors": authors,
+                    "abstract": paper.get("abstract"),
+                }
+            )
+
+        top_cited = sorted(references, key=lambda item: item.get("citation_count", 0), reverse=True)
+
+        return {
+            "total_references_extracted": len(references),
+            "references_processed": len(references),
+            "matched_count": len(references),
+            "missing_count": 0,
+            "references": references,
+            "top_cited": top_cited,
+        }
+    finally:
+        client.close()

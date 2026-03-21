@@ -739,6 +739,7 @@ def generate_citation_recommendations(
         paper_context: str,
         top_cited: list[dict],
         missing_references: list[str],
+    recommendation_mode: str = "upload",
 ) -> dict:
 
                 compact_top_cited = []
@@ -753,17 +754,23 @@ def generate_citation_recommendations(
                                 }
                         )
 
+                normalized_mode = (recommendation_mode or "upload").strip().lower()
+                is_discovery_mode = normalized_mode == "discover"
+
+                focus_label = "topic_focus" if is_discovery_mode else "paper_focus"
+                context_label = "Project/topic context" if is_discovery_mode else "Paper context"
+
                 prompt = f"""
 You are an AI research mentor.
 
 Task:
-1) Understand the paper context.
+1) Understand the provided context.
 2) Analyze citation evidence from matched top-cited references.
 3) Provide actionable reading suggestions.
 
 You MUST return strict JSON in this exact structure:
 {{
-    "paper_focus": "1-2 sentence summary of what this paper is mainly about",
+    "{focus_label}": "1-2 sentence summary of the focus inferred from the provided context",
     "must_read": [
         {{
             "title": "Paper title",
@@ -792,8 +799,12 @@ Rules:
 - Keep must_read between 3 and 6 entries when possible.
 - reading_path must contain exactly 3 concise steps.
 - next_search_queries must contain 3 to 5 practical scholar-search queries.
+- If mode is project discovery, avoid claiming an uploaded paper was analyzed.
 
-Paper context:
+Mode:
+{normalized_mode}
+
+{context_label}:
 {paper_context}
 
 Top cited references (JSON):
