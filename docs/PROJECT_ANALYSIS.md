@@ -1,6 +1,6 @@
 # PaperLens AI — Project Analysis
 
-_Last updated: 2026-03-19_
+_Last updated: 2026-03-21_
 
 ## 1) Executive Summary
 
@@ -39,9 +39,11 @@ The architecture is coherent and production-intent, but current docs were partia
 - Paper Q&A: `POST /api/ask`
 - Experiment Planner: `POST /api/plan-experiment`
 - Problem Generator: `POST /api/generate-problems`
+- Problem Expansion: `POST /api/expand-problem`
 - Gap Detection: `POST /api/detect-gaps`
+- Dataset & Benchmark Finder: `POST /api/find-datasets-benchmarks`
 
-Streaming endpoints exist in backend (`/api/analyze_stream`, `/api/ask_stream`) but the current frontend code path uses non-streaming variants.
+Streaming endpoints exist in backend (`/api/analyze_stream`, `/api/ask_stream`) but the current frontend code path still uses non-streaming variants.
 
 ## 4) Key Configuration Surface
 
@@ -88,7 +90,8 @@ Streaming endpoints exist in backend (`/api/analyze_stream`, `/api/ask_stream`) 
 - Root README rewritten to match real architecture and commands.
 - Frontend README expanded from placeholder to full setup/flow doc.
 - Backend README corrected and expanded (auth/database/API coverage).
-- New API reference added under `docs/API_REFERENCE.md`.
+- `docs/API_REFERENCE.md` refreshed to match current routes and schemas.
+- New feature workflow docs added and aligned, including `docs/5_DATASET_BENCHMARK_FINDER.md`.
 
 ## 8) Recommended Next Improvements
 
@@ -96,4 +99,5 @@ Streaming endpoints exist in backend (`/api/analyze_stream`, `/api/ask_stream`) 
 - Add at least smoke tests for auth + key API flows.
 - Use stricter CORS origin settings for non-local environments.
 - Consider persistent vector/document store for multi-document sessions.
-- Align frontend to streaming endpoints for better UX on long responses.
+- Align frontend analyzer/Q&A flows to streaming endpoints for better UX on long responses.
+- Add a short “Endpoint Change Log” section in API docs to reduce future drift.

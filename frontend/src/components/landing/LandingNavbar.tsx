@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type LandingNavbarProps = {
@@ -53,8 +53,12 @@ export default function LandingNavbar({ isDark, onToggleTheme }: LandingNavbarPr
             </Button>
           </Link>
           <Link to="/signup">
-            <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 text-xs sm:text-sm">
+            <Button
+              size="sm"
+              className="h-9 px-4 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:from-cyan-400 hover:to-violet-400 border border-cyan-400/40 text-xs sm:text-sm font-medium gap-1.5 shadow-sm"
+            >
               Get Started
+              <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </Link>
         </div>
