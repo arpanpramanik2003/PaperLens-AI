@@ -12,12 +12,13 @@ from app.core.database import get_db
 from app.models.domain import Document, Activity
 
 from app.core.config import settings
-from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
 from app.services.parsing import extract_docx_pages, extract_pdf_pages, ParsingLimitError
 from app.services.retrieval import build_vector_store
+from app.services.citation_intelligence import run_citation_intelligence
 
 router = APIRouter()
 
@@ -479,6 +480,122 @@ async def find_datasets_benchmarks(
                 "project_title": project_title,
                 "has_project_plan": bool(project_plan),
             }
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(recommendations)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/citation-intelligence")
+async def citation_intelligence(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        if not file.filename:
+            return JSONResponse({"error": "No file selected"}, status_code=400)
+
+        ext = os.path.splitext(file.filename.lower())[1]
+        if ext not in [".pdf", ".docx"]:
+            return JSONResponse({"error": "Only PDF or DOCX files allowed"}, status_code=400)
+
+        os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+
+        file.file.seek(0, os.SEEK_END)
+        size_bytes = file.file.tell()
+        file.file.seek(0)
+
+        if settings.MAX_UPLOAD_MB > 0 and size_bytes > settings.MAX_UPLOAD_MB * 1024 * 1024:
+            return JSONResponse({"error": f"File too large. Max allowed is {settings.MAX_UPLOAD_MB} MB."}, status_code=413)
+
+        path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
+
+        with open(path, "wb") as handle:
+            shutil.copyfileobj(file.file, handle)
+
+        if ext == ".pdf":
+            pages = extract_pdf_pages(
+                path,
+                max_pages=settings.MAX_PAGES,
+                max_total_chars=settings.MAX_TOTAL_CHARS
+            )
+        else:
+            pages = extract_docx_pages(
+                path,
+                max_pages=settings.MAX_PAGES,
+                max_total_chars=settings.MAX_TOTAL_CHARS
+            )
+
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+        if not pages:
+            return JSONResponse({"error": "Could not extract text"}, status_code=400)
+
+        _raise_if_paper_too_lengthy(pages)
+
+        if not settings.SEMANTIC_SCHOLAR_API_KEY:
+            return JSONResponse(
+                {"error": "Semantic Scholar API key is not configured on the server."},
+                status_code=500,
+            )
+
+        report = run_citation_intelligence(
+            pages=pages,
+            semantic_scholar_api_key=settings.SEMANTIC_SCHOLAR_API_KEY,
+            max_references=settings.CITATION_MAX_REFERENCES,
+        )
+
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="citation_intelligence",
+            metadata_json={
+                "filename": file.filename,
+                "references_processed": report.get("references_processed", 0),
+                "matched_count": report.get("matched_count", 0),
+                "missing_count": report.get("missing_count", 0),
+            },
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(report)
+    except PaperTooLengthyError as exc:
+        return _lengthy_response(exc.detail)
+    except ParsingLimitError as exc:
+        return _lengthy_response(exc.detail)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/citation-intelligence/recommendations")
+async def citation_intelligence_recommendations(
+    payload: CitationRecommendationRequest,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        from app.services.llm import generate_citation_recommendations
+
+        recommendations = generate_citation_recommendations(
+            paper_context=(payload.paper_context or "").strip(),
+            top_cited=payload.top_cited or [],
+            missing_references=payload.missing_references or [],
+        )
+
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="citation_recommendations",
+            metadata_json={
+                "top_cited_count": len(payload.top_cited or []),
+                "missing_count": len(payload.missing_references or []),
+            },
         )
         db.add(db_activity)
         db.commit()

@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
-import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Database, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ const navItems = [
   { title: "Problem Generator", path: "/dashboard/generator", icon: Lightbulb },
   { title: "Gap Detection", path: "/dashboard/gaps", icon: ScanSearch },
   { title: "Dataset & Benchmark Finder", path: "/dashboard/dataset-benchmarks", icon: Database },
+  { title: "Citation Intelligence", path: "/dashboard/citation-intelligence", icon: BarChart3 },
   { title: "Settings", path: "/dashboard/settings", icon: Settings },
 ];
 
@@ -110,6 +111,19 @@ export default function DashboardLayout() {
         { title: "Technology Stack", path: "/dashboard/dataset-benchmarks", description: "See commonly used frameworks and tools" },
       ];
       finderItems.forEach((item) => {
+        if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
+          if (!results.find(r => r.title === item.title)) {
+            results.push(item);
+          }
+        }
+      });
+    } else if (currentPath.includes("citation-intelligence")) {
+      const citationItems = [
+        { title: "Upload Paper", path: "/dashboard/citation-intelligence", description: "Upload a paper for citation analysis" },
+        { title: "Top Cited References", path: "/dashboard/citation-intelligence", description: "Sort matched references by citation count" },
+        { title: "Missing References", path: "/dashboard/citation-intelligence", description: "See references not found in Semantic Scholar" },
+      ];
+      citationItems.forEach((item) => {
         if (item.title.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)) {
           if (!results.find(r => r.title === item.title)) {
             results.push(item);

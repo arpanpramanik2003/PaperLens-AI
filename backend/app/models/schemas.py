@@ -39,3 +39,10 @@ class DatasetBenchmarkFinderRequest(BaseModel):
 
     project_title: Optional[str] = None
     project_plan: Optional[str] = None
+
+
+class CitationRecommendationRequest(BaseModel):
+
+    paper_context: Optional[str] = None
+    top_cited: list[dict] = []
+    missing_references: list[str] = []

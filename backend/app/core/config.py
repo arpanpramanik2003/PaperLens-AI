@@ -26,6 +26,7 @@ def _as_int(value, default):
 class Settings:
 
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")
     MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
     RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
@@ -41,6 +42,7 @@ class Settings:
     ENABLE_VECTOR_RETRIEVAL = _as_bool(os.getenv("ENABLE_VECTOR_RETRIEVAL", "false"), False)
     ENABLE_RERANKER = _as_bool(os.getenv("ENABLE_RERANKER", "false"), False)
     MAX_CACHED_DOCS = _as_int(os.getenv("MAX_CACHED_DOCS", "1"), 1)
+    CITATION_MAX_REFERENCES = _as_int(os.getenv("CITATION_MAX_REFERENCES", "35"), 35)
 
 
 settings = Settings()

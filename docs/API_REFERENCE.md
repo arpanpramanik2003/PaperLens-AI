@@ -312,7 +312,53 @@ At least one of file or text must be provided.
 
 ---
 
-## 9) Documents
+## 9) Citation Intelligence
+
+### POST /api/citation-intelligence
+- Auth: Yes
+- Request: multipart/form-data
+  - file: PDF or DOCX
+
+- Behavior:
+  - Extracts references from uploaded paper text.
+  - Queries Semantic Scholar per extracted reference.
+  - Returns references sorted by citation count in `top_cited`.
+  - Includes unmatched count (`missing_count`).
+
+- Response shape:
+
+```json
+{
+  "total_references_extracted": 47,
+  "references_processed": 35,
+  "matched_count": 28,
+  "missing_count": 7,
+  "references": [
+    {
+      "reference_index": 1,
+      "reference_text": "...",
+      "matched": true,
+      "paper_id": "abc123",
+      "title": "Paper title",
+      "year": 2020,
+      "citation_count": 134,
+      "url": "https://www.semanticscholar.org/...",
+      "venue": "NeurIPS",
+      "authors": ["Author A", "Author B"]
+    }
+  ],
+  "top_cited": []
+}
+```
+
+- Error examples:
+  - 400 invalid file type
+  - 413 upload/parsing limits exceeded
+  - 500 Semantic Scholar API key missing on server
+
+---
+
+## 10) Documents
 
 ### GET /api/documents
 - Auth: Yes
@@ -326,7 +372,7 @@ At least one of file or text must be provided.
 
 ---
 
-## 10) Request Model Summary
+## 11) Request Model Summary
 
 Current request models in backend/app/models/schemas.py:
 
@@ -353,7 +399,7 @@ Note: GapDetectionRequest class exists but /api/detect-gaps currently accepts mu
 
 ---
 
-## 11) Limits and Controls
+## 12) Limits and Controls
 
 Key backend controls (app.core.config settings):
 
@@ -362,5 +408,10 @@ Key backend controls (app.core.config settings):
 - MAX_TOTAL_CHARS
 - MAX_CHUNKS
 - TOP_K
+- CITATION_MAX_REFERENCES
+
+Citation Intelligence additionally requires:
+
+- SEMANTIC_SCHOLAR_API_KEY
 
 When parsing/size limits are exceeded, endpoints may return 413 with descriptive error text (and PAPER_TOO_LENGTHY code for analyzer paths).

@@ -733,3 +733,86 @@ Project plan:
         )
 
         return json.loads(response.choices[0].message.content)
+
+
+def generate_citation_recommendations(
+        paper_context: str,
+        top_cited: list[dict],
+        missing_references: list[str],
+) -> dict:
+
+                compact_top_cited = []
+                for entry in (top_cited or [])[:20]:
+                        compact_top_cited.append(
+                                {
+                                        "title": entry.get("title"),
+                                        "authors": entry.get("authors", [])[:5],
+                                        "year": entry.get("year"),
+                                        "citation_count": entry.get("citation_count", 0),
+                                        "venue": entry.get("venue"),
+                                }
+                        )
+
+                prompt = f"""
+You are an AI research mentor.
+
+Task:
+1) Understand the paper context.
+2) Analyze citation evidence from matched top-cited references.
+3) Provide actionable reading suggestions.
+
+You MUST return strict JSON in this exact structure:
+{{
+    "paper_focus": "1-2 sentence summary of what this paper is mainly about",
+    "must_read": [
+        {{
+            "title": "Paper title",
+            "why_read": "Why this paper is high-priority for the user",
+            "priority": "high|medium"
+        }}
+    ],
+    "reading_path": [
+        "Step 1 reading strategy",
+        "Step 2 reading strategy",
+        "Step 3 reading strategy"
+    ],
+    "coverage_gaps": [
+        "Topic gap inferred from missing or weak citations"
+    ],
+    "next_search_queries": [
+        "search query 1",
+        "search query 2",
+        "search query 3"
+    ]
+}}
+
+Rules:
+- Use only provided inputs.
+- Do not invent unknown paper titles; if uncertain, skip that item.
+- Keep must_read between 3 and 6 entries when possible.
+- reading_path must contain exactly 3 concise steps.
+- next_search_queries must contain 3 to 5 practical scholar-search queries.
+
+Paper context:
+{paper_context}
+
+Top cited references (JSON):
+{json.dumps(compact_top_cited, ensure_ascii=False)}
+
+Missing references (sample):
+{json.dumps((missing_references or [])[:10], ensure_ascii=False)}
+"""
+
+                response = client.chat.completions.create(
+                                model=settings.MODEL_NAME,
+                                messages=[
+                                                {
+                                                                "role": "system",
+                                                                "content": "You output only valid JSON for citation-based reading recommendations."
+                                                },
+                                                {"role": "user", "content": prompt}
+                                ],
+                                response_format={"type": "json_object"}
+                )
+
+                return json.loads(response.choices[0].message.content)
