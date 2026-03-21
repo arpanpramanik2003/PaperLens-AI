@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, FlaskConical, Lightbulb, ScanSearch, Database, Clock, ArrowUpRight } from "lucide-react";
+import { FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Clock, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
@@ -12,7 +12,8 @@ const iconMap = {
   FileText,
   FlaskConical,
   Lightbulb,
-  ScanSearch
+  ScanSearch,
+  BarChart3,
 };
 
 const defaultStats = [
@@ -20,6 +21,7 @@ const defaultStats = [
   { label: "Experiments Planned", value: "0", icon: "FlaskConical", change: "Get started" },
   { label: "Ideas Generated", value: "0", icon: "Lightbulb", change: "Get started" },
   { label: "Gaps Detected", value: "0", icon: "ScanSearch", change: "Get started" },
+  { label: "Citations Analyzed", value: "0", icon: "BarChart3", change: "Get started" },
 ];
 
 const quickActions = [
@@ -28,6 +30,7 @@ const quickActions = [
   { title: "Generate Ideas", desc: "Get problem statements", path: "/dashboard/generator", icon: Lightbulb },
   { title: "Detect Gaps", desc: "Find research gaps", path: "/dashboard/gaps", icon: ScanSearch },
   { title: "Dataset Finder", desc: "Find datasets & benchmarks", path: "/dashboard/dataset-benchmarks", icon: Database },
+  { title: "Citation Intelligence", desc: "Analyze references & citation impact", path: "/dashboard/citation-intelligence", icon: BarChart3 },
 ];
 
 export default function DashboardHome() {
@@ -48,6 +51,7 @@ export default function DashboardHome() {
               { label: "Experiments Planned", value: "12", icon: "FlaskConical", change: "+2 this week" },
               { label: "Ideas Generated", value: "89", icon: "Lightbulb", change: "+15 this week" },
               { label: "Gaps Detected", value: "31", icon: "ScanSearch", change: "+5 this week" },
+              { label: "Citations Analyzed", value: "19", icon: "BarChart3", change: "+4 this week" },
             ],
             recentPapers: [
               { title: "Attention Is All You Need", date: "2 hours ago", status: "Analyzed" },
@@ -83,7 +87,7 @@ export default function DashboardHome() {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {dashboardData.stats.map((s, i) => {
           const Icon = iconMap[s.icon as keyof typeof iconMap] || FileText;
           return (
