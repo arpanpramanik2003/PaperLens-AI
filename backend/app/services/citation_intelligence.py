@@ -1,5 +1,6 @@
 import re
 import time
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -437,7 +438,10 @@ def discover_citations_by_topic(
         raise ValueError("Project title is required.")
 
     requested_limit = max(30, min(limit or 35, 60))
+    fetch_limit = min(max(requested_limit * 3, requested_limit), 100)
     query = f"{normalized_title} {normalized_details}".strip()
+    current_year = datetime.utcnow().year
+    recent_year_cutoff = current_year - 3
 
     client = SemanticScholarClient(semantic_scholar_api_key)
 
@@ -452,7 +456,7 @@ def discover_citations_by_topic(
             "https://api.semanticscholar.org/graph/v1/paper/search",
             params={
                 "query": query,
-                "limit": requested_limit,
+                "limit": fetch_limit,
                 "fields": "title,authors,year,citationCount,url,venue,paperId,abstract",
             },
             headers=headers,
@@ -470,8 +474,49 @@ def discover_citations_by_topic(
         payload = response.json()
         papers = payload.get("data") or []
 
+        unique_papers: list[dict[str, Any]] = []
+        seen_keys: set[str] = set()
+        for paper in papers:
+            paper_id = (paper.get("paperId") or "").strip()
+            title = (paper.get("title") or "").strip().lower()
+            dedupe_key = paper_id or title
+            if not dedupe_key or dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            unique_papers.append(paper)
+
+        recent_papers = []
+        older_papers = []
+        for paper in unique_papers:
+            year = paper.get("year")
+            if isinstance(year, int) and year >= recent_year_cutoff:
+                recent_papers.append(paper)
+            else:
+                older_papers.append(paper)
+
+        ranked_recent_papers = sorted(
+            recent_papers,
+            key=lambda item: (
+                item.get("year") or 0,
+                item.get("citationCount") or 0,
+            ),
+            reverse=True,
+        )
+
+        ranked_older_papers = sorted(
+            older_papers,
+            key=lambda item: (
+                1 if isinstance(item.get("year"), int) else 0,
+                item.get("year") or 0,
+                item.get("citationCount") or 0,
+            ),
+            reverse=True,
+        )
+
+        papers_to_use = (ranked_recent_papers + ranked_older_papers)[:requested_limit]
+
         references = []
-        for index, paper in enumerate(papers, start=1):
+        for index, paper in enumerate(papers_to_use, start=1):
             authors = [author.get("name", "") for author in (paper.get("authors") or []) if author.get("name")]
             references.append(
                 {
@@ -489,13 +534,30 @@ def discover_citations_by_topic(
                 }
             )
 
-        top_cited = sorted(references, key=lambda item: item.get("citation_count", 0), reverse=True)
+        selected_year_distribution: dict[str, int] = {}
+        for item in references:
+            year = item.get("year")
+            year_key = str(year) if isinstance(year, int) else "unknown"
+            selected_year_distribution[year_key] = selected_year_distribution.get(year_key, 0) + 1
+
+        top_cited = sorted(
+            references,
+            key=lambda item: (
+                item.get("year") or 0,
+                item.get("citation_count", 0),
+            ),
+            reverse=True,
+        )
 
         return {
             "total_references_extracted": len(references),
             "references_processed": len(references),
             "matched_count": len(references),
             "missing_count": 0,
+            "recent_year_cutoff": recent_year_cutoff,
+            "recent_candidates_found": len(ranked_recent_papers),
+            "older_candidates_found": len(ranked_older_papers),
+            "selected_year_distribution": selected_year_distribution,
             "references": references,
             "top_cited": top_cited,
         }
