@@ -300,11 +300,16 @@ async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
     elif get_current_doc_id() is None:
         return JSONResponse({"error": "No document loaded. Please upload first."}, status_code=400)
 
-    from app.services.llm import answer_question
+    try:
+        from app.services.llm import answer_question
 
-    answer = answer_question(payload.question)
+        answer = answer_question(payload.question, payload.history)
 
-    return {"answer": answer}
+        return {"answer": answer}
+    except Exception:
+        return {
+            "answer": "I ran into a temporary issue while generating that response. Please try once more.",
+        }
 
 
 @router.post("/ask_stream")
@@ -320,7 +325,7 @@ async def ask_stream(payload: AskRequest, user_id: str = Depends(get_current_use
         return JSONResponse({"error": "No document loaded. Please upload first."}, status_code=400)
 
     def stream_response():
-        for token in stream_answer(payload.question):
+        for token in stream_answer(payload.question, payload.history):
             yield token
 
     return StreamingResponse(stream_response(), media_type="text/plain")

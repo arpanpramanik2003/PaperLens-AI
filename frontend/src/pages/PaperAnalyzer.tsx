@@ -136,6 +136,21 @@ export default function PaperAnalyzer() {
     const input = chatInput;
     setChatMessages((prev) => [...prev, { role: "user", text: input }]);
     setChatInput("");
+
+    const normalizedInput = input.trim().toLowerCase();
+    const acknowledgementRegex = /^(ok|okay|ok good|great|nice|cool|got it|understood|thanks|thank you|perfect|alright|all right)[.!\s]*$/i;
+
+    if (acknowledgementRegex.test(normalizedInput)) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          text: "Great — let me know if you want a summary, key findings, or deeper verification from the paper.",
+        },
+      ]);
+      return;
+    }
+
     setAiGenerating(true);
     
     if (!userId) {
@@ -153,7 +168,11 @@ export default function PaperAnalyzer() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ question: input, doc_id: docId })
+        body: JSON.stringify({
+          question: input,
+          doc_id: docId,
+          history: chatMessages.slice(-10)
+        })
       }, getToken);
       
       if (!res.ok) throw new Error("Chat failed");

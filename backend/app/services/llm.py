@@ -314,8 +314,121 @@ def stream_completion(prompt, system_text):
             yield delta.content
 
 
-def answer_question(question):
+def _normalize_history(history, max_turns=8):
+
+    if not history:
+        return []
+
+    normalized = []
+
+    for turn in history:
+        if not isinstance(turn, dict):
+            continue
+
+        role = (turn.get("role") or "").strip().lower()
+        text = (turn.get("text") or turn.get("content") or "").strip()
+
+        if not text:
+            continue
+
+        if role == "ai":
+            role = "assistant"
+        if role not in ["user", "assistant"]:
+            continue
+
+        normalized.append({"role": role, "text": text})
+
+    return normalized[-max_turns:]
+
+
+def _is_follow_up_question(question):
+
+    q = question.strip().lower()
+
+    follow_up_phrases = [
+        "are you sure",
+        "why",
+        "how so",
+        "what about",
+        "can you verify",
+        "can you confirm",
+        "explain that",
+        "what do you mean",
+        "really",
+        "is that correct",
+    ]
+
+    if len(q) <= 40:
+        return True
+
+    return any(phrase in q for phrase in follow_up_phrases)
+
+
+def _build_retrieval_query(question, history):
+
+    if not history:
+        return question
+
+    if not _is_follow_up_question(question):
+        return question
+
+    last_user_question = None
+    for turn in reversed(history):
+        if turn["role"] == "user" and turn["text"].strip().lower() != question.strip().lower():
+            last_user_question = turn["text"]
+            break
+
+    if not last_user_question:
+        return question
+
+    return f"{last_user_question}\nFollow-up: {question}"
+
+
+def _format_history_for_prompt(history):
+
+    if not history:
+        return ""
+
+    lines = []
+    for turn in history:
+        speaker = "User" if turn["role"] == "user" else "Assistant"
+        lines.append(f"{speaker}: {turn['text']}")
+
+    return "\n".join(lines)
+
+
+def _get_last_qa_pair(history):
+
+    if not history:
+        return ("", "")
+
+    last_user = ""
+    last_assistant = ""
+
+    for turn in reversed(history):
+        if not last_assistant and turn["role"] == "assistant":
+            last_assistant = turn["text"]
+        elif not last_user and turn["role"] == "user":
+            last_user = turn["text"]
+
+        if last_user and last_assistant:
+            break
+
+    return (last_user, last_assistant)
+
+
+def answer_question(question, history=None):
+    history_turns = _normalize_history(history)
+    is_follow_up = _is_follow_up_question(question)
+    prev_user_q, prev_assistant_a = _get_last_qa_pair(history_turns)
     q_lower = question.lower()
+
+    acknowledgement_phrases = {
+        "ok", "okay", "ok good", "great", "nice", "cool", "got it", "understood",
+        "thanks", "thank you", "perfect", "alright", "all right"
+    }
+    if q_lower.strip().rstrip(".! ") in acknowledgement_phrases:
+        return "Great — let me know if you want a summary, key findings, or deeper verification from the paper."
 
     if any(
         phrase in q_lower
@@ -344,7 +457,8 @@ def answer_question(question):
         else:
             return "Author names not found in the extracted first page."
 
-    relevant_chunks = search_chunks(question)
+    retrieval_query = _build_retrieval_query(question, history_turns)
+    relevant_chunks = search_chunks(retrieval_query)
 
     if "limitation" in question.lower() or "limitations" in question.lower():
         if not any("limitation" in c["text"].lower() for c in relevant_chunks):
@@ -358,26 +472,45 @@ def answer_question(question):
     for c in relevant_chunks:
         context += f"[Page {c['page']}]\n{c['text']}\n\n"
 
+    conversation_history = _format_history_for_prompt(history_turns)
+    follow_up_reference = ""
+
+    if is_follow_up and (prev_user_q or prev_assistant_a):
+        follow_up_reference = f"""
+Follow-up reference:
+- Previous user question: {prev_user_q or "(not available)"}
+- Previous assistant answer: {prev_assistant_a or "(not available)"}
+"""
+
     prompt = f"""
 You are a research assistant.
 
-Answer the question using the research paper context.
+Answer the latest user question using both conversation history and research paper context.
 
 Rules:
 - If the answer is not present, provide a brief inferred answer and label it as "Inferred:".
 - Cite page numbers like [Page 5] for any explicit claims.
-- Be concise and academic.
+- Be concise, academic, and conversationally aware.
+- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve what "that" refers to.
+- Do NOT say that prior context is missing when conversation history exists.
+- For confirmations like "are you sure?", explicitly confirm or correct the previous answer using the document context.
+
+Conversation history:
+{conversation_history or "(No prior turns)"}
+
+{follow_up_reference}
 
 Context:
 {context}
 
-Question:
+Latest question:
 {question}
 """
 
     response = client.chat.completions.create(
         model=settings.MODEL_NAME,
         messages=[
+            {"role": "system", "content": "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present."},
             {"role": "user", "content": prompt}
         ]
     )
@@ -385,8 +518,19 @@ Question:
     return response.choices[0].message.content
 
 
-def stream_answer(question):
+def stream_answer(question, history=None):
+    history_turns = _normalize_history(history)
+    is_follow_up = _is_follow_up_question(question)
+    prev_user_q, prev_assistant_a = _get_last_qa_pair(history_turns)
     q_lower = question.lower()
+
+    acknowledgement_phrases = {
+        "ok", "okay", "ok good", "great", "nice", "cool", "got it", "understood",
+        "thanks", "thank you", "perfect", "alright", "all right"
+    }
+    if q_lower.strip().rstrip(".! ") in acknowledgement_phrases:
+        yield "Great — let me know if you want a summary, key findings, or deeper verification from the paper."
+        return
 
     if any(
         phrase in q_lower
@@ -418,7 +562,8 @@ def stream_answer(question):
             yield "Author names not found in the extracted first page."
         return
 
-    relevant_chunks = search_chunks(question)
+    retrieval_query = _build_retrieval_query(question, history_turns)
+    relevant_chunks = search_chunks(retrieval_query)
 
     if "limitation" in question.lower() or "limitations" in question.lower():
         if not any("limitation" in c["text"].lower() for c in relevant_chunks):
@@ -434,26 +579,44 @@ def stream_answer(question):
     for c in relevant_chunks:
         context += f"[Page {c['page']}]\n{c['text']}\n\n"
 
+    conversation_history = _format_history_for_prompt(history_turns)
+    follow_up_reference = ""
+
+    if is_follow_up and (prev_user_q or prev_assistant_a):
+        follow_up_reference = f"""
+Follow-up reference:
+- Previous user question: {prev_user_q or "(not available)"}
+- Previous assistant answer: {prev_assistant_a or "(not available)"}
+"""
+
     prompt = f"""
 You are a research assistant.
 
-Answer the question using the research paper context.
+Answer the latest user question using both conversation history and research paper context.
 
 Rules:
 - If the answer is not present, provide a brief inferred answer and label it as "Inferred:".
 - Cite page numbers like [Page 5] for any explicit claims.
-- Be concise and academic.
+- Be concise, academic, and conversationally aware.
+- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve what "that" refers to.
+- Do NOT say that prior context is missing when conversation history exists.
+- For confirmations like "are you sure?", explicitly confirm or correct the previous answer using the document context.
+
+Conversation history:
+{conversation_history or "(No prior turns)"}
+
+{follow_up_reference}
 
 Context:
 {context}
 
-Question:
+Latest question:
 {question}
 """
 
     for token in stream_completion(
         prompt,
-        "You answer with strict grounding and citations."
+        "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present."
     ):
         yield token
 

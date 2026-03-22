@@ -7,6 +7,7 @@ class AskRequest(BaseModel):
 
     question: str
     doc_id: Optional[str] = None
+    history: Optional[list[dict]] = None
 
 
 class ExperimentPlanRequest(BaseModel):
