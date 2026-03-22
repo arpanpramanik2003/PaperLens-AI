@@ -1,0 +1,27 @@
+export const clerkAuthAppearance = {
+  variables: {
+    colorPrimary: "hsl(var(--foreground))",
+    colorBackground: "hsl(var(--background))",
+    colorText: "hsl(var(--foreground))",
+    colorTextSecondary: "hsl(var(--muted-foreground))",
+    colorInputBackground: "hsl(var(--background))",
+    colorInputText: "hsl(var(--foreground))",
+    colorNeutral: "hsl(var(--muted-foreground))",
+    borderRadius: "0.9rem",
+  },
+  elements: {
+    cardBox: "clerk-card-shell",
+    card: "clerk-card",
+    headerTitle: "clerk-title",
+    headerSubtitle: "clerk-subtitle",
+    socialButtonsBlockButton: "clerk-social-btn",
+    socialButtonsBlockButtonText: "clerk-social-btn-text",
+    formFieldLabel: "clerk-label",
+    formFieldInput: "clerk-input",
+    formButtonPrimary: "clerk-primary-btn",
+    footerActionLink: "clerk-link",
+    footerPages: "clerk-footer-pages",
+    identityPreviewText: "clerk-muted-text",
+    formResendCodeLink: "clerk-link",
+  },
+};

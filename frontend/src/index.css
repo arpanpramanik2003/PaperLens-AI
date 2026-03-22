@@ -289,3 +289,106 @@ a .btn-get-started,
 a .btn-explore {
   text-decoration: none !important;
 }
+
+/* Clerk auth monochrome theme */
+.clerk-auth-shell {
+  position: relative;
+  padding: 0;
+  border-radius: 1rem;
+  overflow: visible;
+  background: transparent;
+  animation: none;
+}
+
+.clerk-card-shell {
+  position: relative;
+  z-index: 1;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+}
+
+.clerk-card {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 14px 34px -22px rgba(0,0,0,0.8);
+}
+
+.clerk-title {
+  color: hsl(var(--foreground));
+}
+
+.clerk-subtitle,
+.clerk-muted-text {
+  color: hsl(var(--muted-foreground));
+}
+
+.clerk-label {
+  color: hsl(var(--foreground));
+}
+
+.clerk-input {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.clerk-input:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.25);
+}
+
+.clerk-social-btn {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+}
+
+.clerk-social-btn:hover {
+  background: hsl(var(--secondary));
+}
+
+.clerk-social-btn-text {
+  color: hsl(var(--foreground));
+}
+
+.clerk-primary-btn {
+  background: linear-gradient(90deg, hsl(var(--foreground)), hsl(var(--foreground) / 0.85), hsl(var(--foreground)));
+  background-size: 200% 100%;
+  color: hsl(var(--background));
+  animation: clerkButtonShimmer 3.4s linear infinite;
+}
+
+.clerk-primary-btn:hover {
+  filter: brightness(0.95);
+}
+
+.clerk-link {
+  color: hsl(var(--foreground));
+  text-decoration-color: hsl(var(--foreground) / 0.45);
+}
+
+.clerk-link:hover {
+  text-decoration-color: hsl(var(--foreground));
+}
+
+.clerk-footer-pages {
+  display: none !important;
+}
+
+@keyframes clerkGradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes clerkButtonShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
