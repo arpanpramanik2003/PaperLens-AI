@@ -7,6 +7,7 @@ class AskRequest(BaseModel):
 
     question: str
     doc_id: Optional[str] = None
+    paper_id: Optional[str] = None   # NEW: for pgvector-based RAG
     history: Optional[list[dict]] = None
 
 
@@ -55,3 +56,21 @@ class CitationDiscoveryRequest(BaseModel):
     project_title: str
     basic_details: Optional[str] = None
     limit: Optional[int] = 35
+
+
+# ---------------------------------------------------------------------------
+# New schemas for pgvector pipeline
+# ---------------------------------------------------------------------------
+
+class UploadPaperResponse(BaseModel):
+    paper_id: str
+    page_count: int
+    chunk_count: int
+    status: str
+    message: str
+
+
+class SummarizeResponse(BaseModel):
+    paper_id: str
+    summary: str
+    chunk_count: int

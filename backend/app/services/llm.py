@@ -990,3 +990,94 @@ Missing references (sample):
                 )
 
                 return json.loads(response.choices[0].message.content)
+
+
+# ---------------------------------------------------------------------------
+# pgvector-based RAG Q&A (new — for /upload-paper + /ask with paper_id)
+# ---------------------------------------------------------------------------
+
+def answer_question_with_pgvector(
+    question: str,
+    paper_id: str,
+    history: list | None = None,
+) -> str:
+    """
+    RAG-based question answering using Supabase pgvector for chunk retrieval.
+    Retrieves top-k semantically similar chunks for the given paper_id,
+    then passes them as context to Groq LLaMA 3.
+
+    Reuses all existing conversation history helpers from answer_question().
+    """
+    from app.services.retrieval import search_pgvector_chunks
+
+    history_turns = _normalize_history(history)
+    is_follow_up = _is_follow_up_question(question)
+    prev_user_q, prev_assistant_a = _get_last_qa_pair(history_turns)
+    q_lower = question.lower()
+
+    # Handle acknowledgements
+    acknowledgement_phrases = {
+        "ok", "okay", "ok good", "great", "nice", "cool", "got it", "understood",
+        "thanks", "thank you", "perfect", "alright", "all right"
+    }
+    if q_lower.strip().rstrip(".! ") in acknowledgement_phrases:
+        return "Great — let me know if you have any questions about the paper."
+
+    # Build retrieval query (handles follow-up questions context)
+    retrieval_query = _build_retrieval_query(question, history_turns)
+
+    # Retrieve top-k chunks from pgvector
+    relevant_chunks = search_pgvector_chunks(paper_id, retrieval_query, top_k=5)
+
+    if not relevant_chunks:
+        return "The relevant content was not found in this paper."
+
+    # Format context
+    context = "\n\n".join(
+        [f"[Page {c['page']}]\n{c['text']}" for c in relevant_chunks]
+    )
+
+    conversation_history = _format_history_for_prompt(history_turns)
+    follow_up_reference = ""
+
+    if is_follow_up and (prev_user_q or prev_assistant_a):
+        follow_up_reference = f"""
+Follow-up reference:
+- Previous user question: {prev_user_q or "(not available)"}
+- Previous assistant answer: {prev_assistant_a or "(not available)"}
+"""
+
+    prompt = f"""You are a research assistant.
+
+Answer the latest question strictly using the provided research paper context.
+
+Rules:
+- If the answer is not explicitly in the context, say "Not explicitly mentioned in this paper."
+- Cite page numbers like [Page 5] for any explicit claims.
+- Be concise, academic, and conversationally aware.
+- If the question is a follow-up, use conversation history to resolve references.
+
+Conversation history:
+{conversation_history or "(No prior turns)"}
+
+{follow_up_reference}
+
+Context from paper:
+{context}
+
+Latest question:
+{question}
+"""
+
+    response = client.chat.completions.create(
+        model=settings.MODEL_NAME,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a precise research assistant that answers questions strictly based on provided paper context.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+    )
+
+    return response.choices[0].message.content

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Upload, BarChart3, ExternalLink, SearchX, Sparkles, FileText, Loader2, CheckCircle2, BookOpen, Clock3 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Upload, BarChart3, ExternalLink, SearchX, Sparkles, FileText, Loader2, CheckCircle2, BookOpen, Clock3, XCircle } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
@@ -41,6 +41,16 @@ type CitationRecommendations = {
   next_search_queries?: string[];
 };
 
+type ProgressState = {
+  current: number;
+  total: number;
+  extracted: number;
+  matchedCount: number;
+  latestTitle: string | null;
+  latestRef: string;
+  lastResult: "matched" | "miss" | null;
+};
+
 export default function CitationIntelligence() {
   const { getToken } = useAuth();
 
@@ -57,6 +67,10 @@ export default function CitationIntelligence() {
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // SSE real-time progress
+  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const processStepsByMode = {
     upload: [
@@ -224,35 +238,84 @@ export default function CitationIntelligence() {
   const handleUploadRun = async () => {
     if (!file) return;
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       setLoading(true);
       setError(null);
       setReport(null);
+      setProgress(null);
       setRecommendations(null);
       setRecommendationError(null);
 
+      const token = await getToken();
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await apiClient.fetch(
-        "/api/citation-intelligence",
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/api/citation-intelligence/stream`,
         {
           method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: formData,
-        },
-        getToken
+          signal: controller.signal,
+        }
       );
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to run citation intelligence.");
+      if (!res.ok || !res.body) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any)?.error || "Failed to run citation intelligence.");
       }
 
-      const parsedReport = data as CitationReport;
-      setReport(parsedReport);
-      setResultMode("upload");
-      await fetchRecommendations(parsedReport, "upload");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const raw = trimmed.slice(5).trim();
+          if (!raw) continue;
+
+          let evt: any;
+          try { evt = JSON.parse(raw); } catch { continue; }
+
+          if (evt.type === "start") {
+            setProgress({ current: 0, total: evt.total, extracted: evt.extracted, matchedCount: 0, latestTitle: null, latestRef: "", lastResult: null });
+          } else if (evt.type === "progress") {
+            setProgress((prev) => ({
+              current: evt.current,
+              total: evt.total,
+              extracted: prev?.extracted ?? evt.total,
+              matchedCount: (prev?.matchedCount ?? 0) + (evt.matched ? 1 : 0),
+              latestTitle: evt.matched ? (evt.title ?? null) : null,
+              latestRef: evt.reference_text ?? "",
+              lastResult: evt.matched ? "matched" : "miss",
+            }));
+          } else if (evt.type === "done") {
+            const parsedReport: CitationReport = evt as CitationReport;
+            setReport(parsedReport);
+            setResultMode("upload");
+            setProgress(null);
+            setLoading(false);
+            await fetchRecommendations(parsedReport, "upload");
+          } else if (evt.type === "error") {
+            throw new Error(evt.message || "Server error during citation analysis.");
+          }
+        }
+      }
     } catch (err: any) {
+      if (err?.name === "AbortError") return;
       setError(err?.message || "Failed to run citation intelligence.");
     } finally {
       setLoading(false);
@@ -416,7 +479,125 @@ export default function CitationIntelligence() {
         </motion.div>
       )}
 
-      {loading && (
+      {loading && mode === "upload" && progress && (
+        <motion.div
+          className="rounded-xl border border-border/50 bg-card p-5 mb-8 overflow-hidden"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-accent animate-spin" />
+              <p className="text-sm font-semibold text-foreground">Matching references with Semantic Scholar</p>
+            </div>
+            <span className="text-xs text-muted-foreground font-mono">
+              {progress.matchedCount} matched so far
+            </span>
+          </div>
+
+          {/* Counter */}
+          <div className="flex items-end gap-1.5 mb-3">
+            <motion.span
+              key={progress.current}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-4xl font-bold tabular-nums text-foreground leading-none"
+            >
+              {progress.current}
+            </motion.span>
+            <span className="text-xl text-muted-foreground font-medium mb-0.5">/ {progress.total}</span>
+            <span className="ml-auto text-xs text-muted-foreground mb-1">
+              {Math.round((progress.current / progress.total) * 100)}%
+            </span>
+          </div>
+
+          {/* Animated progress bar */}
+          <div className="relative h-2.5 rounded-full bg-secondary/50 overflow-hidden mb-4">
+            <motion.div
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{
+                background: "linear-gradient(90deg, hsl(217 91% 55%), hsl(200 90% 60%), hsl(260 80% 65%))",
+                backgroundSize: "200% 100%",
+              }}
+              animate={{
+                width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
+                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+              }}
+              transition={{
+                width: { duration: 0.4, ease: "easeOut" },
+                backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" },
+              }}
+            />
+            {/* Glow pulse at leading edge */}
+            <motion.div
+              className="absolute top-0 bottom-0 w-8 blur-sm rounded-full"
+              style={{ background: "hsl(217 91% 70% / 0.7)" }}
+              animate={{
+                left: `calc(${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}% - 1.5rem)`,
+              }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            />
+          </div>
+
+          {/* Latest reference */}
+          <AnimatePresence mode="wait">
+            {progress.current > 0 && (
+              <motion.div
+                key={progress.current}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-start gap-2.5 rounded-lg border border-border/40 bg-secondary/20 px-3 py-2.5"
+              >
+                {progress.lastResult === "matched" ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-accent mt-0.5 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                )}
+                <div className="min-w-0">
+                  {progress.lastResult === "matched" && progress.latestTitle ? (
+                    <p className="text-xs font-medium text-foreground truncate">{progress.latestTitle}</p>
+                  ) : null}
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{progress.latestRef}</p>
+                </div>
+                <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                  progress.lastResult === "matched"
+                    ? "bg-accent/10 text-accent"
+                    : "bg-secondary text-muted-foreground"
+                }`}>
+                  {progress.lastResult === "matched" ? "matched" : "no match"}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Stats row */}
+          <div className="flex gap-4 mt-4">
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Extracted</p>
+              <p className="text-sm font-semibold">{progress.extracted}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Processed</p>
+              <p className="text-sm font-semibold">{progress.current}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Matched</p>
+              <p className="text-sm font-semibold text-accent">{progress.matchedCount}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Miss</p>
+              <p className="text-sm font-semibold">{progress.current - progress.matchedCount}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {loading && (mode === "discover" || !progress) && (
         <motion.div
           className="rounded-xl border border-border/50 bg-card p-5 mb-8"
           initial={{ opacity: 0, y: 8 }}

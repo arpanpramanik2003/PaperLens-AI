@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.models.domain import Document, Activity
 
 from app.core.config import settings
-from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest, CitationDiscoveryRequest
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest, CitationDiscoveryRequest, UploadPaperResponse, SummarizeResponse
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
@@ -294,6 +294,24 @@ async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
     if not payload.question:
         return JSONResponse({"error": "Question required"}, status_code=400)
 
+    # ------------------------------------------------------------------
+    # New path: pgvector RAG when paper_id is provided
+    # ------------------------------------------------------------------
+    if payload.paper_id:
+        try:
+            from app.services.llm import answer_question_with_pgvector
+            answer = answer_question_with_pgvector(
+                payload.question,
+                payload.paper_id,
+                payload.history,
+            )
+            return {"answer": answer}
+        except Exception as exc:
+            return JSONResponse({"error": str(exc)}, status_code=500)
+
+    # ------------------------------------------------------------------
+    # Legacy path: in-memory FAISS/BM25 (used with /analyze flow)
+    # ------------------------------------------------------------------
     if payload.doc_id:
         if not set_active_doc(payload.doc_id):
             return JSONResponse({"error": "Document not found. Please re-upload."}, status_code=400)
@@ -579,6 +597,163 @@ async def citation_intelligence(
         return JSONResponse({"error": str(exc)}, status_code=500)
 
 
+@router.post("/citation-intelligence/stream")
+async def citation_intelligence_stream(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Streaming SSE version of citation intelligence.
+    Yields newline-delimited JSON progress events:
+      {"type":"start",  "total": N, "extracted": N}
+      {"type":"progress","current": i, "total": N, "matched": bool, "title": str|null, "reference_text": str}
+      {"type":"done",   ...full CitationReport...}
+      {"type":"error",  "message": str}
+    """
+    import json as _json
+
+    if not file.filename:
+        async def _err():
+            yield 'data: {"type":"error","message":"No file selected"}\n\n'
+        return StreamingResponse(_err(), media_type="text/event-stream")
+
+    ext = os.path.splitext(file.filename.lower())[1]
+    if ext not in [".pdf", ".docx"]:
+        async def _err():
+            yield 'data: {"type":"error","message":"Only PDF or DOCX files allowed"}\n\n'
+        return StreamingResponse(_err(), media_type="text/event-stream")
+
+    file.file.seek(0, os.SEEK_END)
+    size_bytes = file.file.tell()
+    file.file.seek(0)
+
+    if settings.MAX_UPLOAD_MB > 0 and size_bytes > settings.MAX_UPLOAD_MB * 1024 * 1024:
+        async def _err():
+            yield f'data: {{"type":"error","message":"File too large. Max {settings.MAX_UPLOAD_MB} MB."}}\n\n'
+        return StreamingResponse(_err(), media_type="text/event-stream")
+
+    os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+    path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
+
+    with open(path, "wb") as handle:
+        shutil.copyfileobj(file.file, handle)
+
+    if ext == ".pdf":
+        pages = extract_pdf_pages(path, max_pages=settings.MAX_PAGES, max_total_chars=settings.MAX_TOTAL_CHARS)
+    else:
+        pages = extract_docx_pages(path, max_pages=settings.MAX_PAGES, max_total_chars=settings.MAX_TOTAL_CHARS)
+
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+    if not pages:
+        async def _err():
+            yield 'data: {"type":"error","message":"Could not extract text from file"}\n\n'
+        return StreamingResponse(_err(), media_type="text/event-stream")
+
+    if not settings.SEMANTIC_SCHOLAR_API_KEY:
+        async def _err():
+            yield 'data: {"type":"error","message":"Semantic Scholar API key not configured"}\n\n'
+        return StreamingResponse(_err(), media_type="text/event-stream")
+
+    # Pre-extract reference list for total count
+    from app.services.citation_intelligence import (
+        _extract_references_block,
+        _split_reference_entries,
+        SemanticScholarClient,
+        _extract_doi,
+        _build_search_query,
+        _build_title_only_query,
+    )
+    import time as _time
+
+    full_text = "\n".join(p.get("text", "") for p in pages if p.get("text"))
+    references_block = _extract_references_block(full_text)
+    extracted = _split_reference_entries(references_block)
+    max_refs = settings.CITATION_MAX_REFERENCES
+    limited = extracted[:max_refs] if max_refs > 0 else extracted
+    total = len(limited)
+    total_extracted = len(extracted)
+
+    def _stream():
+        # Start event
+        yield f'data: {_json.dumps({"type":"start","total":total,"extracted":total_extracted})}\n\n'
+
+        results = []
+        matched_count = 0
+        client = SemanticScholarClient(settings.SEMANTIC_SCHOLAR_API_KEY, min_interval_seconds=1.0)
+
+        try:
+            for index, ref_text in enumerate(limited, start=1):
+                try:
+                    paper = client.search_paper(ref_text)
+                except RuntimeError as exc:
+                    yield f'data: {_json.dumps({"type":"error","message":str(exc)})}\n\n'
+                    return
+                except Exception:
+                    paper = None
+
+                matched = paper is not None
+                if matched:
+                    matched_count += 1
+                    authors = [a.get("name", "") for a in (paper.get("authors") or []) if a.get("name")]
+                    results.append({
+                        "reference_index": index, "reference_text": ref_text, "matched": True,
+                        "paper_id": paper.get("paperId"), "title": paper.get("title"),
+                        "year": paper.get("year"), "citation_count": paper.get("citationCount") or 0,
+                        "url": paper.get("url"), "venue": paper.get("venue"), "authors": authors,
+                    })
+                    title = paper.get("title")
+                else:
+                    results.append({
+                        "reference_index": index, "reference_text": ref_text, "matched": False,
+                        "paper_id": None, "title": None, "year": None,
+                        "citation_count": 0, "url": None, "venue": None, "authors": [],
+                    })
+                    title = None
+
+                # Progress event
+                yield f'data: {_json.dumps({"type":"progress","current":index,"total":total,"matched":matched,"title":title,"reference_text":ref_text[:80]})}\n\n'
+
+        finally:
+            client.close()
+
+        matched_refs = [e for e in results if e["matched"]]
+        top_cited = sorted(matched_refs, key=lambda e: e.get("citation_count", 0), reverse=True)
+
+        report = {
+            "type": "done",
+            "total_references_extracted": total_extracted,
+            "references_processed": total,
+            "matched_count": matched_count,
+            "missing_count": total - matched_count,
+            "references": results,
+            "top_cited": top_cited,
+        }
+        yield f'data: {_json.dumps(report)}\n\n'
+
+        # Log to DB
+        try:
+            db_doc_check = db.query(Document).filter(Document.id == "citation-stream").first()
+            db_activity = Activity(
+                user_id=user_id, action_type="citation_intelligence",
+                metadata_json={"filename": file.filename, "references_processed": total, "matched_count": matched_count},
+            )
+            db.add(db_activity)
+            db.commit()
+        except Exception:
+            pass
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.post("/citation-intelligence/recommendations")
 async def citation_intelligence_recommendations(
     payload: CitationRecommendationRequest,
@@ -652,5 +827,196 @@ async def citation_intelligence_discover(
         return JSONResponse(report)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+# ===========================================================================
+# NEW ENDPOINTS: pgvector-based pipeline
+# ===========================================================================
+
+@router.post("/upload-paper", response_model=UploadPaperResponse)
+async def upload_paper(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload a PDF → extract pages (PyMuPDF generator) → token-based chunking
+    → generate embeddings → store in Supabase pgvector.
+    Deduplicates: skips processing if paper_id already indexed.
+    Returns: {paper_id, page_count, chunk_count, status}
+    """
+    try:
+        if not file.filename:
+            return JSONResponse({"error": "No file selected"}, status_code=400)
+
+        ext = os.path.splitext(file.filename.lower())[1]
+        if ext not in [".pdf", ".docx"]:
+            return JSONResponse({"error": "Only PDF or DOCX files allowed"}, status_code=400)
+
+        # Check file size
+        file.file.seek(0, os.SEEK_END)
+        size_bytes = file.file.tell()
+        file.file.seek(0)
+
+        if settings.MAX_UPLOAD_MB > 0 and size_bytes > settings.MAX_UPLOAD_MB * 1024 * 1024:
+            return JSONResponse(
+                {"error": f"File too large. Max allowed is {settings.MAX_UPLOAD_MB} MB."},
+                status_code=413,
+            )
+
+        # Generate paper_id from filename + size (deterministic, for dedup)
+        paper_id = hashlib.sha256(
+            f"{file.filename}:{size_bytes}:{user_id}".encode("utf-8")
+        ).hexdigest()[:16]
+
+        # Check if already indexed in pgvector (avoid re-processing)
+        from app.services.embedding import paper_already_indexed
+        if paper_already_indexed(paper_id):
+            # Count existing chunks
+            from app.services.embedding import fetch_all_chunks_from_pgvector
+            existing = fetch_all_chunks_from_pgvector(paper_id)
+            return UploadPaperResponse(
+                paper_id=paper_id,
+                page_count=0,
+                chunk_count=len(existing),
+                status="already_indexed",
+                message="Paper was already indexed. Use paper_id for summarize/ask.",
+            )
+
+        # Save file temporarily
+        os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+        path = os.path.join(settings.UPLOAD_FOLDER, f"{paper_id}{ext}")
+
+        with open(path, "wb") as handle:
+            shutil.copyfileobj(file.file, handle)
+
+        # Extract pages using generator (memory-efficient)
+        from app.services.parsing import extract_pdf_pages_generator, extract_docx_pages
+        from app.services.parsing import ParsingLimitError as ParseError
+
+        try:
+            if ext == ".pdf":
+                pages = list(extract_pdf_pages_generator(
+                    path,
+                    max_pages=settings.MAX_PAGES,
+                    max_total_chars=settings.MAX_TOTAL_CHARS,
+                ))
+            else:
+                pages = extract_docx_pages(
+                    path,
+                    max_pages=settings.MAX_PAGES,
+                    max_total_chars=settings.MAX_TOTAL_CHARS,
+                )
+        finally:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+        if not pages:
+            return JSONResponse({"error": "Could not extract text from file"}, status_code=400)
+
+        page_count = max(p["page"] for p in pages) if pages else 0
+
+        # Token-based chunking (500-800 tokens per chunk)
+        from app.services.chunking import chunk_text_by_tokens
+        chunks = chunk_text_by_tokens(pages)
+
+        if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
+            chunks = chunks[:settings.MAX_CHUNKS]
+
+        # Generate embeddings
+        from app.services.embedding import embed_texts, store_chunks_in_pgvector
+        texts = [c["text"] for c in chunks]
+        embeddings = embed_texts(texts)
+
+        # Store in Supabase pgvector
+        inserted = store_chunks_in_pgvector(paper_id, user_id, chunks, embeddings)
+
+        # Log to DB
+        db_doc = db.query(Document).filter(Document.id == paper_id).first()
+        if not db_doc:
+            db_doc = Document(
+                id=paper_id,
+                user_id=user_id,
+                filename=file.filename,
+                title=file.filename,
+                status="Indexed",
+            )
+            db.add(db_doc)
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="upload_paper",
+            metadata_json={
+                "filename": file.filename,
+                "page_count": page_count,
+                "chunk_count": len(chunks),
+            },
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return UploadPaperResponse(
+            paper_id=paper_id,
+            page_count=page_count,
+            chunk_count=inserted or len(chunks),
+            status="indexed",
+            message="Paper uploaded and indexed successfully.",
+        )
+
+    except ParsingLimitError as exc:
+        return _lengthy_response(exc.detail)
+    except MemoryError:
+        return _lengthy_response("Paper is too lengthy for this deployment.")
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.get("/summarize/{paper_id}")
+async def summarize_paper(
+    paper_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """
+    Runs map-reduce summarization on chunks stored in pgvector for paper_id.
+    Caches the result in memory — subsequent calls return instantly.
+    Returns: {paper_id, summary, chunk_count}
+    """
+    try:
+        # Check summary cache
+        from app.services.cache import get_cached_summary, set_cached_summary
+        cached = get_cached_summary(paper_id)
+        if cached:
+            return SummarizeResponse(
+                paper_id=paper_id,
+                summary=cached,
+                chunk_count=0,  # Count unknown from cache
+            )
+
+        # Fetch chunks from pgvector
+        from app.services.embedding import fetch_all_chunks_from_pgvector
+        chunks = fetch_all_chunks_from_pgvector(paper_id)
+
+        if not chunks:
+            return JSONResponse(
+                {"error": "No chunks found for this paper_id. Upload the paper first via /upload-paper."},
+                status_code=404,
+            )
+
+        # Run map-reduce summarization
+        from app.services.summarization import run_map_reduce_summarization
+        summary = run_map_reduce_summarization(chunks, paper_hint=paper_id)
+
+        # Cache for future requests
+        set_cached_summary(paper_id, summary)
+
+        return SummarizeResponse(
+            paper_id=paper_id,
+            summary=summary,
+            chunk_count=len(chunks),
+        )
+
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
