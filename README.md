@@ -18,82 +18,140 @@
 
 ---
 
-## Why PaperLens AI
+## 📖 What is PaperLens AI?
 
-PaperLens AI is a full-stack research assistant for students, researchers, and builders who need to move from raw papers to actionable output quickly.
+**PaperLens AI** is a comprehensive full-stack research assistant designed for students, researchers, and developers. It bridges the gap between raw research papers and actionable outputs by providing an intelligent, workflow-driven platform. 
 
-It combines document analysis, grounded Q&A, research gap discovery, experiment planning, problem ideation, and dataset/benchmark recommendations in one workflow-driven platform.
-
----
-
-## Core Capabilities
-
-### 1) Paper Analyzer
-- Upload PDF/DOCX and receive structured markdown analysis.
-- Ask follow-up questions grounded in parsed paper context.
-- Supports both non-streaming and streaming backend endpoints.
-
-### 2) Experiment Planner
-- Generate step-wise execution plans from topic and difficulty.
-- Includes practical details, params, and risk notes.
-
-### 3) Problem Generator
-- Generate domain/subdomain-aware research problems.
-- Expand a selected idea into a deeper execution brief.
-
-### 4) Gap Detection
-- Detect research gaps from uploaded files or pasted text.
-- Returns severity + actionable suggestions.
-
-### 5) Dataset & Benchmark Finder
-- Recommends suitable datasets, benchmarks, and common technologies.
-- Includes fit scores and practical detail objects for implementation decisions.
-
-### 6) Dashboard Analytics
-- Tracks key activity (papers analyzed, plans, ideas, gaps, etc.).
-- Shows recent documents and usage summaries.
+Instead of just chatting with a PDF, PaperLens AI provides structured workflows: extracting key insights from documents, planning experiments based on those insights, discovering research gaps, generating novel problem statements, finding relevant datasets, and running citation intelligence.
 
 ---
 
-## Tech Stack
+## 🚀 Core Features & Workflows
 
-| Layer | Stack |
+### 1) 📄 Paper Analyzer & Grounded Q&A
+- **Deep Extraction:** Upload PDF or DOCX files and receive a highly structured, markdown-formatted analysis. 
+- **RAG-Powered Q&A:** Ask follow-up questions directly grounded in the parsed paper context using a Hybrid Retrieval pipeline (Sparse BM25 + Dense FAISS embeddings).
+- **Streaming Support:** Supports incremental streaming endpoints for real-time text generation.
+
+### 2) 🧪 Experiment Planner
+- **Step-by-Step Roadmaps:** Generate detailed, step-wise execution plans by inputting a research topic and a target difficulty level.
+- **Practical Metrics:** Provides parameter recommendations, risk assessments, and practical implementation details.
+
+### 3) 💡 Problem Generator
+- **Idea Ideation:** Input a domain, subdomain, and complexity level to generate novel research problems.
+- **Problem Expansion:** Expand a selected surface-level idea into a deep execution brief and methodology.
+
+### 4) 🔍 Gap Detection
+- **Critical Analysis:** Detect logical flaws, missing literature, or methodological research gaps from uploaded files or pasted text.
+- **Actionable Advice:** Returns severity scores (low/medium/high) alongside actionable suggestions for improvement.
+
+### 5) 📊 Dataset & Benchmark Finder
+- **Intelligent Matching:** Recommends the most suitable datasets, evaluation benchmarks, and common framework technologies.
+- **Fit Scoring:** Provides quantitative fit scores and practical detail objects (modality, size, licenses, tasks) to inform tooling decisions.
+
+### 6) 🗂 Citation Intelligence
+- **Reference Extraction:** Extracts references from the uploaded paper.
+- **Semantic Mapping:** Matches extracted citations against Semantic Scholar to find citation counts, missing parameters, and top-cited related papers.
+
+### 7) 📈 Dashboard Analytics
+- **Telemetry & Tracking:** Tracks key user activity metrics (papers analyzed, plans created, ideas generated).
+- **Recent History:** Maintains state of recently analyzed documents and usage summaries via PostgreSQL.
+
+---
+
+## 🏗 System Architecture
+
+PaperLens AI is built using a modern, decoupled client-server architecture. 
+
+### High-Level Data Flow
+1. **Client Layer:** User interacts with the React/TypeScript frontend. Authentication is handled via **Clerk**.
+2. **API Gateway:** The frontend sends requests carrying a JWT Bearer token to the **FastAPI** backend.
+3. **Security:** FastAPI intercepts requests, verifying the JWT against Clerk's JWKS.
+4. **AI & Processing Engine:** 
+   - Uses `pdfplumber`/`python-docx` for text extraction.
+   - Text is split using sentence-aware chunking strategies.
+   - Vectors are created and indexed via `sentence-transformers` and stored in an in-memory FAISS + BM25 hybrid cache.
+   - Prompts are orchestrated and sent to **Groq**'s ultra-fast LLM inference engine.
+5. **Persistence Layer:** User tracking and telemetry data are persisted asynchronously to a **Supabase (PostgreSQL)** database via SQLAlchemy.
+
+### AI Retrieval Pipeline (RAG) details
+- **Chunking Strategy:** Configurable size (default 1200 chars) with overlap to preserve context boundaries.
+- **Sparse Retrieval:** BM25 handles exact keyword matching.
+- **Dense Retrieval (Optional):** FAISS indexes embeddings generated by `all-MiniLM-L6-v2`.
+- **Reranker (Optional):** Employs `cross-encoder/ms-marco-MiniLM-L-6-v2` to rerank and refine retrieved chunks before injecting them into the LLM context limits.
+
+---
+
+## 💻 Tech Stack
+
+| Layer | Technologies |
 |---|---|
-| Frontend | React, Vite, TypeScript, Tailwind, shadcn/ui, framer-motion |
-| Backend | FastAPI, SQLAlchemy |
-| Auth | Clerk JWT |
-| Retrieval | BM25 + optional FAISS + optional reranker |
-| Data | PostgreSQL (Supabase-compatible) |
-| LLM | Groq |
+| **Frontend** | React, Vite, TypeScript, Tailwind CSS, shadcn/ui, framer-motion |
+| **Backend** | Python 3.10+, FastAPI, Uvicorn, SQLAlchemy |
+| **Authentication** | Clerk JWT |
+| **AI / LLM Orchestration**| Groq (Default: `llama-3.1-8b-instant`) |
+| **Retrieval (RAG)** | BM25 + FAISS + Cross-Encoder Reranker |
+| **Database** | PostgreSQL (Supabase-compatible) |
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```text
 paper_explainer/
 ├─ backend/
+│  ├─ app/
+│  │  ├─ api/       # Route definitions
+│  │  ├─ core/      # Security, Config, Database sessions
+│  │  ├─ models/    # Domain & Pydantic schema models
+│  │  └─ services/  # LLM, Parsing, Chunking, Retrieval logic
+│  ├─ requirements.txt
+│  └─ README.md
 ├─ frontend/
-├─ docs/
-├─ render.yaml
-├─ vercel.json
-└─ README.md
+│  ├─ src/
+│  │  ├─ components/ # Reusable UI & Layouts
+│  │  ├─ pages/      # Feature Pages (Dashboard, Analyzer, etc.)
+│  │  └─ lib/        # API client and logic setups
+│  ├─ package.json
+│  └─ README.md
+├─ docs/            # Architecture analyses and API references
+├─ render.yaml      # Backend Deployment Config
+├─ vercel.json      # Frontend Deployment Config
+└─ README.md        # This file
 ```
 
 ---
 
-## Quick Start
+## 🔌 API Reference Overview
+
+The backend acts as a robust RESTful API. Below is a snapshot of core routes:
+
+* **Public:** `GET /health`
+* **Protected (Require Clerk JWT):**
+  * `GET /api/dashboard` - Telemetry and stats.
+  * `POST /api/analyze` - File analysis.
+  * `POST /api/ask` - Grounded document Q&A.
+  * `POST /api/plan-experiment` - Step-wise methodology generation.
+  * `POST /api/generate-problems` - Idea generation.
+  * `POST /api/detect-gaps` - Research gap identification.
+  * `POST /api/find-datasets-benchmarks` - Datasets retrieval.
+  * `POST /api/citation-intelligence` - Reference validation via Semantic Scholar.
+
+> For full request/response contracts, examples, and validation parameters, see [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
+
+---
+
+## 🛠 Quick Start Guide
 
 ### Prerequisites
-
 - Python 3.10+
 - Node.js 18+
 - Clerk account (publishable + secret keys)
-- PostgreSQL connection URL
+- PostgreSQL connection URL (e.g., Supabase)
 - Groq API key
 
-### 1) Backend setup
-
+### 1) Backend Setup
+Open a terminal (PowerShell for Windows recommended) and run:
 ```powershell
 cd backend
 python -m venv .venv
@@ -101,107 +159,63 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Create `backend/.env`:
-
+Create exactly the environment variables your backend needs in `backend/.env`:
 ```env
-DATABASE_URL=postgresql://...
-CLERK_SECRET_KEY=sk_...
-GROQ_API_KEY=gsk_...
+DATABASE_URL=postgresql://<YOUR_POSTGRES_URL>
+CLERK_SECRET_KEY=sk_test_<YOUR_KEY>
+GROQ_API_KEY=gsk_<YOUR_KEY>
 ```
+*Optional advanced tuning parameters can be found in `backend/app/core/config.py` (e.g. `CHUNK_SIZE`, `TOP_K`, `MAX_PAGES`).*
 
-Run backend:
-
+Run the backend server:
 ```powershell
 uvicorn app.main:app --reload
 ```
+*(Server runs on http://localhost:8000 by default)*
 
-### 2) Frontend setup
-
+### 2) Frontend Setup
+Open a separate terminal and run:
 ```powershell
 cd frontend
 npm install
 ```
 
-Create `frontend/.env.local`:
-
+Create the frontend config file `frontend/.env.local`:
 ```env
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_<YOUR_CLERK_KEY>
 VITE_API_URL=http://localhost:8000
 ```
 
-Run frontend:
-
+Run the frontend dashboard:
 ```powershell
 npm run dev
 ```
+*(Client runs on http://localhost:5173 by default)*
 
 ---
 
-## API Snapshot
+## 🌍 Deployment
 
-### Public
-- `GET /health`
-
-### Protected
-- `GET /api/test-auth`
-- `GET /api/dashboard`
-- `GET /api/documents`
-- `POST /api/analyze`
-- `POST /api/analyze_stream`
-- `POST /api/ask`
-- `POST /api/ask_stream`
-- `POST /api/plan-experiment`
-- `POST /api/generate-problems`
-- `POST /api/expand-problem`
-- `POST /api/detect-gaps`
-- `POST /api/find-datasets-benchmarks`
-
-For full contracts, examples, and validation notes, see `docs/API_REFERENCE.md`.
+The project is configured for split deployment:
+- **Backend:** Designed for Render. Trigger deployment via the `render.yaml` configuration.
+- **Frontend:** Designed for Vercel. Trigger deployment via the `vercel.json` configuration.
 
 ---
 
-## Configuration (Important)
+## 📚 Documentation Hub
 
-### Required backend env
-- `DATABASE_URL`
-- `CLERK_SECRET_KEY`
-- `GROQ_API_KEY`
-
-### Common backend tuning
-- `GROQ_MODEL`, `EMBEDDING_MODEL`, `RERANKER_MODEL`
-- `TOP_K`, `CHUNK_SIZE`, `CHUNK_OVERLAP`
-- `MAX_UPLOAD_MB`, `MAX_PAGES`, `MAX_TOTAL_CHARS`, `MAX_CHUNKS`
-- `ENABLE_VECTOR_RETRIEVAL`, `ENABLE_RERANKER`, `MAX_CACHED_DOCS`
-
-### Required frontend env
-- `VITE_CLERK_PUBLISHABLE_KEY`
-
-### Recommended frontend env
-- `VITE_API_URL`
+Check out specific workflows and underlying architecture documentation in the `docs` folder:
+- **Architecture & Roadmap:** [`docs/PROJECT_ANALYSIS.md`](docs/PROJECT_ANALYSIS.md)
+- **API Reference:** [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md)
+- **Workflow Guides:** 
+  - [Paper Analyzer](docs/1_PAPER_ANALYZER.md)
+  - [Experiment Planner](docs/2_EXPERIMENT_PLANNER.md)
+  - [Problem Generator](docs/3_PROBLEM_GENERATOR.md)
+  - [Gap Detection](docs/4_GAP_DETECTION.md)
+  - [Dataset & Benchmark Finder](docs/5_DATASET_BENCHMARK_FINDER.md)
 
 ---
 
-## Deploy
-
-- Backend: Render via `render.yaml`
-- Frontend: Vercel via `vercel.json`
-
----
-
-## Documentation Hub
-
-- Primary analysis: `docs/PROJECT_ANALYSIS.md`
-- API reference: `docs/API_REFERENCE.md`
-- Paper Analyzer workflow: `docs/1_PAPER_ANALYZER.md`
-- Experiment Planner workflow: `docs/2_EXPERIMENT_PLANNER.md`
-- Problem Generator workflow: `docs/3_PROBLEM_GENERATOR.md`
-- Gap Detection workflow: `docs/4_GAP_DETECTION.md`
-- Dataset & Benchmark Finder workflow: `docs/5_DATASET_BENCHMARK_FINDER.md`
-- Backend guide: `backend/README.md`
-- Frontend guide: `frontend/README.md`
-
----
-
-## License
+## ⚖️ License
 
 MIT License. See `LICENSE`.
