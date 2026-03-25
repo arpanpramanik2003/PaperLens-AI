@@ -1,27 +1,28 @@
 # PaperLens AI Backend
 
-FastAPI backend for document analysis, grounded Q&A, experiment planning, problem generation, and gap detection.
+FastAPI backend for document analysis, grounded Q&A, experiment planning, problem generation, gap detection, and citation intelligence.
 
-## Stack
+## Stack Updates & Architecture
 
-- FastAPI + Uvicorn
-- SQLAlchemy + PostgreSQL (Supabase)
-- Clerk JWT authentication
-- Groq LLM API
-- sentence-transformers + FAISS + BM25
-- pdfplumber + python-docx
+- **FastAPI + Uvicorn** — Core framework and server.
+- **SQLAlchemy + PostgreSQL** — Main application database (users, documents, activity).
+- **Supabase pgvector** — Remote vector database used for memory-efficient RAG on large PDFs.
+- **PyMuPDF (fitz)** — High-performance, memory-efficient PDF text extraction (replaced `pdfplumber`).
+- **Groq LLaMA 3 (8B)** — Ultra-fast LLM inference engine.
+- **Semantic Scholar API** — Multi-strategy citation intelligence matching.
+- **Clerk** — JWT authentication handling.
 
 ## Directory Layout
 
 ```text
 backend/
 ├─ app/
-│  ├─ api/
-│  ├─ core/
-│  ├─ models/
-│  └─ services/
+│  ├─ api/          # Route definitions
+│  ├─ core/         # Config, DB connections, Security
+│  ├─ models/       # Pydantic schemas, SQLAlchemy models
+│  └─ services/     # Parsing, Chunking, Retrieval, LLM logic
 ├─ requirements.txt
-├─ uploads/
+├─ supabase_migration.sql # Setup script for pgvector table & RPC
 └─ README.md
 ```
 
@@ -34,96 +35,50 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Create `backend/.env` manually with at least:
+Create `backend/.env` manually with:
 
 ```env
 DATABASE_URL=postgresql://...
 CLERK_SECRET_KEY=sk_...
 GROQ_API_KEY=gsk_...
+SEMANTIC_SCHOLAR_API_KEY="..."
+
+# For pgvector RAG pipeline:
+SUPABASE_URL=https://...
+SUPABASE_KEY=...
 ```
 
 ## Run
 
 ```powershell
-cd backend
 uvicorn app.main:app --reload
 ```
-
 Default URL: `http://localhost:8000`
 
-## Authentication
+## API Endpoints (Core)
 
-- Most `/api/*` routes require `Authorization: Bearer <Clerk JWT>`.
-- Token verification uses Clerk JWKS (`app/core/security.py`).
-- Public endpoint: `GET /health`.
+*See `docs/API_REFERENCE.md` for full definitions.*
 
-## API Endpoints
+- `GET /health` (Public)
+- `GET /api/dashboard` (Stats/Telemetry)
+- `POST /api/upload-paper` (PyMuPDF parser → pgvector storage)
+- `POST /api/summarize/{paper_id}` (Map-Reduce summarization using pgvector chunks)
+- `POST /api/ask` (Grounded Q&A — supports both pgvector RAG and FAISS/BM25 legacy mode)
+- `POST /api/citation-intelligence/stream` (SSE endpoint yielding real-time citation matching progress)
 
-### Public
+## Processing Pipelines
 
-- `GET /health`
+**1. Standard / Legacy Pipeline (FAISS/BM25):**
+Used by `POST /api/analyze` and planners. 
+Extracts text → chunks → builds in-memory FAISS/BM25 indexes → runs Groq LLM analysis. *(Note: FAISS/Torch is lazy-loaded to save RAM).*
 
-### Protected
+**2. Modern Memory-Efficient RAG Pipeline (pgvector):**
+Used by `POST /api/upload-paper`.
+Generator-based PDF parsing (`PyMuPDF`) → lazy-loaded embeddings (`sentence-transformers`) → stored remotely in Supabase `paper_chunks`. Saves local RAM and allows persistence across restarts.
 
-- `GET /api/test-auth`
-- `GET /api/dashboard`
-- `GET /api/documents`
-- `POST /api/analyze`
-- `POST /api/analyze_stream`
-- `POST /api/ask`
-- `POST /api/ask_stream`
-- `POST /api/plan-experiment`
-- `POST /api/generate-problems`
-- `POST /api/detect-gaps`
+## Deployment constraints (Render 500MB)
 
-For full request/response contracts, see `../docs/API_REFERENCE.md`.
-
-## Environment Variables
-
-Configured in `app/core/config.py`.
-
-| Variable | Required | Default | Purpose |
-|---|---|---|---|
-| `DATABASE_URL` | Yes | none | PostgreSQL/Supabase connection string |
-| `CLERK_SECRET_KEY` | Yes | none | Clerk key used to fetch JWKS |
-| `GROQ_API_KEY` | Yes | none | Groq API auth |
-| `GROQ_MODEL` | No | `llama-3.1-8b-instant` | LLM model name |
-| `EMBEDDING_MODEL` | No | `all-MiniLM-L6-v2` | Embedding model |
-| `RERANKER_MODEL` | No | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Cross-encoder reranker |
-| `UPLOAD_FOLDER` | No | `uploads` | Temporary upload directory |
-| `CHUNK_SIZE` | No | `1200` | Chunk size (chars) |
-| `CHUNK_OVERLAP` | No | `220` | Chunk overlap (chars) |
-| `TOP_K` | No | `5` | Retrieved chunk count |
-| `MAX_UPLOAD_MB` | No | `12` | Max upload size |
-| `MAX_PAGES` | No | `12` | Max extracted pages |
-| `MAX_TOTAL_CHARS` | No | `120000` | Max extracted chars |
-| `MAX_CHUNKS` | No | `220` | Max chunks processed |
-| `EMBEDDING_BATCH_SIZE` | No | `16` | Embedding batch size |
-| `ENABLE_VECTOR_RETRIEVAL` | No | `false` | Enable FAISS + embedding retrieval path |
-| `ENABLE_RERANKER` | No | `false` | Enable CrossEncoder reranking |
-| `MAX_CACHED_DOCS` | No | `1` | In-memory cached docs |
-
-## Processing Pipeline
-
-1. Validate uploaded PDF/DOCX and enforce limits.
-2. Extract text (`pdfplumber` / `python-docx`).
-3. Sentence-aware chunking with overlap.
-4. Build sparse BM25 index, plus dense FAISS index when `ENABLE_VECTOR_RETRIEVAL=true`.
-5. Generate structured analysis via Groq.
-6. Cache analysis + indexes in memory.
-7. Answer follow-up questions via hybrid retrieval.
-
-## Deployment (Render)
-
-Root-level `render.yaml` deploys this backend with:
-
-- build: `pip install -r requirements.txt`
-- start: `uvicorn app.main:app --host 0.0.0.0 --port 10000`
-- env vars: `DATABASE_URL`, `CLERK_SECRET_KEY`, `GROQ_API_KEY`
-
-## Notes & Limitations
-
-- In-memory cache is not persistent across restarts.
-- No OCR pipeline for image-only PDFs.
-- CORS is permissive by default; tighten for production.
-- Model loading can cause first-request latency.
+This architecture is optimized for 500MB RAM limits:
+- `PyMuPDF` is used instead of `pdfplumber` to prevent parsing OOMs.
+- `torch` and `sentence-transformers` models are explicitly **lazy-loaded** (meaning they consume ~350MB only when `/upload-paper` is called, leaving the rest of the application idle at ~150MB).
+- `ENABLE_VECTOR_RETRIEVAL` defaults to `false` for legacy FAISS endpoints to save memory.

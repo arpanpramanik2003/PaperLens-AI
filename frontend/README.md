@@ -2,12 +2,13 @@
 
 React + TypeScript dashboard for interacting with the PaperLens AI backend.
 
-## Stack
+## Stack & Features
 
-- React + Vite + TypeScript
-- Tailwind CSS + shadcn/ui
-- Clerk auth (`@clerk/clerk-react`)
-- Framer Motion animations
+- **Framework:** React + Vite + TypeScript
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Auth:** Clerk (`@clerk/clerk-react`)
+- **Animations:** Framer Motion (used extensively for the advanced real-time progress bars)
+- **Streaming:** Native `ReadableStream` API used to consume Server-Sent Events (SSE) from the backend.
 
 ## Setup
 
@@ -22,22 +23,13 @@ Create or update `frontend/.env.local`:
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 VITE_API_URL=http://localhost:8000
 ```
+*(If deployed to Vercel, set `VITE_API_URL` to your Render backend URL).*
 
 ## Run
 
 ```powershell
-cd frontend
 npm run dev
 ```
-
-## Scripts
-
-- `npm run dev` — start dev server
-- `npm run build` — production build
-- `npm run build:dev` — development-mode build
-- `npm run lint` — lint code
-- `npm run test` — run Vitest tests
-- `npm run test:watch` — watch tests
 
 ## Route Map
 
@@ -50,33 +42,21 @@ npm run dev
 - `/dashboard/generator` — problem generator
 - `/dashboard/gaps` — gap detection
 - `/dashboard/settings` — local profile/preferences
+- `/dashboard/citation` — real-time citation intelligence
 
-## Backend Integration
+## Backend Integration Details
 
-API client: `src/lib/api-client.ts`
+API client operations are handled in `src/lib/api-client.ts` leveraging the `VITE_API_URL` variable.
 
-- Base URL: `VITE_API_URL` (fallback `http://localhost:8000`)
-- Adds `Authorization: Bearer <token>` from Clerk
-
-Feature-page API usage:
-
+**Standard REST Endpoints:**
 - `DashboardHome.tsx` → `GET /api/dashboard`
-- `PaperAnalyzer.tsx` → `POST /api/analyze`, `POST /api/ask`
 - `ExperimentPlanner.tsx` → `POST /api/plan-experiment`
-- `ProblemGenerator.tsx` → `POST /api/generate-problems`
-- `GapDetection.tsx` → `POST /api/detect-gaps`
+
+**Streaming Capabilities:**
+The frontend utilizes real-time streaming to provide users with visual feedback during long-running tasks:
+- **`CitationIntelligence.tsx`**: Uses the native fetch `ReadableStream` to consume the `POST /api/citation-intelligence/stream` endpoint. It processes `start`, `progress`, and `done` JSON chunks to animate the high-fidelity framer-motion progress bar.
 
 ## Auth Flow
 
 - `ClerkProvider` wraps app in `src/App.tsx`.
-- `LoginPage` and `SignupPage` use Clerk hosted components.
-- Frontend sends Clerk session token to backend for protected API calls.
-
-## Testing
-
-- Vitest configured in `vitest.config.ts` (jsdom + setup file).
-
-## Notes
-
-- Dashboard contains demo-mode fallbacks when no authenticated user is present.
-- `SettingsPage` persists profile fields in browser `localStorage` (not backend DB).
+- Frontend passes the Clerk JWT to the backend via the `Authorization: Bearer <token>` header for all protected API routes.
