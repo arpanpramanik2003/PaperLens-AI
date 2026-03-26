@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
@@ -20,7 +20,7 @@ export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isLoaded, userId } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [isDark, setIsDark] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -237,7 +237,7 @@ export default function DashboardLayout() {
       {/* Main */}
       <div
         className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
-          sidebarOpen ? "lg:ml-64" : "lg:ml-16"
+          sidebarOpen ? "lg:pl-64" : "lg:pl-16"
         }`}
       >
         {/* Top Navbar */}

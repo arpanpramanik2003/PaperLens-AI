@@ -367,16 +367,16 @@ export default function CitationIntelligence() {
   const missingReferences = report?.references.filter((entry) => !entry.matched) || [];
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
         <h1 className="text-2xl font-semibold tracking-tight mb-1">Citation Intelligence</h1>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
           {modeIntro[mode].description}
         </p>
       </motion.div>
 
       <motion.div
-        className="rounded-xl border border-border/50 bg-card p-4 mb-6"
+        className="rounded-xl border border-border/50 bg-card p-4 mb-6 overflow-hidden"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease }}
@@ -402,31 +402,37 @@ export default function CitationIntelligence() {
 
         {mode === "upload" ? (
           <>
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <input
-                type="file"
-                id="citation-file"
-                className="hidden"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                accept=".pdf,.docx"
-              />
-              <label
-                htmlFor="citation-file"
-                className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-md border border-border/60 bg-secondary/40 text-sm cursor-pointer hover:bg-secondary/60 transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                Choose File
-              </label>
-
-              <div className="min-w-0 flex-1 h-10 rounded-md border border-border/60 bg-background/50 px-3 flex items-center">
-                <p className="text-sm text-foreground truncate">{file ? file.name : "No file selected"}</p>
+            <input
+              type="file"
+              id="citation-file"
+              className="hidden"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              accept=".pdf,.docx"
+            />
+            {/* Row 1: Choose File button */}
+            <label
+              htmlFor="citation-file"
+              className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-md border border-border/60 bg-secondary/40 text-sm cursor-pointer hover:bg-secondary/60 transition-colors whitespace-nowrap mb-2"
+            >
+              <Upload className="w-4 h-4" />
+              Choose File
+            </label>
+            {/* Row 2: File name (always on its own line) */}
+            {file && (
+              <div className="w-full h-10 rounded-md border border-border/60 bg-background/50 px-3 flex items-center mb-2 overflow-hidden">
+                <span className="text-sm text-foreground whitespace-nowrap">
+                  {file.name.length > 38 ? file.name.slice(0, 24) + "..." + file.name.slice(-10) : file.name}
+                </span>
               </div>
-
-              <Button onClick={handleUploadRun} disabled={!file || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8">
-                <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
-                {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
-              </Button>
-            </div>
+            )}
+            {!file && (
+              <p className="text-xs text-muted-foreground mb-2">No file selected</p>
+            )}
+            {/* Row 3: Analyze button — full width */}
+            <Button onClick={handleUploadRun} disabled={!file || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 w-full">
+              <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+              {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
+            </Button>
 
             <p className="text-xs text-muted-foreground mt-2">PDF/DOCX • Max 12MB</p>
           </>
@@ -447,7 +453,7 @@ export default function CitationIntelligence() {
                 placeholder="Basic details (optional): domain, method, dataset"
                 className="h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
-              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8">
+              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shrink-0 whitespace-nowrap">
                 <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
                 {loading ? "Discovering papers..." : "Discover 30+ Papers"}
               </Button>
@@ -481,19 +487,19 @@ export default function CitationIntelligence() {
 
       {loading && mode === "upload" && progress && (
         <motion.div
-          className="rounded-xl border border-border/50 bg-card p-5 mb-8 overflow-hidden"
+          className="rounded-xl border border-border/50 bg-card p-4 mb-8 overflow-hidden w-full"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 text-accent animate-spin" />
-              <p className="text-sm font-semibold text-foreground">Matching references with Semantic Scholar</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <Loader2 className="w-4 h-4 text-accent animate-spin flex-shrink-0" />
+              <p className="text-sm font-semibold text-foreground">Matching with Semantic Scholar</p>
             </div>
-            <span className="text-xs text-muted-foreground font-mono">
-              {progress.matchedCount} matched so far
+            <span className="text-xs text-muted-foreground font-mono shrink-0">
+              {progress.matchedCount} matched
             </span>
           </div>
 
@@ -551,20 +557,22 @@ export default function CitationIntelligence() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="flex items-start gap-2.5 rounded-lg border border-border/40 bg-secondary/20 px-3 py-2.5"
+                className="rounded-lg border border-border/40 bg-secondary/20 px-3 py-2.5 overflow-hidden"
               >
-                {progress.lastResult === "matched" ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-accent mt-0.5 flex-shrink-0" />
-                ) : (
-                  <XCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                )}
-                <div className="min-w-0">
-                  {progress.lastResult === "matched" && progress.latestTitle ? (
-                    <p className="text-xs font-medium text-foreground truncate">{progress.latestTitle}</p>
-                  ) : null}
-                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{progress.latestRef}</p>
+                <div className="flex items-start gap-2 mb-1">
+                  {progress.lastResult === "matched" ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-accent mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    {progress.lastResult === "matched" && progress.latestTitle ? (
+                      <p className="text-xs font-medium text-foreground break-words">{progress.latestTitle}</p>
+                    ) : null}
+                    <p className="text-[11px] text-muted-foreground break-words mt-0.5 leading-relaxed">{progress.latestRef}</p>
+                  </div>
                 </div>
-                <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                   progress.lastResult === "matched"
                     ? "bg-accent/10 text-accent"
                     : "bg-secondary text-muted-foreground"
@@ -576,7 +584,7 @@ export default function CitationIntelligence() {
           </AnimatePresence>
 
           {/* Stats row */}
-          <div className="flex gap-4 mt-4">
+          <div className="grid grid-cols-4 gap-2 mt-4">
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Extracted</p>
               <p className="text-sm font-semibold">{progress.extracted}</p>
@@ -630,7 +638,7 @@ export default function CitationIntelligence() {
       )}
 
       {report && (
-        <div className="space-y-8">
+        <div className="space-y-8 overflow-hidden">
           {resultMode === "discover" ? (
             <section className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -681,8 +689,8 @@ export default function CitationIntelligence() {
           )}
 
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-            <div className="xl:col-span-3 space-y-6">
-              <section>
+            <div className="xl:col-span-3 space-y-6 min-w-0">
+              <section className="min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-accent" />
@@ -732,18 +740,18 @@ export default function CitationIntelligence() {
                     </div>
                   )}
                   {sortedTopCited.map((entry) => (
-                    <div key={`${entry.reference_index}-${entry.paper_id || entry.reference_text}`} className="rounded-xl border border-border/50 bg-card p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                        <h3 className="text-sm font-semibold text-foreground leading-snug">{entry.title || "Unknown title"}</h3>
+                    <div key={`${entry.reference_index}-${entry.paper_id || entry.reference_text}`} className="rounded-xl border border-border/50 bg-card p-4 overflow-hidden">
+                      <div className="flex flex-col gap-2 mb-2">
+                        <h3 className="text-sm font-semibold text-foreground leading-snug break-words">{entry.title || "Unknown title"}</h3>
                         <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent w-fit">
                           {entry.citation_count} citations
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-2">{entry.authors?.slice(0, 5).join(", ") || "Unknown authors"}</p>
+                      <p className="text-xs text-muted-foreground mb-2 break-words">{entry.authors?.slice(0, 5).join(", ") || "Unknown authors"}</p>
                       <p className="text-xs text-muted-foreground mb-3">{entry.venue || "Unknown venue"}{entry.year ? ` • ${entry.year}` : ""}</p>
                       {entry.url && (
-                        <a href={entry.url} target="_blank" rel="noreferrer" className="text-xs text-accent inline-flex items-center gap-1 hover:underline">
-                          Open in Semantic Scholar <ExternalLink className="w-3 h-3" />
+                        <a href={entry.url} target="_blank" rel="noreferrer" className="text-xs text-accent inline-flex items-center gap-1 hover:underline break-all">
+                          Open in Semantic Scholar <ExternalLink className="w-3 h-3 flex-shrink-0" />
                         </a>
                       )}
                       <p className="text-xs text-foreground/80 mt-3 leading-relaxed break-words">{entry.reference_text}</p>
@@ -773,8 +781,8 @@ export default function CitationIntelligence() {
               </section>
             </div>
 
-            <div className="xl:col-span-2">
-              <section className="rounded-xl border border-border/50 bg-card p-4 xl:sticky xl:top-20">
+            <div className="xl:col-span-2 min-w-0">
+              <section className="rounded-xl border border-border/50 bg-card p-4 xl:sticky xl:top-20 min-w-0 overflow-hidden">
                 <div className="flex items-center gap-2 mb-3">
                   <BookOpen className="w-4 h-4 text-accent" />
                   <h2 className="text-base font-semibold">AI Recommendations</h2>
