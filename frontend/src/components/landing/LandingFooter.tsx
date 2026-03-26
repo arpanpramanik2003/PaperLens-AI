@@ -12,7 +12,7 @@ export default function LandingFooter({ onOpenAbout }: LandingFooterProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
           <div>
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <img src="/favicon.svg" alt="PaperLens Logo" className="w-6 h-6" />
+              <img src="/apple-touch-icon.png" alt="PaperLens Logo" className="w-6 h-6" />
               <span className="text-sm font-semibold text-foreground">PaperLens AI</span>
             </Link>
             <p className="text-xs sm:text-sm text-muted-foreground">AI-powered research assistant for students, engineers, and researchers.</p>

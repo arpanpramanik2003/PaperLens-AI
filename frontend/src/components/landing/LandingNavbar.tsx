@@ -19,7 +19,7 @@ export default function LandingNavbar({ isDark, onToggleTheme }: LandingNavbarPr
     <nav className="fixed top-0 w-full z-50 glass-surface border-b border-border/50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 min-w-0">
-          <img src="/favicon.svg" alt="PaperLens Logo" className="w-7 h-7 flex-shrink-0" />
+          <img src="/apple-touch-icon.png" alt="PaperLens Logo" className="w-7 h-7 flex-shrink-0" />
           <span className="font-semibold text-foreground hidden sm:inline">PaperLens AI</span>
         </Link>
 
