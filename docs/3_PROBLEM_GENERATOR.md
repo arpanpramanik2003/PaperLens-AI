@@ -127,7 +127,7 @@ async def generate_problems(payload: ProblemGeneratorRequest, ...):
 **File:** `backend/app/services/llm.py`
 
 **LLM Provider:** Groq  
-**Model:** `mixtral-8x7b-32768`  
+**Model:** `settings.MODEL_NAME` (default: `llama-3.1-8b-instant`)  
 **Response Format:** JSON with strict schema
 
 **Prompt:**
@@ -618,7 +618,7 @@ Activity(
 
 | Config | Default | Usage |
 |--------|---------|-------|
-| `MODEL_NAME` | "mixtral-8x7b-32768" | Groq LLM |
+| `MODEL_NAME` | "llama-3.1-8b-instant" | Groq LLM |
 | `IDEA_SEED` | 42 | Reproducibility |
 | `MIN_IDEAS` | 4 | Minimum ideas per request |
 | `MAX_IDEAS` | 6 | Maximum ideas per request |

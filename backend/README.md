@@ -62,7 +62,7 @@ Default URL: `http://localhost:8000`
 - `GET /health` (Public)
 - `GET /api/dashboard` (Stats/Telemetry)
 - `POST /api/upload-paper` (PyMuPDF parser → pgvector storage)
-- `POST /api/summarize/{paper_id}` (Map-Reduce summarization using pgvector chunks)
+- `GET /api/summarize/{paper_id}` (Map-Reduce summarization using pgvector chunks)
 - `POST /api/ask` (Grounded Q&A — supports both pgvector RAG and FAISS/BM25 legacy mode)
 - `POST /api/citation-intelligence/stream` (SSE endpoint yielding real-time citation matching progress)
 
@@ -81,4 +81,4 @@ Generator-based PDF parsing (`PyMuPDF`) → lazy-loaded embeddings (`sentence-tr
 This architecture is optimized for 500MB RAM limits:
 - `PyMuPDF` is used instead of `pdfplumber` to prevent parsing OOMs.
 - `torch` and `sentence-transformers` models are explicitly **lazy-loaded** (meaning they consume ~350MB only when `/upload-paper` is called, leaving the rest of the application idle at ~150MB).
-- `ENABLE_VECTOR_RETRIEVAL` defaults to `false` for legacy FAISS endpoints to save memory.
+- `ENABLE_VECTOR_RETRIEVAL` defaults to `false` for legacy FAISS endpoints to save memory.

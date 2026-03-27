@@ -1,6 +1,11 @@
-# Paper Analyzer: Complete Workflow Documentation
+# Paper Analyzer (PaperLens AI): Complete Workflow Documentation
 
-**Purpose:** Upload research papers (PDF/DOCX) and receive AI-powered structured analysis with follow-up Q&A capability.
+**Purpose:** Upload research papers (PDF/DOCX) and receive AI-powered structured analysis plus grounded follow-up Q&A.
+
+This feature supports **two workflows**:
+
+- **Legacy (in-memory)**: `POST /api/analyze` → `doc_id` → `POST /api/ask` with `doc_id`
+- **Persistent (pgvector)**: `POST /api/upload-paper` → `paper_id` → `GET /api/summarize/{paper_id}` and `POST /api/ask` with `paper_id`
 
 ---
 
@@ -9,15 +14,24 @@
 ```
 User Interface (Frontend)
     ↓
-    ├─ File Upload → /api/analyze
-    ├─ Follow-up Questions → /api/ask
-    └─ Real-time Chat Responses
+    ├─ Upload & analyze (legacy) → POST /api/analyze
+    ├─ Upload & index (pgvector) → POST /api/upload-paper
+    ├─ Summarize (pgvector) → GET /api/summarize/{paper_id}
+    ├─ Follow-up questions → POST /api/ask (doc_id OR paper_id)
+    └─ Optional streaming → POST /api/analyze_stream, POST /api/ask_stream
     
 Backend Processing Pipeline
-    ├─ Document Validation & Parsing
-    ├─ Semantic Chunking & Indexing
-    ├─ LLM-based Structured Analysis
-    └─ Retrieval-Augmented Q&A
+    ├─ Document validation & parsing (PyMuPDF for PDF, python-docx for DOCX)
+    ├─ Chunking
+    │    ├─ Semantic (char+sentence) chunking (legacy)
+    │    └─ Token-aware chunking (pgvector pipeline)
+    ├─ Indexing / storage
+    │    ├─ In-memory BM25 + optional FAISS (legacy)
+    │    └─ Supabase pgvector (persistent embeddings + chunks)
+    ├─ LLM outputs (Groq)
+    │    ├─ Structured analysis markdown (legacy)
+    │    └─ Map-reduce summarization (pgvector summarize)
+    └─ Retrieval-Augmented Q&A (legacy OR pgvector)
     
 Output Layers
     ├─ Markdown Analysis (6 sections)
@@ -52,6 +66,7 @@ Output Layers
 - Each question sent to `/api/ask` with:
   - `question`: User query string
   - `doc_id`: Document identifier from analysis phase
+- Frontend can optionally include `history` (recent turns) to improve follow-up handling.
 - AI responses rendered inline with markdown formatting
 
 ### 1.4 UX Enhancements
@@ -73,7 +88,8 @@ Output Layers
 ```python
 extract_pdf_pages(file_path) → List[{"page": int, "text": str}]
 ```
-- Uses PyPDF library to extract text page-by-page
+- Uses **PyMuPDF** (`fitz`) to extract text page-by-page
+- Also provides a generator path (`extract_pdf_pages_generator`) for memory efficiency
 - Honors limits: `MAX_PAGES`, `MAX_TOTAL_CHARS`
 - Raises `ParsingLimitError` if limits exceeded
 
@@ -82,13 +98,14 @@ extract_pdf_pages(file_path) → List[{"page": int, "text": str}]
 extract_docx_pages(file_path) → List[{"page": int, "text": str}]
 ```
 - Uses python-docx to extract text
-- Treats paragraphs as continuous text blocks
+- Treats all paragraphs as a single “page” (DOCX is not paginated like PDF)
 - Same limit enforcement as PDF
 
 **Limits (Configurable):**
-- `MAX_PAGES`: 100 (prevent memory overload)
-- `MAX_TOTAL_CHARS`: 500,000 (prevent tokenization cost)
-- `MAX_UPLOAD_MB`: 25 (file size cap)
+- `MAX_UPLOAD_MB`: default 20 (file size cap)
+- `MAX_PAGES`: default 60 (page cap)
+- `MAX_TOTAL_CHARS`: default 300,000 (text cap)
+- `MAX_CHUNKS`: default 300 (chunk cap)
 
 ### 2.2 Semantic Chunking
 **File:** `backend/app/services/chunking.py`
@@ -101,8 +118,7 @@ chunk_text_semantic(pages) → List[{
     "text": str,
     "page": int,
     "chunk_id": int,
-    "start_char": int,
-    "end_char": int
+    # legacy path stores minimal fields; no char offsets
 }]
 ```
 
@@ -111,7 +127,7 @@ chunk_text_semantic(pages) → List[{
 2. Split by sentences (preserves meaning)
 3. Group sentences into chunks (~300-500 chars)
 4. Add overlap (~50 chars) between adjacent chunks for context continuity
-5. Cap total chunks at `MAX_CHUNKS` (default: 500)
+5. Cap total chunks at `MAX_CHUNKS` (default: 300)
 
 **Why Semantic Chunking?**
 - Preserves sentence boundaries (don't split mid-sentence)
@@ -137,7 +153,7 @@ build_vector_store(chunks) → (faiss_index, bm25_index)
 - Optional: `ENABLE_VECTOR_RETRIEVAL=true`
 - Uses sentence-transformers embeddings
 - Semantic similarity matching
-- Requires more RAM (~2GB for 1000+ chunks)
+- Requires more RAM and may not be suitable on low-memory hosts
 
 **On Low-Memory Hosts:**
 - Keep `ENABLE_VECTOR_RETRIEVAL=false`
@@ -340,15 +356,42 @@ Question:
 
 ---
 
-## 5. Visualization & UX
+## 5. Persistent pgvector Pipeline (Upload → Summarize → Ask)
 
-### 5.1 Analysis Rendering
+This is the newer, memory-efficient pipeline where paper chunks + embeddings are stored in **Supabase pgvector**, so Q&A can work even after backend restarts.
+
+### 5.1 Upload & Index
+- **Endpoint:** `POST /api/upload-paper`
+- **Key properties:**
+  - Generates a deterministic `paper_id` (16 chars) for deduplication per user.
+  - Uses PyMuPDF generator extraction for PDFs (`extract_pdf_pages_generator`) to reduce memory spikes.
+  - Uses token-aware chunking (`chunk_text_by_tokens`) before embedding.
+  - Embeddings are generated lazily via sentence-transformers and stored in Supabase table `paper_chunks`.
+
+### 5.2 Summarize (Map-Reduce)
+- **Endpoint:** `GET /api/summarize/{paper_id}`
+- **What happens:**
+  - Fetch all chunks for `paper_id` from pgvector.
+  - Run map-reduce summarization (`run_map_reduce_summarization`) to create one cohesive summary.
+  - Cache the final summary in memory for fast repeat calls.
+
+### 5.3 Q&A using pgvector RAG
+- **Endpoint:** `POST /api/ask` with `paper_id`
+- **What happens:**
+  - Retrieve top-k relevant chunks from Supabase via RPC `match_chunks`.
+  - Generate an answer grounded in retrieved context, with page citations preserved when available.
+
+---
+
+## 6. Visualization & UX
+
+### 6.1 Analysis Rendering
 - **Framework:** React with Framer Motion
 - **Markdown Parser:** `react-markdown` with custom component styling
 - **Headings:** Color-coded by level (h1, h2, h3)
 - **Page Citations:** Displayed as-is in markdown, formatted as `[Page X]`
 
-### 5.2 Chat UI
+### 6.2 Chat UI
 - **Layout:** Paper analysis on left (scrollable), chat sidebar on right (sticky)
 - **Message Display:**
   - User messages: Right-aligned, secondary background
@@ -356,7 +399,7 @@ Question:
   - Loading state: Animate dots while generating
 - **Input:** Bottom text field with Send button
 
-### 5.3 Error Handling
+### 6.3 Error Handling
 - **413 Payload Too Large:** Show professional warning with file size recommendations
 - **Parsing Timeout:** Graceful fallback with "Could not extract text"
 - **LLM Timeout:** Show "Analysis failed" with retry option
@@ -364,24 +407,24 @@ Question:
 
 ---
 
-## 6. Configuration & Limits
+## 7. Configuration & Limits
 
 **File:** `backend/app/core/config.py`
 
 | Config | Default | Purpose |
 |--------|---------|---------|
-| `MAX_PAGES` | 100 | Page limit to prevent parsing overload |
-| `MAX_TOTAL_CHARS` | 500,000 | Total character limit |
-| `MAX_UPLOAD_MB` | 25 | Maximum file size in MB |
-| `MAX_CHUNKS` | 500 | Maximum chunks after semantic split |
+| `MAX_UPLOAD_MB` | 20 | Maximum file size in MB |
+| `MAX_PAGES` | 60 | Page limit to prevent parsing overload |
+| `MAX_TOTAL_CHARS` | 300,000 | Total character limit |
+| `MAX_CHUNKS` | 300 | Maximum chunks after chunking |
 | `MAX_CACHED_DOCS` | 1 | Concurrent cached documents |
 | `ENABLE_VECTOR_RETRIEVAL` | false | Use FAISS dense indexing |
 | `ENABLE_RERANKER` | false | Use cross-encoder reranking |
-| `MODEL_NAME` | "mixtral-8x7b-32768" | Groq LLM model |
+| `MODEL_NAME` | "llama-3.1-8b-instant" | Groq LLM model |
 
 ---
 
-## 7. Failure Modes & Recovery
+## 8. Failure Modes & Recovery
 
 | Scenario | Root Cause | User Experience | Recovery |
 |----------|-----------|-----------------|----------|
@@ -394,7 +437,7 @@ Question:
 
 ---
 
-## 8. Performance Characteristics
+## 9. Performance Characteristics
 
 | Operation | Time | Memory | Notes |
 |-----------|------|--------|-------|
@@ -407,7 +450,7 @@ Question:
 
 ---
 
-## 9. Streaming Endpoints (Available)
+## 10. Streaming Endpoints (Available)
 
 Alternative endpoints for real-time token-by-token experience:
 - `POST /api/analyze_stream` – Streams analysis tokens as generated
@@ -417,7 +460,7 @@ Current frontend uses non-stream endpoints, but streaming routes available for f
 
 ---
 
-## 10. Summary
+## 11. Summary
 
 1. **User uploads paper** → Frontend sends multipart to `/api/analyze`
 2. **Backend parses & chunks** → Validates size, extracts pages, semantically chunks with overlap

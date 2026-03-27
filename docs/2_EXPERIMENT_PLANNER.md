@@ -98,7 +98,7 @@ async def plan_experiment(payload: ExperimentPlanRequest, ...):
 **File:** `backend/app/services/llm.py` → `generate_experiment_plan()`
 
 **LLM Provider:** Groq  
-**Model:** `mixtral-8x7b-32768`  
+**Model:** `settings.MODEL_NAME` (default: `llama-3.1-8b-instant`)  
 **Response Format:** Strict JSON schema
 
 **Prompt Structure:**
@@ -330,7 +330,7 @@ db.commit()
 
 | Config | Default | Usage |
 |--------|---------|-------|
-| `MODEL_NAME` | "mixtral-8x7b-32768" | Groq LLM model to use |
+| `MODEL_NAME` | "llama-3.1-8b-instant" | Groq LLM model to use |
 | `GENERATE_PLAN_TIMEOUT` | 10 | Seconds before timeout |
 | `MAX_RETRIES` | 2 | JSON parse retry attempts |
 | `TEMPERATURE` | 0.7 | LLM creativity (0.0-1.0) |

@@ -29,8 +29,11 @@ Client (React + Clerk)
 FastAPI API Layer (/api/*)
 	 ├─ Auth checks (Clerk JWKS)
 	 ├─ LLM orchestration (Groq)
-	 ├─ Retrieval pipeline (BM25 + optional FAISS + optional reranker)
-	 ├─ Parsing/chunking (PDF/DOCX)
+	 ├─ Parsing/chunking (PDF/DOCX via PyMuPDF + python-docx)
+	 ├─ Retrieval pipeline (legacy: BM25 + optional FAISS + optional reranker)
+	 ├─ Retrieval pipeline (new: Supabase pgvector + RPC match_chunks)
+	 ├─ Summarization (map-reduce over pgvector chunks)
+	 ├─ Citation intelligence (Semantic Scholar API + optional SSE streaming)
 	 └─ DB writes (documents, activities)
 				↓
 PostgreSQL (Supabase-compatible connection)
@@ -74,7 +77,9 @@ PostgreSQL (Supabase-compatible connection)
 | Dashboard | `GET /api/dashboard` | Yes | Reads `documents` + `activities` | Stable |
 | Paper Analyzer | `POST /api/analyze` | Yes | Writes `documents` + `activities` | Stable |
 | Paper Analyzer (stream) | `POST /api/analyze_stream` | Not primary path | Writes `documents` + `activities` | Available, not adopted in UI |
-| Q&A | `POST /api/ask` | Yes | No extra DB write | Stable |
+| Paper Upload (pgvector) | `POST /api/upload-paper` | Not primary path | Stores chunks in Supabase `paper_chunks`; writes `documents` + `activities` | Available |
+| Paper Summarize (pgvector) | `GET /api/summarize/{paper_id}` | Not primary path | Summary cached in-memory; chunks in Supabase | Available |
+| Q&A | `POST /api/ask` | Yes | No extra DB write | Stable (supports doc_id + paper_id) |
 | Q&A (stream) | `POST /api/ask_stream` | Not primary path | No extra DB write | Available, not adopted in UI |
 | Experiment Planner | `POST /api/plan-experiment` | Yes | Writes `activities` | Stable |
 | Problem Generator | `POST /api/generate-problems` | Yes | Writes `activities` | Stable |
@@ -82,6 +87,10 @@ PostgreSQL (Supabase-compatible connection)
 | Gap Detection | `POST /api/detect-gaps` | Yes | Writes `activities` | Stable |
 | Dataset & Benchmark Finder | `POST /api/find-datasets-benchmarks` | Yes | Writes `activities` | Stable |
 | Documents Listing | `GET /api/documents` | Indirect/available | Reads `documents` | Stable |
+| Citation Intelligence | `POST /api/citation-intelligence` | Yes | Writes `activities` | Stable |
+| Citation Intelligence (SSE) | `POST /api/citation-intelligence/stream` | Yes | Writes `activities` | Stable |
+| Citation Recommendations | `POST /api/citation-intelligence/recommendations` | Yes | Writes `activities` | Stable |
+| Citation Discovery | `POST /api/citation-intelligence/discover` | Yes | Writes `activities` | Stable |
 
 ---
 
@@ -135,16 +144,19 @@ User analytics/history persist; retrieval context for ongoing chat is process-lo
 	- `TOP_K=5`
 	- `CHUNK_SIZE=1200`
 	- `CHUNK_OVERLAP=220`
+	- `TOKEN_CHUNK_SIZE=700` (pgvector)
+	- `TOKEN_CHUNK_OVERLAP=100` (pgvector)
 - Limits:
-	- `MAX_UPLOAD_MB=12`
-	- `MAX_PAGES=12`
-	- `MAX_TOTAL_CHARS=120000`
-	- `MAX_CHUNKS=220`
+	- `MAX_UPLOAD_MB=20`
+	- `MAX_PAGES=60`
+	- `MAX_TOTAL_CHARS=300000`
+	- `MAX_CHUNKS=300`
 - Feature flags:
 	- `ENABLE_VECTOR_RETRIEVAL=false`
 	- `ENABLE_RERANKER=false`
 - Cache:
 	- `MAX_CACHED_DOCS=1`
+	- `CITATION_MAX_REFERENCES=60`
 
 ### Frontend env
 
@@ -191,6 +203,7 @@ User analytics/history persist; retrieval context for ongoing chat is process-lo
 - `docs/3_PROBLEM_GENERATOR.md`
 - `docs/4_GAP_DETECTION.md`
 - `docs/5_DATASET_BENCHMARK_FINDER.md`
+- `docs/6_CITATION_INTELLIGENCE.md`
 
 ### Suggested governance rule
 

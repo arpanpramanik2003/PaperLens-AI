@@ -179,7 +179,7 @@ content_to_analyze = text  # Used as-is
 **File:** `backend/app/services/llm.py` → `detect_research_gaps()`
 
 **LLM Provider:** Groq  
-**Model:** `mixtral-8x7b-32768`  
+**Model:** `settings.MODEL_NAME` (default: `llama-3.1-8b-instant`)  
 **Response Format:** JSON with strict schema
 
 **Prompt:**
@@ -494,7 +494,7 @@ db.commit()
 
 | Config | Default | Usage |
 |--------|---------|-------|
-| `MODEL_NAME` | "mixtral-8x7b-32768" | Groq LLM |
+| `MODEL_NAME` | "llama-3.1-8b-instant" | Groq LLM |
 | `SUMMARIZATION_CHUNK_COUNT` | 3 | Chunks to sample for summary |
 | `MIN_GAPS` | 4 | Minimum gaps per request |
 | `MAX_GAPS` | 6 | Maximum gaps per request |
