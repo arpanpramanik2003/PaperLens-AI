@@ -21,7 +21,7 @@ export default function AboutModal({ open, onClose }: AboutModalProps) {
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <img src="/apple-touch-icon.png" alt="PaperLens Logo" className="w-8 h-8" />
+            <img src="/favicon.svg" alt="PaperLens Logo" className="w-8 h-8" />
             <h2 className="text-2xl font-semibold text-foreground">PaperLens AI</h2>
           </div>
           <button

@@ -177,7 +177,7 @@ export default function DashboardLayout() {
         <div className="h-full flex flex-col w-64 lg:w-auto">
           {/* Logo */}
           <div className="h-14 flex items-center justify-center px-4 border-b border-border/50 flex-shrink-0">
-            <img src="/apple-touch-icon.png" alt="PaperLens Logo" className="w-8 h-8 flex-shrink-0" />
+            <img src="/favicon.svg" alt="PaperLens Logo" className="w-8 h-8 flex-shrink-0" />
             {sidebarOpen && <span className="font-semibold text-foreground whitespace-nowrap ml-2">PaperLens AI</span>}
           </div>
 
@@ -259,7 +259,7 @@ export default function DashboardLayout() {
               </span>
             </Button>
             <div className="lg:hidden flex items-center gap-2">
-              <img src="/apple-touch-icon.png" alt="PaperLens Logo" className="w-6 h-6" />
+              <img src="/favicon.svg" alt="PaperLens Logo" className="w-6 h-6" />
               <span className="font-semibold text-sm">PaperLens AI</span>
             </div>
             <div className="hidden sm:flex items-center">
