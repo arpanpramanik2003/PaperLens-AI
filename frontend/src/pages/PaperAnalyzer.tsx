@@ -30,6 +30,11 @@ const normalizeMarkdown = (value: string) => {
     .replace(/^\s*\*\*(.*?)\*\*\s*$/gm, "## $1");
 };
 
+type AnalyzeErrorPayload = {
+  error?: string;
+  code?: string;
+};
+
 export default function PaperAnalyzer() {
   const { getToken, userId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +45,7 @@ export default function PaperAnalyzer() {
   
   const [analysisResult, setAnalysisResult] = useState<string>("");
   const [docId, setDocId] = useState<string>("");
+  const [pageCount, setPageCount] = useState<number | null>(null);
   const [analyzingStep, setAnalyzingStep] = useState(0);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   
@@ -54,7 +60,7 @@ export default function PaperAnalyzer() {
     "Finalizing result"
   ];
 
-  const parseAnalyzeError = (status: number, payload: any) => {
+  const parseAnalyzeError = (status: number, payload: AnalyzeErrorPayload) => {
     const message = payload?.error || "Analysis failed. Please try again.";
 
     if (status === 413 || payload?.code === "PAPER_TOO_LENGTHY") {
@@ -78,6 +84,7 @@ export default function PaperAnalyzer() {
     setAnalyzed(false);
     setWarningMessage(null);
     setChatMessages([]);
+    setPageCount(null);
 
     const stepTimer = window.setInterval(() => {
       setAnalyzingStep((prev) => (prev < analysisSteps.length - 1 ? prev + 1 : prev));
@@ -87,6 +94,7 @@ export default function PaperAnalyzer() {
       setTimeout(() => {
         setAnalysisResult("This paper introduces the Transformer architecture, a novel sequence transduction model based entirely on attention mechanisms...\n\n**Methodology**\nThe authors propose a multi-head self-attention mechanism...\n\n**Results**\nThe Transformer achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results by over 2 BLEU.\n\n**Limitations**\nThe model's self-attention mechanism has O(n²) complexity with respect to sequence length, which can be prohibitive for very long sequences.");
         setDocId("demo_doc_id");
+        setPageCount(15);
         setAnalyzed(true);
         setAnalyzing(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -112,10 +120,12 @@ export default function PaperAnalyzer() {
       const data = await res.json();
       setAnalysisResult(data.result);
       setDocId(data.doc_id);
+      setPageCount(typeof data.page_count === "number" ? data.page_count : null);
       setAnalyzed(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      const message = parseAnalyzeError(error?.status ?? 0, error?.payload ?? {});
+      const err = error as { status?: number; payload?: AnalyzeErrorPayload };
+      const message = parseAnalyzeError(err?.status ?? 0, err?.payload ?? {});
       setWarningMessage(message);
       toast.error("Analysis could not be completed", {
         description: message
@@ -193,6 +203,7 @@ export default function PaperAnalyzer() {
     setAnalyzed(false);
     setAnalysisResult("");
     setDocId("");
+    setPageCount(null);
     setChatMessages([]);
     setChatInput("");
     setAiGenerating(false);
@@ -310,7 +321,16 @@ export default function PaperAnalyzer() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease }}
             >
-              <h3 className="text-sm font-semibold text-foreground capitalize mb-4">Analysis Result</h3>
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground capitalize">Analysis Result</h3>
+                </div>
+                {typeof pageCount === "number" && pageCount > 0 && (
+                  <div className="text-xs font-mono px-2 py-1 rounded-md bg-secondary text-foreground border border-border/60 whitespace-nowrap">
+                    {pageCount} {pageCount === 1 ? "page" : "pages"}
+                  </div>
+                )}
+              </div>
               <div className="text-sm">
                 {analysisResult ? (
                   <ReactMarkdown components={MarkdownComponents}>

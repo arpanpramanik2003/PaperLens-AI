@@ -1,5 +1,6 @@
 import hashlib
 import os
+import re
 import shutil
 from typing import Optional
 
@@ -57,6 +58,132 @@ def _lengthy_response(message):
     )
 
 
+_TITLE_BLOCKLIST = {
+    "abstract",
+    "introduction",
+    "keywords",
+    "index terms",
+    "authors",
+    "author",
+    "references",
+    "acknowledgements",
+    "table of contents",
+}
+
+_NON_TITLE_HINTS = (
+    "department",
+    "university",
+    "school of",
+    "faculty of",
+    "institute",
+    "college",
+    "jaipur",
+    "india",
+    "corresponding author",
+    "affiliation",
+)
+
+
+def _filename_to_title(filename: Optional[str]) -> Optional[str]:
+
+    if not filename:
+        return None
+
+    stem = os.path.splitext(os.path.basename(filename))[0]
+    cleaned = re.sub(r"[_\-.]+", " ", stem).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned or None
+
+
+def _detect_paper_title(pages: list[dict]) -> Optional[str]:
+
+    if not pages:
+        return None
+
+    sample_pages = pages[:2]
+    candidates: list[tuple[float, str]] = []
+
+    for page in sample_pages:
+        text = page.get("text", "")
+        if not text:
+            continue
+
+        for line_idx, raw_line in enumerate(text.splitlines()[:30]):
+            line = re.sub(r"\s+", " ", raw_line).strip()
+            if not line:
+                continue
+
+            lower_line = line.lower().strip(":")
+            if lower_line in _TITLE_BLOCKLIST:
+                continue
+
+            if any(hint in lower_line for hint in _NON_TITLE_HINTS):
+                continue
+
+            # Affiliation markers like "1 Department of ..."
+            if re.match(r"^\d+\s+(department|school|faculty|institute|college)\b", lower_line):
+                continue
+
+            if (
+                len(line) < 12
+                or len(line) > 180
+                or line.endswith(":")
+                or "http" in lower_line
+                or "doi" in lower_line
+                or "@" in line
+                or line.count(",") >= 3
+            ):
+                continue
+
+            words = line.split()
+            if len(words) < 3 or len(words) > 24:
+                continue
+
+            alpha_words = [w for w in words if any(c.isalpha() for c in w)]
+            if not alpha_words:
+                continue
+
+            title_case_words = [w for w in alpha_words if w[0].isupper()]
+            title_case_ratio = len(title_case_words) / len(alpha_words)
+
+            if title_case_ratio < 0.45:
+                continue
+
+            # Prefer lines appearing early and with reasonable title length.
+            position_bonus = max(0.0, (32 - line_idx) / 32)
+            length_score = min(len(line), 120) / 120
+            score = (title_case_ratio * 0.65) + (position_bonus * 0.2) + (length_score * 0.15)
+            candidates.append((score, line))
+
+    if not candidates:
+        return None
+
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _sanitize_detected_title(title: Optional[str]) -> Optional[str]:
+
+    if not title:
+        return None
+
+    normalized = re.sub(r"\s+", " ", title).strip()
+    lowered = normalized.lower()
+
+    if len(normalized) < 10:
+        return None
+
+    if any(hint in lowered for hint in _NON_TITLE_HINTS):
+        return None
+
+    if re.match(r"^\d+\s+(department|school|faculty|institute|college)\b", lowered):
+        return None
+
+    if normalized.count(",") >= 3:
+        return None
+
+    return normalized
+
+
 @router.post("/analyze")
 async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
 
@@ -84,9 +211,19 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
         if has_doc(doc_id):
             set_active_doc(doc_id)
             cached = get_doc(doc_id)
+            cached_page_count = cached.get("page_count")
+            if cached_page_count is None:
+                cached_pages = {
+                    chunk.get("page") for chunk in cached.get("chunks", []) if chunk.get("page") is not None
+                }
+                cached_page_count = len(cached_pages) if cached_pages else None
+
             return {
                 "result": cached["analysis"],
-                "doc_id": doc_id
+                "doc_id": doc_id,
+                "page_count": cached_page_count,
+                "detected_title": _sanitize_detected_title(cached.get("detected_title")),
+                "fallback_title": _filename_to_title(cached.get("filename")),
             }
 
         path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
@@ -114,6 +251,9 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
 
         _raise_if_paper_too_lengthy(pages)
 
+        page_count = len(pages)
+        detected_title = _sanitize_detected_title(_detect_paper_title(pages))
+
         chunks = chunk_text_semantic(pages)
 
         if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
@@ -128,7 +268,9 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
             "vector_index": index,
             "bm25_index": bm25,
             "analysis": result,
-            "filename": file.filename
+            "filename": file.filename,
+            "page_count": page_count,
+            "detected_title": detected_title,
         })
 
         set_active_doc(doc_id)
@@ -146,7 +288,13 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
         except OSError:
             pass
 
-        return {"result": result, "doc_id": doc_id}
+        return {
+            "result": result,
+            "doc_id": doc_id,
+            "page_count": page_count,
+            "detected_title": detected_title,
+            "fallback_title": _filename_to_title(file.filename),
+        }
 
     except PaperTooLengthyError as exc:
 
