@@ -49,6 +49,8 @@ class CitationRecommendationRequest(BaseModel):
     top_cited: list[dict] = []
     missing_references: list[str] = []
     recommendation_mode: Optional[str] = "upload"
+    project_title: Optional[str] = None
+    basic_details: Optional[str] = None
 
 
 class CitationDiscoveryRequest(BaseModel):

@@ -1,9 +1,14 @@
+import json
+import math
 import re
 import time
 from datetime import datetime
 from typing import Any
 
 import httpx
+from groq import Groq
+
+from app.core.config import settings
 
 
 REFERENCE_SECTION_HEADERS = [
@@ -303,6 +308,319 @@ def _build_title_only_query(reference_text: str) -> str:
     return ""
 
 
+DISCOVERY_STOPWORDS = {
+    "a", "an", "and", "based", "by", "for", "from", "in", "into", "of", "on", "or",
+    "the", "to", "using", "via", "with", "without", "toward", "towards", "through",
+    "approach", "method", "methods", "model", "models", "system", "systems", "study",
+    "framework", "frameworks", "analysis", "detection", "classification", "prediction",
+}
+
+DISCOVERY_METHOD_SYNONYMS: dict[str, list[str]] = {
+    "gan": ["gan", "generative adversarial network", "generative adversarial networks"],
+    "cgan": ["cgan", "conditional gan", "conditional generative adversarial network"],
+    "cnn": ["cnn", "convolutional neural network", "convolutional neural networks"],
+    "rnn": ["rnn", "recurrent neural network", "recurrent neural networks"],
+    "lstm": ["lstm", "long short-term memory"],
+    "transformer": ["transformer", "transformers", "vision transformer", "vit"],
+    "vit": ["vision transformer", "vit", "transformer"],
+    "diffusion": ["diffusion model", "diffusion models", "denoising diffusion"],
+    "federated learning": ["federated learning", "privacy-preserving federated learning"],
+    "graph neural network": ["graph neural network", "graph neural networks", "gnn"],
+    "gnn": ["graph neural network", "graph neural networks", "gnn"],
+    "explainable": ["explainable ai", "interpretable", "explainability"],
+}
+
+
+def _normalize_phrase(value: str) -> str:
+    cleaned = value.lower().strip()
+    cleaned = re.sub(r"[^a-z0-9\s-]", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def _extract_keyphrases(text: str, max_terms: int = 10) -> list[str]:
+    if not text:
+        return []
+
+    normalized = _normalize_phrase(text)
+    pieces = re.split(r"[;:,/()\[\]\-]", normalized)
+    phrases: list[str] = []
+
+    for piece in pieces:
+        tokens = [token for token in piece.split() if token and token not in DISCOVERY_STOPWORDS]
+        if len(tokens) >= 2:
+            phrase = " ".join(tokens[:5]).strip()
+            if phrase and phrase not in phrases:
+                phrases.append(phrase)
+
+    if not phrases:
+        tokens = [token for token in normalized.split() if token and token not in DISCOVERY_STOPWORDS]
+        if tokens:
+            phrases = [" ".join(tokens[:max_terms])]
+
+    return phrases[:max_terms]
+
+
+def _expand_method_terms(text: str) -> list[str]:
+    normalized = _normalize_phrase(text)
+    expansions: list[str] = []
+
+    for key, values in DISCOVERY_METHOD_SYNONYMS.items():
+        if key in normalized:
+            for value in values:
+                if value not in expansions:
+                    expansions.append(value)
+
+    return expansions
+
+
+def _unique_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        candidate = value.strip()
+        if not candidate:
+            continue
+        key = candidate.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(candidate)
+    return ordered
+
+
+def _split_topic_clauses(text: str) -> list[str]:
+    if not text:
+        return []
+
+    normalized = re.sub(r"\s+", " ", text.strip())
+    fragments = re.split(r"\s*[:;–—-]\s*|\s+via\s+|\s+using\s+|\s+based on\s+|\s+for\s+", normalized, flags=re.IGNORECASE)
+
+    clauses: list[str] = []
+    for fragment in fragments:
+        fragment = fragment.strip(" ,.-")
+        if len(fragment.split()) < 2:
+            continue
+        if fragment.lower() not in {item.lower() for item in clauses}:
+            clauses.append(fragment)
+
+    return clauses
+
+
+def _build_heuristic_discovery_plan(project_title: str, basic_details: str = "") -> dict[str, Any]:
+    normalized_title = (project_title or "").strip()
+    normalized_details = (basic_details or "").strip()
+    combined_text = f"{normalized_title} {normalized_details}".strip()
+
+    clauses = _split_topic_clauses(normalized_title)
+    if normalized_details:
+        clauses.extend(_extract_keyphrases(normalized_details, max_terms=4))
+
+    keyphrases = _extract_keyphrases(combined_text, max_terms=12)
+    method_terms = _expand_method_terms(combined_text)
+
+    domain_terms = clauses[:4] if clauses else keyphrases[:4]
+    task_terms = []
+    for phrase in keyphrases:
+        if phrase not in domain_terms and phrase not in method_terms:
+            task_terms.append(phrase)
+
+    must_include_terms = _unique_preserve_order(method_terms[:4] + [term for term in clauses[:2] if term])
+    core_terms = _unique_preserve_order((clauses[:3] or keyphrases[:3]) + keyphrases[:5])
+
+    search_queries: list[str] = []
+    if normalized_title:
+        search_queries.append(normalized_title)
+    if normalized_details:
+        search_queries.append(f"{normalized_title} {normalized_details}".strip())
+
+    for clause in clauses[:4]:
+        search_queries.append(clause)
+
+    if method_terms and keyphrases:
+        search_queries.append(" ".join(_unique_preserve_order(method_terms[:2] + keyphrases[:4])))
+
+    if method_terms and domain_terms:
+        search_queries.append(" ".join(_unique_preserve_order(method_terms[:2] + domain_terms[:3])))
+
+    if keyphrases:
+        search_queries.append(" ".join(keyphrases[:6]))
+
+    if normalized_details:
+        search_queries.append(" ".join(_extract_keyphrases(normalized_details, max_terms=6)))
+
+    search_queries = _unique_preserve_order([query for query in search_queries if len(query.split()) >= 2])
+
+    intent_summary = " ".join(keyphrases[:2]) if keyphrases else normalized_title
+    if method_terms:
+        intent_summary = f"{intent_summary} with {method_terms[0]} focus".strip()
+
+    return {
+        "intent_summary": intent_summary[:220],
+        "core_terms": core_terms,
+        "method_terms": _unique_preserve_order(method_terms),
+        "domain_terms": _unique_preserve_order(domain_terms),
+        "task_terms": _unique_preserve_order(task_terms[:6]),
+        "must_include_terms": must_include_terms,
+        "search_queries": search_queries[:8],
+        "negative_terms": [],
+        "llm_used": False,
+    }
+
+
+def _build_discovery_query_plan(project_title: str, basic_details: str = "") -> dict[str, Any]:
+    base_plan = _build_heuristic_discovery_plan(project_title, basic_details)
+
+    if not settings.GROQ_API_KEY:
+        return base_plan
+
+    try:
+        llm_client = Groq(api_key=settings.GROQ_API_KEY)
+        response = llm_client.chat.completions.create(
+            model=settings.MODEL_NAME,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You turn a research project title into a smart literature-search plan. "
+                        "Split compound titles, preserve explicit method acronyms like GAN/CNN/GNN, "
+                        "and return only valid JSON."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"""
+Project title:
+{project_title}
+
+Optional details:
+{basic_details}
+
+Return JSON with these keys:
+{{
+  "intent_summary": "1 short sentence summarizing the topic",
+  "core_terms": ["core concept", "task", "domain"],
+  "method_terms": ["GAN", "generative adversarial network"],
+  "domain_terms": ["plant pathology", "leaf blight"],
+  "task_terms": ["disease detection"],
+  "must_include_terms": ["GAN", "leaf blight"],
+  "search_queries": ["query 1", "query 2", "query 3", "query 4"],
+  "negative_terms": ["optional exclusions"]
+}}
+
+Rules:
+- Search queries should discover related work, not just exact-title matches.
+- Include both narrow and broad variants.
+- Keep search queries between 4 and 8 items.
+- Make sure at least one query explicitly includes the method if the title mentions one.
+- If the title is compound, split it into meaningful clauses.
+""".strip(),
+                },
+            ],
+            response_format={"type": "json_object"},
+        )
+
+        payload = json.loads(response.choices[0].message.content)
+        search_queries = _unique_preserve_order([
+            *(payload.get("search_queries") or []),
+            *(base_plan.get("search_queries") or []),
+        ])
+
+        merged_plan = {
+            **base_plan,
+            "intent_summary": (payload.get("intent_summary") or base_plan["intent_summary"])[:220],
+            "core_terms": _unique_preserve_order((payload.get("core_terms") or []) + base_plan.get("core_terms", [])),
+            "method_terms": _unique_preserve_order((payload.get("method_terms") or []) + base_plan.get("method_terms", [])),
+            "domain_terms": _unique_preserve_order((payload.get("domain_terms") or []) + base_plan.get("domain_terms", [])),
+            "task_terms": _unique_preserve_order((payload.get("task_terms") or []) + base_plan.get("task_terms", [])),
+            "must_include_terms": _unique_preserve_order((payload.get("must_include_terms") or []) + base_plan.get("must_include_terms", [])),
+            "search_queries": search_queries[:8],
+            "negative_terms": _unique_preserve_order((payload.get("negative_terms") or []) + base_plan.get("negative_terms", [])),
+            "llm_used": True,
+        }
+
+        if merged_plan["search_queries"]:
+            return merged_plan
+    except Exception:
+        pass
+
+    return base_plan
+
+
+def _normalized_text(value: Any) -> str:
+    return _normalize_phrase(str(value or ""))
+
+
+def _phrase_hits(text: str, phrases: list[str]) -> int:
+    if not text or not phrases:
+        return 0
+
+    hits = 0
+    for phrase in phrases:
+        normalized_phrase = _normalized_text(phrase)
+        if not normalized_phrase:
+            continue
+        if normalized_phrase in text:
+            hits += 1
+    return hits
+
+
+def _score_discovery_candidate(paper: dict[str, Any], plan: dict[str, Any], query_hit_count: int) -> float:
+    title = _normalized_text(paper.get("title"))
+    abstract = _normalized_text(paper.get("abstract"))
+    venue = _normalized_text(paper.get("venue"))
+    combined = f"{title} {abstract} {venue}".strip()
+
+    core_terms = [_normalized_text(term) for term in (plan.get("core_terms") or [])]
+    method_terms = [_normalized_text(term) for term in (plan.get("method_terms") or [])]
+    domain_terms = [_normalized_text(term) for term in (plan.get("domain_terms") or [])]
+    task_terms = [_normalized_text(term) for term in (plan.get("task_terms") or [])]
+    must_include_terms = [_normalized_text(term) for term in (plan.get("must_include_terms") or [])]
+    search_queries = [_normalized_text(term) for term in (plan.get("search_queries") or [])]
+
+    score = 0.0
+
+    if plan.get("intent_summary"):
+        summary_terms = _extract_keyphrases(plan["intent_summary"], max_terms=4)
+        score += 2.0 * _phrase_hits(title, summary_terms)
+
+    score += 8.0 * _phrase_hits(title, must_include_terms)
+    score += 4.0 * _phrase_hits(abstract, must_include_terms)
+    score += 5.0 * _phrase_hits(title, method_terms)
+    score += 2.5 * _phrase_hits(abstract, method_terms)
+    score += 4.0 * _phrase_hits(title, domain_terms)
+    score += 2.0 * _phrase_hits(abstract, domain_terms)
+    score += 3.0 * _phrase_hits(title, task_terms)
+    score += 1.5 * _phrase_hits(abstract, task_terms)
+    score += 1.5 * _phrase_hits(title, core_terms)
+    score += 0.75 * _phrase_hits(abstract, core_terms)
+
+    for query in search_queries:
+        if query and query in title:
+            score += 10.0
+
+    if must_include_terms:
+        must_hit_count = _phrase_hits(combined, must_include_terms)
+        score += 8.0 * (must_hit_count / max(len(must_include_terms), 1))
+        if must_hit_count == 0:
+            score -= 10.0
+
+    if query_hit_count:
+        score += min(query_hit_count, 5) * 2.5
+
+    citation_count = paper.get("citationCount") or 0
+    score += min(math.log1p(citation_count) * 1.6, 12.0)
+
+    year = paper.get("year")
+    if isinstance(year, int):
+        score += max(0.0, (year - 2018) * 0.7)
+
+    title_bonus_terms = _extract_keyphrases(paper.get("title") or "", max_terms=8)
+    score += 0.6 * len(set(title_bonus_terms) & set(core_terms + method_terms + domain_terms + task_terms))
+
+    return score
+
+
 # ---------------------------------------------------------------------------
 # Semantic Scholar client — with multi-strategy search
 # ---------------------------------------------------------------------------
@@ -360,6 +678,42 @@ class SemanticScholarClient:
 
         data = response.json().get("data") or []
         return data[0] if data else None
+
+    def _search_results_by_query(
+        self,
+        query: str,
+        limit: int = 12,
+        fields: str = "title,authors,year,citationCount,url,venue,paperId,abstract",
+    ) -> list[dict]:
+        if not query or len(query.strip()) < 3:
+            return []
+
+        self._throttle()
+
+        response = self._client.get(
+            "https://api.semanticscholar.org/graph/v1/paper/search",
+            params={"query": query, "limit": max(1, min(limit, 25)), "fields": fields},
+            headers=self._get_headers(),
+        )
+        self._last_request_time = time.monotonic()
+
+        if response.status_code in {429, 503}:
+            time.sleep(2.0)
+            return []
+
+        if response.status_code in {401, 403}:
+            raise RuntimeError("Semantic Scholar API authentication failed.")
+
+        if response.status_code in {400, 404}:
+            return []
+
+        try:
+            response.raise_for_status()
+        except Exception:
+            return []
+
+        data = response.json().get("data") or []
+        return [paper for paper in data if paper.get("paperId") or paper.get("title")]
 
     def _fetch_by_doi(self, doi: str) -> dict | None:
 
@@ -581,75 +935,97 @@ def discover_citations_by_topic(
         raise ValueError("Project title is required.")
 
     requested_limit = max(30, min(limit or 35, 60))
-    fetch_limit = min(max(requested_limit * 3, requested_limit), 100)
-    query = f"{normalized_title} {normalized_details}".strip()
     current_year = datetime.utcnow().year
     recent_year_cutoff = current_year - 3
+    query_plan = _build_discovery_query_plan(normalized_title, normalized_details)
+    search_queries = query_plan.get("search_queries") or [normalized_title]
+    fetch_limit_per_query = min(max(requested_limit, 10), 20)
 
     client = SemanticScholarClient(semantic_scholar_api_key)
 
     try:
-        client._throttle()
+        candidates: dict[str, dict[str, Any]] = {}
 
-        response = client._client.get(
-            "https://api.semanticscholar.org/graph/v1/paper/search",
-            params={
-                "query": query,
-                "limit": fetch_limit,
-                "fields": "title,authors,year,citationCount,url,venue,paperId,abstract",
-            },
-            headers=client._get_headers(),
-        )
+        for query in search_queries[:8]:
+            try:
+                papers = client._search_results_by_query(query, limit=fetch_limit_per_query)
+            except RuntimeError:
+                raise
+            except Exception:
+                papers = []
 
-        client._last_request_time = time.monotonic()
+            for paper in papers:
+                paper_id = (paper.get("paperId") or "").strip()
+                title = (paper.get("title") or "").strip().lower()
+                dedupe_key = paper_id or title
+                if not dedupe_key:
+                    continue
 
-        if response.status_code in {401, 403}:
-            raise RuntimeError("Semantic Scholar API authentication failed.")
+                candidate = candidates.get(dedupe_key)
+                if candidate is None:
+                    candidates[dedupe_key] = {
+                        "paper": paper,
+                        "query_hit_count": 1,
+                        "query_examples": [query],
+                    }
+                    continue
 
-        if response.status_code in {429, 503}:
-            raise RuntimeError("Semantic Scholar API rate limit reached. Please try again in a moment.")
+                candidate["query_hit_count"] = candidate.get("query_hit_count", 0) + 1
+                examples = candidate.setdefault("query_examples", [])
+                if query not in examples:
+                    examples.append(query)
 
-        response.raise_for_status()
-        payload = response.json()
-        papers = payload.get("data") or []
+                existing_paper = candidate["paper"]
+                existing_citations = existing_paper.get("citationCount") or 0
+                new_citations = paper.get("citationCount") or 0
+                if new_citations > existing_citations or not existing_paper.get("abstract") and paper.get("abstract"):
+                    candidate["paper"] = paper
 
-        unique_papers: list[dict[str, Any]] = []
-        seen_keys: set[str] = set()
-        for paper in papers:
-            paper_id = (paper.get("paperId") or "").strip()
-            title = (paper.get("title") or "").strip().lower()
-            dedupe_key = paper_id or title
-            if not dedupe_key or dedupe_key in seen_keys:
-                continue
-            seen_keys.add(dedupe_key)
-            unique_papers.append(paper)
+        scored_candidates: list[dict[str, Any]] = []
+        for candidate in candidates.values():
+            paper = candidate["paper"]
+            score = _score_discovery_candidate(paper, query_plan, candidate.get("query_hit_count", 0))
+            scored_candidates.append(
+                {
+                    "paper": paper,
+                    "score": score,
+                    "query_hit_count": candidate.get("query_hit_count", 0),
+                    "query_examples": candidate.get("query_examples", []),
+                }
+            )
 
-        recent_papers = []
-        older_papers = []
-        for paper in unique_papers:
-            year = paper.get("year")
-            if isinstance(year, int) and year >= recent_year_cutoff:
-                recent_papers.append(paper)
-            else:
-                older_papers.append(paper)
+        if not scored_candidates:
+            return {
+                "total_references_extracted": 0,
+                "references_processed": 0,
+                "matched_count": 0,
+                "missing_count": 0,
+                "recent_year_cutoff": recent_year_cutoff,
+                "recent_candidates_found": 0,
+                "older_candidates_found": 0,
+                "selected_year_distribution": {},
+                "references": [],
+                "top_cited": [],
+                "project_title": normalized_title,
+                "basic_details": normalized_details,
+                "discovery_profile": query_plan,
+                "search_queries_used": search_queries[:8],
+            }
 
-        ranked_recent_papers = sorted(
-            recent_papers,
-            key=lambda item: (item.get("year") or 0, item.get("citationCount") or 0),
-            reverse=True,
-        )
-
-        ranked_older_papers = sorted(
-            older_papers,
+        scored_candidates.sort(
             key=lambda item: (
-                1 if isinstance(item.get("year"), int) else 0,
-                item.get("year") or 0,
-                item.get("citationCount") or 0,
+                item["score"],
+                item["paper"].get("citationCount") or 0,
+                item["paper"].get("year") or 0,
             ),
             reverse=True,
         )
 
-        papers_to_use = (ranked_recent_papers + ranked_older_papers)[:requested_limit]
+        unique_papers = [item["paper"] for item in scored_candidates]
+        recent_candidates_found = sum(1 for paper in unique_papers if isinstance(paper.get("year"), int) and paper.get("year") >= recent_year_cutoff)
+        older_candidates_found = len(unique_papers) - recent_candidates_found
+
+        papers_to_use = unique_papers[:requested_limit]
 
         references = []
         for index, paper in enumerate(papers_to_use, start=1):
@@ -658,6 +1034,13 @@ def discover_citations_by_topic(
                 for author in (paper.get("authors") or [])
                 if author.get("name")
             ]
+
+            query_examples = []
+            for candidate in scored_candidates:
+                if candidate["paper"].get("paperId") == paper.get("paperId") or candidate["paper"].get("title") == paper.get("title"):
+                    query_examples = candidate.get("query_examples", [])
+                    break
+
             references.append(
                 {
                     "reference_index": index,
@@ -671,6 +1054,7 @@ def discover_citations_by_topic(
                     "venue": paper.get("venue"),
                     "authors": authors,
                     "abstract": paper.get("abstract"),
+                    "query_examples": query_examples[:3],
                 }
             )
 
@@ -692,11 +1076,15 @@ def discover_citations_by_topic(
             "matched_count": len(references),
             "missing_count": 0,
             "recent_year_cutoff": recent_year_cutoff,
-            "recent_candidates_found": len(ranked_recent_papers),
-            "older_candidates_found": len(ranked_older_papers),
+            "recent_candidates_found": recent_candidates_found,
+            "older_candidates_found": older_candidates_found,
             "selected_year_distribution": selected_year_distribution,
             "references": references,
             "top_cited": top_cited,
+            "project_title": normalized_title,
+            "basic_details": normalized_details,
+            "discovery_profile": query_plan,
+            "search_queries_used": search_queries[:8],
         }
     finally:
         client.close()

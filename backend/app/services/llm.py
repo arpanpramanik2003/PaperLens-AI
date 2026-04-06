@@ -903,6 +903,8 @@ def generate_citation_recommendations(
         top_cited: list[dict],
         missing_references: list[str],
     recommendation_mode: str = "upload",
+    project_title: str = "",
+    basic_details: str = "",
 ) -> dict:
 
                 compact_top_cited = []
@@ -922,6 +924,11 @@ def generate_citation_recommendations(
 
                 focus_label = "topic_focus" if is_discovery_mode else "paper_focus"
                 context_label = "Project/topic context" if is_discovery_mode else "Paper context"
+                project_context = ""
+                if project_title:
+                    project_context += f"Project title: {project_title}\n"
+                if basic_details:
+                    project_context += f"Project details: {basic_details}\n"
 
                 prompt = f"""
 You are an AI research mentor.
@@ -968,6 +975,7 @@ Mode:
 {normalized_mode}
 
 {context_label}:
+{project_context}
 {paper_context}
 
 Top cited references (JSON):

@@ -916,6 +916,8 @@ async def citation_intelligence_recommendations(
             top_cited=payload.top_cited or [],
             missing_references=payload.missing_references or [],
             recommendation_mode=(payload.recommendation_mode or "upload"),
+            project_title=(payload.project_title or "").strip(),
+            basic_details=(payload.basic_details or "").strip(),
         )
 
         db_activity = Activity(

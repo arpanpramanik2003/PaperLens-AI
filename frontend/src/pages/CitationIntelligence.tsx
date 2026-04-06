@@ -27,6 +27,19 @@ type CitationReport = {
   missing_count: number;
   references: CitationEntry[];
   top_cited: CitationEntry[];
+  project_title?: string;
+  basic_details?: string;
+  discovery_profile?: {
+    intent_summary?: string;
+    core_terms?: string[];
+    method_terms?: string[];
+    domain_terms?: string[];
+    task_terms?: string[];
+    must_include_terms?: string[];
+    search_queries?: string[];
+    llm_used?: boolean;
+  };
+  search_queries_used?: string[];
 };
 
 type CitationRecommendations = {
@@ -190,7 +203,11 @@ export default function CitationIntelligence() {
       .map((entry) => entry.reference_text)
       .join("\n");
 
-    return `Matched reference titles: ${matchedTitles}\n\nReference sample:\n${referenceSample}`;
+    const discoveryProfile = currentReport.discovery_profile
+      ? `\n\nDiscovery profile:\n${currentReport.discovery_profile.intent_summary || ""}\n${(currentReport.discovery_profile.search_queries || []).join("; ")}`
+      : "";
+
+    return `Matched reference titles: ${matchedTitles}\n\nReference sample:\n${referenceSample}${discoveryProfile}`;
   };
 
   const fetchRecommendations = async (currentReport: CitationReport, recommendationMode: "upload" | "discover") => {
@@ -216,6 +233,8 @@ export default function CitationIntelligence() {
             top_cited: currentReport.top_cited || [],
             missing_references: missingReferences,
             recommendation_mode: recommendationMode,
+            project_title: recommendationMode === "discover" ? projectTitle : undefined,
+            basic_details: recommendationMode === "discover" ? basicDetails : undefined,
           }),
         },
         getToken
@@ -641,6 +660,22 @@ export default function CitationIntelligence() {
         <div className="space-y-8 overflow-hidden">
           {resultMode === "discover" ? (
             <section className="space-y-3">
+              {report.discovery_profile?.intent_summary && (
+                <div className="rounded-xl border border-border/50 bg-card p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Discovery Focus</p>
+                  <p className="text-sm text-foreground/90 leading-relaxed">{report.discovery_profile.intent_summary}</p>
+                  {!!report.discovery_profile.search_queries?.length && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {report.discovery_profile.search_queries.slice(0, 5).map((query, index) => (
+                        <span key={`discovery-query-${index}`} className="text-[11px] px-2 py-1 rounded-full border border-border/60 bg-secondary/40 text-foreground/85">
+                          {query}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-border/50 bg-card p-4">
                   <p className="text-xs text-muted-foreground">Papers Gathered</p>
