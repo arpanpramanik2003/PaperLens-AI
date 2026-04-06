@@ -330,6 +330,110 @@ DISCOVERY_METHOD_SYNONYMS: dict[str, list[str]] = {
     "explainable": ["explainable ai", "interpretable", "explainability"],
 }
 
+DISCOVERY_DOMAIN_SYNONYMS: dict[str, list[str]] = {
+    "plant pathology": ["plant pathology", "crop disease", "plant disease", "agricultural disease"],
+    "plant disease": ["plant pathology", "plant disease", "crop disease", "leaf disease"],
+    "leaf blight": ["leaf blight", "leaf spot", "plant leaf disease", "foliar disease"],
+    "crop disease": ["crop disease", "plant disease", "plant pathology"],
+    "medical imaging": ["medical imaging", "radiology", "clinical imaging", "biomedical imaging"],
+    "biomedical imaging": ["biomedical imaging", "medical imaging", "clinical imaging"],
+    "mri": ["mri", "magnetic resonance imaging", "brain mri", "medical imaging"],
+    "ct scan": ["ct scan", "computed tomography", "medical imaging"],
+    "ultrasound": ["ultrasound", "sonography", "medical imaging"],
+    "remote sensing": ["remote sensing", "satellite imagery", "earth observation", "aerial imagery"],
+    "satellite imagery": ["satellite imagery", "remote sensing", "earth observation"],
+    "earth observation": ["earth observation", "remote sensing", "satellite imagery"],
+    "agriculture": ["agriculture", "agricultural", "crop", "farming"],
+    "computer vision": ["computer vision", "image analysis", "visual recognition"],
+}
+
+DISCOVERY_TOPIC_PRESETS: dict[str, dict[str, list[str] | str]] = {
+    "plant_pathology": {
+        "trigger_terms": ["plant pathology", "plant disease", "crop disease", "leaf blight", "leaf disease"],
+        "intent_suffix": "focused on plant pathology and crop disease analysis",
+        "core_terms": ["plant pathology", "crop disease", "leaf disease", "agricultural imaging"],
+        "domain_terms": ["plant pathology", "plant disease", "crop disease", "leaf blight", "foliar disease"],
+        "task_terms": ["disease detection", "disease classification", "lesion segmentation", "stress detection"],
+        "must_include_terms": ["plant pathology", "crop disease"],
+        "search_queries": [
+            "plant disease detection deep learning",
+            "crop disease classification neural network",
+            "leaf disease segmentation agricultural imaging",
+            "plant pathology computer vision",
+        ],
+    },
+    "agricultural_disease": {
+        "trigger_terms": ["agricultural disease", "crop health", "plant disease", "crop disease", "disease monitoring"],
+        "intent_suffix": "focused on agricultural disease monitoring and detection",
+        "core_terms": ["agricultural disease", "crop health", "plant disease", "precision agriculture"],
+        "domain_terms": ["agricultural disease", "crop disease", "plant disease", "plant pathology", "precision agriculture"],
+        "task_terms": ["disease monitoring", "disease detection", "stress detection", "field diagnosis"],
+        "must_include_terms": ["agricultural disease", "crop disease"],
+        "search_queries": [
+            "agricultural disease detection deep learning",
+            "crop health monitoring computer vision",
+            "plant disease monitoring neural network",
+            "precision agriculture disease diagnosis",
+        ],
+    },
+    "medical_imaging": {
+        "trigger_terms": ["medical imaging", "biomedical imaging", "radiology", "mri", "ct scan", "ultrasound"],
+        "intent_suffix": "focused on medical and biomedical image analysis",
+        "core_terms": ["medical imaging", "biomedical imaging", "radiology", "image analysis"],
+        "domain_terms": ["medical imaging", "biomedical imaging", "radiology", "clinical imaging", "diagnostic imaging"],
+        "task_terms": ["segmentation", "classification", "detection", "lesion analysis"],
+        "must_include_terms": ["medical imaging", "biomedical imaging"],
+        "search_queries": [
+            "medical image segmentation deep learning",
+            "biomedical image classification neural network",
+            "radiology image analysis transformer",
+            "clinical imaging computer vision",
+        ],
+    },
+    "medical_diagnosis": {
+        "trigger_terms": ["medical diagnosis", "diagnosis support", "clinical diagnosis", "disease diagnosis", "diagnostic support"],
+        "intent_suffix": "focused on medical diagnosis support and clinical decision systems",
+        "core_terms": ["medical diagnosis", "clinical diagnosis", "diagnostic support", "decision support"],
+        "domain_terms": ["medical diagnosis", "clinical diagnosis", "diagnostic support", "clinical decision support", "healthcare"],
+        "task_terms": ["disease classification", "risk prediction", "diagnosis support", "symptom analysis"],
+        "must_include_terms": ["medical diagnosis", "clinical diagnosis"],
+        "search_queries": [
+            "medical diagnosis deep learning",
+            "clinical diagnosis support neural network",
+            "disease classification healthcare ai",
+            "medical decision support system",
+        ],
+    },
+    "remote_sensing": {
+        "trigger_terms": ["remote sensing", "satellite imagery", "earth observation", "aerial imagery"],
+        "intent_suffix": "focused on remote sensing and earth observation analysis",
+        "core_terms": ["remote sensing", "earth observation", "satellite imagery", "aerial imagery"],
+        "domain_terms": ["remote sensing", "satellite imagery", "earth observation", "aerial imagery"],
+        "task_terms": ["land cover classification", "object detection", "change detection", "segmentation"],
+        "must_include_terms": ["remote sensing", "earth observation"],
+        "search_queries": [
+            "remote sensing image classification deep learning",
+            "satellite imagery segmentation neural network",
+            "earth observation object detection",
+            "aerial imagery analysis transformer",
+        ],
+    },
+    "climate_earth_observation": {
+        "trigger_terms": ["climate", "earth observation", "environmental monitoring", "satellite imagery", "weather"],
+        "intent_suffix": "focused on climate analysis and earth observation monitoring",
+        "core_terms": ["climate analysis", "earth observation", "environmental monitoring", "satellite imagery"],
+        "domain_terms": ["climate analysis", "earth observation", "environmental monitoring", "satellite imagery", "remote sensing"],
+        "task_terms": ["change detection", "forecasting", "classification", "monitoring"],
+        "must_include_terms": ["climate", "earth observation"],
+        "search_queries": [
+            "climate analysis satellite imagery deep learning",
+            "earth observation environmental monitoring",
+            "weather forecasting satellite data neural network",
+            "remote sensing climate change detection",
+        ],
+    },
+}
+
 
 def _normalize_phrase(value: str) -> str:
     cleaned = value.lower().strip()
@@ -374,6 +478,28 @@ def _expand_method_terms(text: str) -> list[str]:
     return expansions
 
 
+def _expand_domain_terms(text: str) -> list[str]:
+    normalized = _normalize_phrase(text)
+    expansions: list[str] = []
+
+    for key, values in DISCOVERY_DOMAIN_SYNONYMS.items():
+        if key in normalized:
+            for value in values:
+                if value not in expansions:
+                    expansions.append(value)
+
+    return expansions
+
+
+def _infer_topic_preset(text: str) -> str | None:
+    normalized = _normalize_phrase(text)
+    for preset_key, preset in DISCOVERY_TOPIC_PRESETS.items():
+        trigger_terms = preset.get("trigger_terms") or []
+        if any(term in normalized for term in trigger_terms):
+            return preset_key
+    return None
+
+
 def _unique_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     ordered: list[str] = []
@@ -394,7 +520,8 @@ def _split_topic_clauses(text: str) -> list[str]:
         return []
 
     normalized = re.sub(r"\s+", " ", text.strip())
-    fragments = re.split(r"\s*[:;–—-]\s*|\s+via\s+|\s+using\s+|\s+based on\s+|\s+for\s+", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"(?<=\w)-(?=\w)", " ", normalized)
+    fragments = re.split(r"\s*[:;–—]\s*|\s+via\s+|\s+using\s+|\s+based on\s+|\s+for\s+", normalized, flags=re.IGNORECASE)
 
     clauses: list[str] = []
     for fragment in fragments:
@@ -407,10 +534,17 @@ def _split_topic_clauses(text: str) -> list[str]:
     return clauses
 
 
-def _build_heuristic_discovery_plan(project_title: str, basic_details: str = "") -> dict[str, Any]:
+def _build_heuristic_discovery_plan(
+    project_title: str,
+    basic_details: str = "",
+    topic_preset: str | None = None,
+) -> dict[str, Any]:
     normalized_title = (project_title or "").strip()
     normalized_details = (basic_details or "").strip()
     combined_text = f"{normalized_title} {normalized_details}".strip()
+    forced_preset = (topic_preset or "").strip().lower()
+    if forced_preset not in DISCOVERY_TOPIC_PRESETS:
+        forced_preset = ""
 
     clauses = _split_topic_clauses(normalized_title)
     if normalized_details:
@@ -418,15 +552,25 @@ def _build_heuristic_discovery_plan(project_title: str, basic_details: str = "")
 
     keyphrases = _extract_keyphrases(combined_text, max_terms=12)
     method_terms = _expand_method_terms(combined_text)
+    domain_expansions = _expand_domain_terms(combined_text)
+    topic_preset = forced_preset or _infer_topic_preset(combined_text)
 
-    domain_terms = clauses[:4] if clauses else keyphrases[:4]
+    preset = DISCOVERY_TOPIC_PRESETS.get(topic_preset or "", {})
+    preset_core_terms = list(preset.get("core_terms") or [])
+    preset_domain_terms = list(preset.get("domain_terms") or [])
+    preset_task_terms = list(preset.get("task_terms") or [])
+    preset_must_include_terms = list(preset.get("must_include_terms") or [])
+    preset_search_queries = list(preset.get("search_queries") or [])
+
+    domain_terms = _unique_preserve_order((clauses[:4] if clauses else keyphrases[:4]) + domain_expansions + preset_domain_terms)
     task_terms = []
     for phrase in keyphrases:
         if phrase not in domain_terms and phrase not in method_terms:
             task_terms.append(phrase)
+    task_terms.extend(term for term in preset_task_terms if term not in task_terms)
 
-    must_include_terms = _unique_preserve_order(method_terms[:4] + [term for term in clauses[:2] if term])
-    core_terms = _unique_preserve_order((clauses[:3] or keyphrases[:3]) + keyphrases[:5])
+    must_include_terms = _unique_preserve_order(method_terms[:4] + [term for term in clauses[:2] if term] + preset_must_include_terms)
+    core_terms = _unique_preserve_order((clauses[:3] or keyphrases[:3]) + keyphrases[:5] + preset_core_terms)
 
     search_queries: list[str] = []
     if normalized_title:
@@ -443,11 +587,19 @@ def _build_heuristic_discovery_plan(project_title: str, basic_details: str = "")
     if method_terms and domain_terms:
         search_queries.append(" ".join(_unique_preserve_order(method_terms[:2] + domain_terms[:3])))
 
+    if domain_expansions and method_terms:
+        search_queries.append(" ".join(_unique_preserve_order(method_terms[:1] + domain_expansions[:3])))
+
+    if domain_expansions:
+        search_queries.append(" ".join(domain_expansions[:4]))
+
     if keyphrases:
         search_queries.append(" ".join(keyphrases[:6]))
 
     if normalized_details:
         search_queries.append(" ".join(_extract_keyphrases(normalized_details, max_terms=6)))
+
+    search_queries.extend(preset_search_queries)
 
     search_queries = _unique_preserve_order([query for query in search_queries if len(query.split()) >= 2])
 
@@ -465,11 +617,14 @@ def _build_heuristic_discovery_plan(project_title: str, basic_details: str = "")
         "search_queries": search_queries[:8],
         "negative_terms": [],
         "llm_used": False,
+        "topic_preset": topic_preset,
     }
-
-
-def _build_discovery_query_plan(project_title: str, basic_details: str = "") -> dict[str, Any]:
-    base_plan = _build_heuristic_discovery_plan(project_title, basic_details)
+def _build_discovery_query_plan(
+    project_title: str,
+    basic_details: str = "",
+    topic_preset: str | None = None,
+) -> dict[str, Any]:
+    base_plan = _build_heuristic_discovery_plan(project_title, basic_details, topic_preset=topic_preset)
 
     if not settings.GROQ_API_KEY:
         return base_plan
@@ -537,6 +692,7 @@ Rules:
             "search_queries": search_queries[:8],
             "negative_terms": _unique_preserve_order((payload.get("negative_terms") or []) + base_plan.get("negative_terms", [])),
             "llm_used": True,
+            "topic_preset": base_plan.get("topic_preset"),
         }
 
         if merged_plan["search_queries"]:
@@ -926,6 +1082,7 @@ def discover_citations_by_topic(
     project_title: str,
     basic_details: str = "",
     limit: int = 35,
+    topic_preset: str | None = None,
 ) -> dict[str, Any]:
 
     normalized_title = (project_title or "").strip()
@@ -937,7 +1094,7 @@ def discover_citations_by_topic(
     requested_limit = max(30, min(limit or 35, 60))
     current_year = datetime.utcnow().year
     recent_year_cutoff = current_year - 3
-    query_plan = _build_discovery_query_plan(normalized_title, normalized_details)
+    query_plan = _build_discovery_query_plan(normalized_title, normalized_details, topic_preset=topic_preset)
     search_queries = query_plan.get("search_queries") or [normalized_title]
     fetch_limit_per_query = min(max(requested_limit, 10), 20)
 

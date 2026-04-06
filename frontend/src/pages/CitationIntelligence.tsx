@@ -38,9 +38,56 @@ type CitationReport = {
     must_include_terms?: string[];
     search_queries?: string[];
     llm_used?: boolean;
+    topic_preset?: string;
   };
   search_queries_used?: string[];
 };
+
+type TopicPreset =
+  | "auto"
+  | "plant_pathology"
+  | "agricultural_disease"
+  | "medical_imaging"
+  | "medical_diagnosis"
+  | "remote_sensing"
+  | "climate_earth_observation";
+
+const topicPresetOptions: Array<{ value: TopicPreset; label: string; description: string }> = [
+  { value: "auto", label: "Auto detect", description: "Let the planner infer the best domain preset" },
+  { value: "plant_pathology", label: "Plant pathology", description: "Crop disease, leaf blight, and agricultural vision" },
+  { value: "agricultural_disease", label: "Agricultural disease", description: "Crop health, field diagnosis, and disease monitoring" },
+  { value: "medical_imaging", label: "Medical imaging", description: "Radiology, MRI, CT, ultrasound, and biomedical imaging" },
+  { value: "medical_diagnosis", label: "Medical diagnosis", description: "Clinical diagnosis support and decision systems" },
+  { value: "remote_sensing", label: "Remote sensing", description: "Satellite imagery, earth observation, and aerial analysis" },
+  { value: "climate_earth_observation", label: "Climate / Earth observation", description: "Weather, climate analysis, and environmental monitoring" },
+];
+
+const topicPresetInferenceRules: Array<{ value: Exclude<TopicPreset, "auto">; terms: string[] }> = [
+  {
+    value: "plant_pathology",
+    terms: ["plant pathology", "plant disease", "crop disease", "leaf blight", "leaf disease"],
+  },
+  {
+    value: "agricultural_disease",
+    terms: ["agricultural disease", "crop health", "disease monitoring", "field diagnosis"],
+  },
+  {
+    value: "medical_imaging",
+    terms: ["medical imaging", "biomedical imaging", "radiology", "mri", "ct scan", "ultrasound"],
+  },
+  {
+    value: "medical_diagnosis",
+    terms: ["medical diagnosis", "clinical diagnosis", "diagnostic support", "disease diagnosis"],
+  },
+  {
+    value: "remote_sensing",
+    terms: ["remote sensing", "satellite imagery", "earth observation", "aerial imagery"],
+  },
+  {
+    value: "climate_earth_observation",
+    terms: ["climate", "earth observation", "environmental monitoring", "weather"],
+  },
+];
 
 type CitationRecommendations = {
   paper_focus?: string;
@@ -71,6 +118,7 @@ export default function CitationIntelligence() {
   const [file, setFile] = useState<File | null>(null);
   const [projectTitle, setProjectTitle] = useState("");
   const [basicDetails, setBasicDetails] = useState("");
+  const [topicPreset, setTopicPreset] = useState<TopicPreset>("auto");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [report, setReport] = useState<CitationReport | null>(null);
@@ -103,6 +151,21 @@ export default function CitationIntelligence() {
   } as const;
 
   const processSteps = processStepsByMode[mode];
+
+  const inferredTopicPreset = useMemo<TopicPreset | null>(() => {
+    if (mode !== "discover") return null;
+
+    const normalizedText = `${projectTitle} ${basicDetails}`.toLowerCase();
+    for (const preset of topicPresetInferenceRules) {
+      if (preset.terms.some((term) => normalizedText.includes(term))) {
+        return preset.value;
+      }
+    }
+
+    return null;
+  }, [basicDetails, mode, projectTitle]);
+
+  const effectiveTopicPreset = topicPreset === "auto" ? inferredTopicPreset : topicPreset;
 
   const modeIntro = {
     upload: {
@@ -362,6 +425,7 @@ export default function CitationIntelligence() {
             project_title: projectTitle,
             basic_details: basicDetails,
             limit: 35,
+            topic_preset: effectiveTopicPreset === "auto" ? undefined : effectiveTopicPreset,
           }),
         },
         getToken
@@ -400,10 +464,10 @@ export default function CitationIntelligence() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease }}
       >
-        <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/50 border border-border/50 w-fit mb-3">
+        <div className="flex w-full flex-wrap items-center gap-1 p-1 rounded-lg bg-secondary/50 border border-border/50 mb-3 sm:w-fit">
           <button
             onClick={() => setMode("upload")}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs transition-colors ${
               mode === "upload" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -411,7 +475,7 @@ export default function CitationIntelligence() {
           </button>
           <button
             onClick={() => setMode("discover")}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs transition-colors ${
               mode === "discover" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -457,25 +521,48 @@ export default function CitationIntelligence() {
           </>
         ) : (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-3">
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wider text-muted-foreground">Topic preset</label>
+                <select
+                  value={topicPreset}
+                  onChange={(e) => setTopicPreset(e.target.value as TopicPreset)}
+                  className="h-11 w-full rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground focus:outline-none"
+                >
+                  {topicPresetOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {topicPreset === "auto" && inferredTopicPreset && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Suggested preset: <span className="text-foreground font-medium">{topicPresetOptions.find((option) => option.value === inferredTopicPreset)?.label}</span>
+                    . You can keep auto-detect or override it manually.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
               <input
                 type="text"
                 value={projectTitle}
                 onChange={(e) => setProjectTitle(e.target.value)}
                 placeholder="Project title (required)"
-                className="h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                className="h-11 w-full rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <input
                 type="text"
                 value={basicDetails}
                 onChange={(e) => setBasicDetails(e.target.value)}
                 placeholder="Basic details (optional): domain, method, dataset"
-                className="h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                className="h-11 w-full rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
-              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shrink-0 whitespace-nowrap">
+              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="h-11 w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shrink-0 whitespace-nowrap lg:w-auto">
                 <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
                 {loading ? "Discovering papers..." : "Discover 30+ Papers"}
               </Button>
+              </div>
             </div>
 
             <p className="text-xs text-muted-foreground mt-2">Finds up to 35 related papers from Semantic Scholar for your topic</p>
@@ -662,7 +749,14 @@ export default function CitationIntelligence() {
             <section className="space-y-3">
               {report.discovery_profile?.intent_summary && (
                 <div className="rounded-xl border border-border/50 bg-card p-4">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Discovery Focus</p>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Discovery Focus</p>
+                    {report.discovery_profile.topic_preset && report.discovery_profile.topic_preset !== "auto" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 bg-secondary/40 text-foreground/80">
+                        {report.discovery_profile.topic_preset.replaceAll("_", " ")}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-foreground/90 leading-relaxed">{report.discovery_profile.intent_summary}</p>
                   {!!report.discovery_profile.search_queries?.length && (
                     <div className="flex flex-wrap gap-1.5 mt-3">

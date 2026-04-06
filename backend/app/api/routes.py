@@ -946,6 +946,7 @@ async def citation_intelligence_discover(
         project_title = (payload.project_title or "").strip()
         basic_details = (payload.basic_details or "").strip()
         limit = payload.limit or 35
+        topic_preset = (payload.topic_preset or "").strip().lower() or None
 
         if not project_title:
             return JSONResponse({"error": "Project title is required."}, status_code=400)
@@ -961,6 +962,7 @@ async def citation_intelligence_discover(
             project_title=project_title,
             basic_details=basic_details,
             limit=limit,
+            topic_preset=topic_preset,
         )
 
         db_activity = Activity(

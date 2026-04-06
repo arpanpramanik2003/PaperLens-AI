@@ -58,6 +58,7 @@ class CitationDiscoveryRequest(BaseModel):
     project_title: str
     basic_details: Optional[str] = None
     limit: Optional[int] = 35
+    topic_preset: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
