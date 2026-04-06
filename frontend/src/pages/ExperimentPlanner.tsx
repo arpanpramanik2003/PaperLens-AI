@@ -10,11 +10,71 @@ import { apiClient } from "@/lib/api-client";
 
 const ease = [0.2, 0, 0, 1] as const;
 
+type PlanStep = {
+  num: number;
+  title: string;
+  iconName: string;
+  details: string;
+  params: string;
+  risks: string;
+};
+
+const STEP_ICON_MAP = {
+  Database: Icons.Database,
+  Cog: Icons.Cog,
+  Cpu: Icons.Cpu,
+  Play: Icons.Play,
+  BarChart3: Icons.BarChart3,
+  FlaskConical: Icons.FlaskConical,
+  List: Icons.List,
+  Eye: Icons.Eye,
+  Cloud: Icons.Cloud,
+  PenTool: Icons.PenTool,
+  Shield: Icons.Shield,
+  CheckCircle: Icons.CheckCircle,
+  Activity: Icons.Activity,
+  Globe: Icons.Globe,
+  Zap: Icons.Zap,
+} as const;
+
+const fallbackRiskByTitle = (title: string) => {
+  const t = (title || "").toLowerCase();
+  if (t.includes("dataset") || t.includes("curation")) return "Data leakage, annotation inconsistency, or class imbalance may reduce generalization.";
+  if (t.includes("preprocess") || t.includes("feature")) return "Preprocessing artifacts or feature distortion can silently degrade model quality.";
+  if (t.includes("model") || t.includes("architecture")) return "Model-design mismatch may overfit small patterns and underperform on out-of-distribution data.";
+  if (t.includes("train") || t.includes("optimization")) return "Instability in optimization or poor hyperparameter ranges may prevent convergence.";
+  if (t.includes("evaluation") || t.includes("ablation")) return "Weak baselines or metric mismatch can lead to misleading conclusions.";
+  if (t.includes("deploy") || t.includes("monitor")) return "Runtime drift and infrastructure constraints can break production reliability.";
+  return "Integration and reproducibility issues may appear if assumptions are not validated at this stage.";
+};
+
+const sanitizePlanSteps = (rawSteps: unknown[]): PlanStep[] => {
+  if (!Array.isArray(rawSteps)) return [];
+
+  return rawSteps
+    .filter((step): step is Record<string, unknown> => Boolean(step) && typeof step === "object")
+    .map((step, index) => {
+      const title = (step.title || "").toString().trim() || `Stage ${index + 1}`;
+      const details = (step.details || "").toString().trim();
+      const params = (step.params || "").toString().trim();
+      const risks = (step.risks || "").toString().trim();
+
+      return {
+        num: Number(step.num) > 0 ? Number(step.num) : index + 1,
+        title,
+        iconName: (step.iconName || "Cog").toString().trim() || "Cog",
+        details: details.length >= 20 ? details : `Define and execute ${title.toLowerCase()} with concrete validation checkpoints and measurable outcomes.`,
+        params: params.length >= 10 ? params : "Specify measurable metrics, key hyperparameters, and acceptance thresholds.",
+        risks: risks.length >= 10 ? risks : fallbackRiskByTitle(title),
+      };
+    });
+};
+
 export default function ExperimentPlanner() {
   const { getToken, userId } = useAuth();
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("intermediate");
-  const [steps, setSteps] = useState<any[]>([]);
+  const [steps, setSteps] = useState<PlanStep[]>([]);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [expandedStep, setExpandedStep] = useState<number | null>(0);
@@ -61,11 +121,12 @@ export default function ExperimentPlanner() {
       
       if (!res.ok) throw new Error("Failed to generate plan");
       const data = await res.json();
-      
-      setSteps(data.steps || []);
+
+      const normalizedSteps = sanitizePlanSteps(data.steps || []);
+      setSteps(normalizedSteps);
       setGenerated(true);
-      
-      data.steps?.forEach((_: any, i: number) => {
+
+      normalizedSteps.forEach((_: PlanStep, i: number) => {
         setTimeout(() => setVisibleSteps(i + 1), (i + 1) * 300);
       });
     } catch (err) {
@@ -125,7 +186,7 @@ export default function ExperimentPlanner() {
         {generated && (
           <div className="space-y-0">
             {steps.slice(0, visibleSteps).map((step, i) => {
-              const IconComponent = (Icons as any)[step.iconName] || Icons.Cog;
+              const IconComponent = STEP_ICON_MAP[step.iconName as keyof typeof STEP_ICON_MAP] ?? STEP_ICON_MAP.Cog;
               return (
               <motion.div
                 key={step.num || i}
@@ -175,11 +236,12 @@ export default function ExperimentPlanner() {
                         <div className="px-4 pb-4 space-y-3">
                           <p className="text-sm text-muted-foreground leading-relaxed">{step.details}</p>
                           <div className="rounded-lg bg-secondary/50 px-3 py-2">
+                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Parameters</p>
                             <p className="text-xs font-mono text-muted-foreground">{step.params}</p>
                           </div>
                           <div className="flex items-start gap-2 text-xs text-muted-foreground">
                             <span className="text-destructive font-medium">Risk:</span>
-                            <span>{step.risks}</span>
+                            <span>{step.risks || fallbackRiskByTitle(step.title)}</span>
                           </div>
                         </div>
                       </motion.div>
