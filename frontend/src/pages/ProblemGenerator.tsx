@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lightbulb, Star, ArrowRight, Sparkles, X } from "lucide-react";
+import { Lightbulb, Star, ArrowRight, Sparkles, X, ChevronDown } from "lucide-react";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -64,9 +64,31 @@ export default function ProblemGenerator() {
   const [expandingIdeaIndex, setExpandingIdeaIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
   const selectedIdea = expandedIdeaIndex !== null ? ideas[expandedIdeaIndex] : null;
   const selectedIdeaDetails = expandedIdeaIndex !== null ? ideaDetails[expandedIdeaIndex] : null;
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (exportMenuRef.current && !exportMenuRef.current.contains(target)) {
+        setExportMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [exportMenuOpen]);
 
   const buildBrief = (): ProblemBrief | null => {
     if (!selectedIdea || !selectedIdeaDetails) return null;
@@ -132,6 +154,7 @@ export default function ProblemGenerator() {
     const doc = new Document({ sections: [{ children }] });
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `${safeFileName(brief.title)}-brief.docx`);
+    setExportMenuOpen(false);
   };
 
   const handleDownloadPdf = () => {
@@ -201,6 +224,7 @@ export default function ProblemGenerator() {
     });
 
     pdf.save(`${safeFileName(brief.title)}-brief.pdf`);
+    setExportMenuOpen(false);
   };
 
   const handleGenerate = async () => {
@@ -281,6 +305,7 @@ export default function ProblemGenerator() {
   const handleUseIdea = async (idea: IdeaCard, index: number) => {
     if (expandedIdeaIndex === index) {
       setExpandedIdeaIndex(null);
+      setExportMenuOpen(false);
       return;
     }
 
@@ -295,6 +320,7 @@ export default function ProblemGenerator() {
       const demoDetails = buildDemoDetails(idea);
       setIdeaDetails((prev) => ({ ...prev, [index]: demoDetails }));
       setExpandedIdeaIndex(index);
+      setExportMenuOpen(false);
       return;
     }
 
@@ -336,6 +362,7 @@ export default function ProblemGenerator() {
 
       setIdeaDetails((prev) => ({ ...prev, [index]: parsed }));
       setExpandedIdeaIndex(index);
+      setExportMenuOpen(false);
     } catch (err) {
       console.error(err);
       alert("Failed to load detailed problem statement.");
@@ -587,19 +614,55 @@ export default function ProblemGenerator() {
                 {/* Footer CTA */}
                 <div className="pt-4 border-t border-border/20 flex flex-col sm:flex-row gap-3">
                   <Button 
-                    className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 flex-1"
-                    onClick={handleDownloadWord}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Download Brief (Word)
-                  </Button>
-                  <Button 
                     variant="outline"
                     className="gap-2 flex-1"
-                    onClick={handleDownloadPdf}
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      setExpandedIdeaIndex(null);
+                    }}
                   >
-                    Download Brief (PDF)
+                    Close
                   </Button>
+
+                  <div className="flex-1" ref={exportMenuRef}>
+                    <Button
+                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 justify-between"
+                      onClick={() => setExportMenuOpen((prev) => !prev)}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Export Brief
+                      </span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${exportMenuOpen ? "rotate-180" : ""}`} />
+                    </Button>
+
+                    <AnimatePresence>
+                      {exportMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.18, ease }}
+                          className="mt-2 rounded-lg border border-border/40 bg-secondary/30 p-2 grid grid-cols-1 sm:grid-cols-2 gap-2"
+                        >
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={handleDownloadWord}
+                          >
+                            Download Word (.docx)
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={handleDownloadPdf}
+                          >
+                            Download PDF (.pdf)
+                          </Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             </motion.div>
