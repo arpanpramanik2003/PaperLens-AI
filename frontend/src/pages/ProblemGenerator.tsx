@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lightbulb, Star, ArrowRight, Sparkles, X } from "lucide-react";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,13 +12,54 @@ import { apiClient } from "@/lib/api-client";
 
 const ease = [0.2, 0, 0, 1] as const;
 
+type BriefStep = {
+  step?: number;
+  title?: string;
+  details?: string;
+};
+
+type ProblemBrief = {
+  title: string;
+  problem_statement: string;
+  objective: string;
+  step_by_step: BriefStep[];
+  datasets: string[];
+  evaluation_metrics: string[];
+  expected_outcomes: string[];
+};
+
+type IdeaCard = {
+  title: string;
+  desc: string;
+  tags: string[];
+  rating: number;
+};
+
+const toArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+};
+
+const safeFileName = (value: string) => {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+
+  return normalized || "research-brief";
+};
+
 export default function ProblemGenerator() {
   const { getToken, userId } = useAuth();
   const [domain, setDomain] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [complexity, setComplexity] = useState("medium");
-  const [ideas, setIdeas] = useState<any[]>([]);
-  const [ideaDetails, setIdeaDetails] = useState<Record<number, any>>({});
+  const [ideas, setIdeas] = useState<IdeaCard[]>([]);
+  const [ideaDetails, setIdeaDetails] = useState<Record<number, ProblemBrief>>({});
   const [expandedIdeaIndex, setExpandedIdeaIndex] = useState<number | null>(null);
   const [expandingIdeaIndex, setExpandingIdeaIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,6 +67,141 @@ export default function ProblemGenerator() {
 
   const selectedIdea = expandedIdeaIndex !== null ? ideas[expandedIdeaIndex] : null;
   const selectedIdeaDetails = expandedIdeaIndex !== null ? ideaDetails[expandedIdeaIndex] : null;
+
+  const buildBrief = (): ProblemBrief | null => {
+    if (!selectedIdea || !selectedIdeaDetails) return null;
+
+    const rawSteps = Array.isArray(selectedIdeaDetails.step_by_step)
+      ? (selectedIdeaDetails.step_by_step as BriefStep[])
+      : [];
+
+    const steps = rawSteps.map((step, idx) => ({
+      step: typeof step?.step === "number" ? step.step : idx + 1,
+      title: (step?.title || `Step ${idx + 1}`).toString(),
+      details: (step?.details || "Details not provided.").toString(),
+    }));
+
+    return {
+      title: (selectedIdeaDetails.title || selectedIdea.title || "Research Brief").toString(),
+      problem_statement: (selectedIdeaDetails.problem_statement || selectedIdea.desc || "Not provided").toString(),
+      objective: (selectedIdeaDetails.objective || "Not provided").toString(),
+      step_by_step: steps,
+      datasets: toArray(selectedIdeaDetails.datasets),
+      evaluation_metrics: toArray(selectedIdeaDetails.evaluation_metrics),
+      expected_outcomes: toArray(selectedIdeaDetails.expected_outcomes),
+    };
+  };
+
+  const handleDownloadWord = async () => {
+    const brief = buildBrief();
+    if (!brief) return;
+
+    const children: Paragraph[] = [
+      new Paragraph({ text: brief.title, heading: HeadingLevel.HEADING_1 }),
+      new Paragraph({ text: "Problem Statement", heading: HeadingLevel.HEADING_2 }),
+      new Paragraph(brief.problem_statement),
+      new Paragraph({ text: "Primary Objective", heading: HeadingLevel.HEADING_2 }),
+      new Paragraph(brief.objective),
+      new Paragraph({ text: "Execution Roadmap", heading: HeadingLevel.HEADING_2 }),
+    ];
+
+    brief.step_by_step.forEach((step) => {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: `${step.step}. ${step.title}`, bold: true })],
+        })
+      );
+      children.push(new Paragraph(step.details || "Details not provided."));
+    });
+
+    children.push(new Paragraph({ text: "Datasets & Tools", heading: HeadingLevel.HEADING_2 }));
+    (brief.datasets.length ? brief.datasets : ["Not provided"]).forEach((item) => {
+      children.push(new Paragraph({ text: item, bullet: { level: 0 } }));
+    });
+
+    children.push(new Paragraph({ text: "Evaluation Metrics", heading: HeadingLevel.HEADING_2 }));
+    (brief.evaluation_metrics.length ? brief.evaluation_metrics : ["Not provided"]).forEach((item) => {
+      children.push(new Paragraph({ text: item, bullet: { level: 0 } }));
+    });
+
+    children.push(new Paragraph({ text: "Expected Outcomes", heading: HeadingLevel.HEADING_2 }));
+    (brief.expected_outcomes.length ? brief.expected_outcomes : ["Not provided"]).forEach((item) => {
+      children.push(new Paragraph({ text: item, bullet: { level: 0 } }));
+    });
+
+    const doc = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `${safeFileName(brief.title)}-brief.docx`);
+  };
+
+  const handleDownloadPdf = () => {
+    const brief = buildBrief();
+    if (!brief) return;
+
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 48;
+    const maxWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed > pageHeight - margin) {
+        pdf.addPage();
+        y = margin;
+      }
+    };
+
+    const writeHeading = (text: string) => {
+      ensureSpace(26);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(14);
+      pdf.text(text, margin, y);
+      y += 20;
+    };
+
+    const writeParagraph = (text: string, indent = 0) => {
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(11);
+      const lines = pdf.splitTextToSize(text || "Not provided", maxWidth - indent);
+      lines.forEach((line: string) => {
+        ensureSpace(16);
+        pdf.text(line, margin + indent, y);
+        y += 14;
+      });
+      y += 4;
+    };
+
+    writeHeading(brief.title);
+    writeHeading("Problem Statement");
+    writeParagraph(brief.problem_statement);
+
+    writeHeading("Primary Objective");
+    writeParagraph(brief.objective);
+
+    writeHeading("Execution Roadmap");
+    brief.step_by_step.forEach((step) => {
+      writeParagraph(`${step.step}. ${step.title}`, 0);
+      writeParagraph(step.details || "Details not provided.", 14);
+    });
+
+    writeHeading("Datasets & Tools");
+    (brief.datasets.length ? brief.datasets : ["Not provided"]).forEach((item) => {
+      writeParagraph(`- ${item}`);
+    });
+
+    writeHeading("Evaluation Metrics");
+    (brief.evaluation_metrics.length ? brief.evaluation_metrics : ["Not provided"]).forEach((item) => {
+      writeParagraph(`- ${item}`);
+    });
+
+    writeHeading("Expected Outcomes");
+    (brief.expected_outcomes.length ? brief.expected_outcomes : ["Not provided"]).forEach((item) => {
+      writeParagraph(`- ${item}`);
+    });
+
+    pdf.save(`${safeFileName(brief.title)}-brief.pdf`);
+  };
 
   const handleGenerate = async () => {
     if (!domain.trim()) return;
@@ -59,7 +238,20 @@ export default function ProblemGenerator() {
 
       if (!res.ok) throw new Error("Failed to generate ideas");
       const data = await res.json();
-      setIdeas(data.ideas || []);
+      const parsedIdeas: IdeaCard[] = Array.isArray(data.ideas)
+        ? data.ideas
+            .filter((idea: unknown): idea is Record<string, unknown> => Boolean(idea) && typeof idea === "object")
+            .map((idea) => ({
+              title: String(idea.title || "Untitled idea"),
+              desc: String(idea.desc || "Description not provided."),
+              tags: Array.isArray(idea.tags)
+                ? idea.tags.map((tag) => String(tag)).filter((tag) => tag.trim().length > 0)
+                : [],
+              rating: Math.max(1, Math.min(5, Number(idea.rating) || 3)),
+            }))
+        : [];
+
+      setIdeas(parsedIdeas);
       setGenerated(true);
     } catch (err) {
       console.error(err);
@@ -69,7 +261,7 @@ export default function ProblemGenerator() {
     }
   };
 
-  const buildDemoDetails = (idea: any) => ({
+  const buildDemoDetails = (idea: IdeaCard): ProblemBrief => ({
     title: idea.title,
     problem_statement: idea.desc,
     objective: "Build and validate a reproducible solution pipeline for this exact problem statement.",
@@ -86,7 +278,7 @@ export default function ProblemGenerator() {
     expected_outcomes: ["Validated improvement over baseline", "Clear roadmap for next iteration"]
   });
 
-  const handleUseIdea = async (idea: any, index: number) => {
+  const handleUseIdea = async (idea: IdeaCard, index: number) => {
     if (expandedIdeaIndex === index) {
       setExpandedIdeaIndex(null);
       return;
@@ -124,7 +316,25 @@ export default function ProblemGenerator() {
       if (!res.ok) throw new Error("Failed to expand problem details");
 
       const data = await res.json();
-      setIdeaDetails((prev) => ({ ...prev, [index]: data }));
+      const parsed: ProblemBrief = {
+        title: String(data.title || idea.title),
+        problem_statement: String(data.problem_statement || idea.desc || "Not provided"),
+        objective: String(data.objective || "Not provided"),
+        step_by_step: Array.isArray(data.step_by_step)
+          ? data.step_by_step
+              .filter((step: unknown): step is Record<string, unknown> => Boolean(step) && typeof step === "object")
+              .map((step, stepIndex) => ({
+                step: Number(step.step) || stepIndex + 1,
+                title: String(step.title || `Step ${stepIndex + 1}`),
+                details: String(step.details || "Details not provided."),
+              }))
+          : [],
+        datasets: toArray(data.datasets),
+        evaluation_metrics: toArray(data.evaluation_metrics),
+        expected_outcomes: toArray(data.expected_outcomes),
+      };
+
+      setIdeaDetails((prev) => ({ ...prev, [index]: parsed }));
       setExpandedIdeaIndex(index);
     } catch (err) {
       console.error(err);
@@ -292,7 +502,7 @@ export default function ProblemGenerator() {
                   </div>
                   
                   <div className="space-y-2.5 pl-2">
-                    {(selectedIdeaDetails.step_by_step || []).map((step: any, stepIndex: number) => {
+                    {(selectedIdeaDetails.step_by_step || []).map((step: BriefStep, stepIndex: number) => {
                       const isLast = stepIndex === (selectedIdeaDetails.step_by_step || []).length - 1;
                       return (
                         <div key={`${step.title || "step"}-${stepIndex}`} className="relative">
@@ -375,20 +585,20 @@ export default function ProblemGenerator() {
                 </div>
 
                 {/* Footer CTA */}
-                <div className="pt-4 border-t border-border/20 flex gap-3">
+                <div className="pt-4 border-t border-border/20 flex flex-col sm:flex-row gap-3">
                   <Button 
                     className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 flex-1"
-                    onClick={() => setExpandedIdeaIndex(null)}
+                    onClick={handleDownloadWord}
                   >
                     <Sparkles className="w-4 h-4" />
-                    Start Research
+                    Download Brief (Word)
                   </Button>
                   <Button 
                     variant="outline"
-                    className="gap-2"
-                    onClick={() => setExpandedIdeaIndex(null)}
+                    className="gap-2 flex-1"
+                    onClick={handleDownloadPdf}
                   >
-                    Export Brief
+                    Download Brief (PDF)
                   </Button>
                 </div>
               </div>
