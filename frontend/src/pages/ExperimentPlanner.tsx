@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -84,7 +85,7 @@ export default function ExperimentPlanner() {
   const handleSavePlan = async () => {
     if (!generated || steps.length === 0) return;
     if (!userId) {
-      alert("Please log in to save this plan.");
+      showSaveSignInToast("Experiment plan");
       return;
     }
 
@@ -110,10 +111,10 @@ export default function ExperimentPlanner() {
       );
 
       if (!res.ok) throw new Error("Failed to save experiment plan.");
-      alert("Experiment plan saved.");
+      showSaveSuccessToast("Experiment plan");
     } catch (err) {
       console.error(err);
-      alert("Could not save experiment plan.");
+      showSaveErrorToast("Experiment plan");
     } finally {
       setSaving(false);
     }
@@ -170,7 +171,7 @@ export default function ExperimentPlanner() {
       });
     } catch (err) {
       console.error(err);
-      alert("Failed to plan experiment.");
+      showSaveErrorToast("Experiment planning results");
     } finally {
       setLoading(false);
     }

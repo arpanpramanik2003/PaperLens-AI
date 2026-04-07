@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -231,7 +232,7 @@ export default function ProblemGenerator() {
   const handleSaveBrief = async () => {
     if (!selectedIdea || !selectedIdeaDetails) return;
     if (!userId) {
-      alert("Please log in to save this brief.");
+      showSaveSignInToast("Problem brief");
       return;
     }
 
@@ -262,10 +263,10 @@ export default function ProblemGenerator() {
       );
 
       if (!res.ok) throw new Error("Failed to save brief.");
-      alert("Brief saved.");
+      showSaveSuccessToast("Problem brief");
     } catch (err) {
       console.error(err);
-      alert("Could not save brief.");
+      showSaveErrorToast("Problem brief");
     } finally {
       setSaving(false);
     }
@@ -323,7 +324,7 @@ export default function ProblemGenerator() {
       setGenerated(true);
     } catch (err) {
       console.error(err);
-      alert("Failed to generate research problems.");
+      showSaveErrorToast("Research problem ideas");
     } finally {
       setLoading(false);
     }
@@ -409,7 +410,7 @@ export default function ProblemGenerator() {
       setExportMenuOpen(false);
     } catch (err) {
       console.error(err);
-      alert("Failed to load detailed problem statement.");
+      showSaveErrorToast("Detailed brief");
     } finally {
       setExpandingIdeaIndex(null);
     }

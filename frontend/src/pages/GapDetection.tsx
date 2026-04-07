@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -66,7 +67,7 @@ export default function GapDetection() {
       setDetected(true);
     } catch (err) {
       console.error(err);
-      alert("Failed to detect research gaps.");
+      showSaveErrorToast("Gap analysis");
     } finally {
       setLoading(false);
     }
@@ -82,7 +83,7 @@ export default function GapDetection() {
   const handleSaveGaps = async () => {
     if (!detected || gaps.length === 0) return;
     if (!userId) {
-      alert("Please log in to save detected gaps.");
+      showSaveSignInToast("Gap report");
       return;
     }
 
@@ -109,10 +110,10 @@ export default function GapDetection() {
       );
 
       if (!res.ok) throw new Error("Failed to save detected gaps.");
-      alert("Gap report saved.");
+      showSaveSuccessToast("Gap report");
     } catch (err) {
       console.error(err);
-      alert("Could not save gap report.");
+      showSaveErrorToast("Gap report");
     } finally {
       setSaving(false);
     }

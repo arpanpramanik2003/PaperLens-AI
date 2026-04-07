@@ -4,6 +4,7 @@ import { Upload, BarChart3, ExternalLink, SearchX, Sparkles, FileText, Loader2, 
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
+import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -453,7 +454,7 @@ export default function CitationIntelligence() {
   const handleSaveCitationResult = async () => {
     if (!report) return;
     if (!userId) {
-      alert("Please log in to save citation results.");
+      showSaveSignInToast("Citation results");
       return;
     }
 
@@ -488,10 +489,10 @@ export default function CitationIntelligence() {
       );
 
       if (!res.ok) throw new Error("Failed to save citation results.");
-      alert("Citation results saved.");
+      showSaveSuccessToast("Citation results");
     } catch (err) {
       console.error(err);
-      alert("Could not save citation results.");
+      showSaveErrorToast("Citation results");
     } finally {
       setSaving(false);
     }

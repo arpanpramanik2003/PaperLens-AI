@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api-client";
+import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -165,7 +166,7 @@ export default function DatasetBenchmarkFinder() {
       setGenerated(true);
     } catch (error) {
       console.error(error);
-      alert("Failed to load dataset and benchmark recommendations.");
+      showSaveErrorToast("Dataset and benchmark recommendations");
     } finally {
       setLoading(false);
     }
@@ -174,7 +175,7 @@ export default function DatasetBenchmarkFinder() {
   const handleSaveRecommendations = async () => {
     if (!generated) return;
     if (!userId) {
-      alert("Please log in to save recommendations.");
+      showSaveSignInToast("Dataset and benchmark recommendations");
       return;
     }
 
@@ -203,10 +204,10 @@ export default function DatasetBenchmarkFinder() {
       );
 
       if (!res.ok) throw new Error("Failed to save recommendations.");
-      alert("Recommendations saved.");
+      showSaveSuccessToast("Dataset and benchmark recommendations");
     } catch (error) {
       console.error(error);
-      alert("Could not save recommendations.");
+      showSaveErrorToast("Dataset and benchmark recommendations");
     } finally {
       setSaving(false);
     }

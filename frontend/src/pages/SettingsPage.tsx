@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { showSaveErrorToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -96,9 +97,10 @@ export default function SettingsPage() {
 
       if (!res.ok) throw new Error("Failed to delete item.");
       setSavedItems((prev) => prev.filter((item) => item.id !== itemId));
+      showSaveSuccessToast("Saved item removed");
     } catch (error) {
       console.error(error);
-      alert("Could not delete saved item.");
+      showSaveErrorToast("Saved item removal");
     } finally {
       setDeletingId(null);
     }
