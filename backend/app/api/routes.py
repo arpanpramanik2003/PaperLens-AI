@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -10,10 +11,10 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.core.database import get_db
-from app.models.domain import Document, Activity
+from app.models.domain import Document, Activity, SavedItem
 
 from app.core.config import settings
-from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest, CitationDiscoveryRequest, UploadPaperResponse, SummarizeResponse
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest, CitationDiscoveryRequest, UploadPaperResponse, SummarizeResponse, SaveItemRequest
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
@@ -22,6 +23,18 @@ from app.services.retrieval import build_vector_store
 from app.services.citation_intelligence import run_citation_intelligence, discover_citations_by_topic
 
 router = APIRouter()
+
+
+def _serialize_saved_item(item: SavedItem) -> dict:
+
+    return {
+        "id": item.id,
+        "section": item.section,
+        "title": item.title,
+        "summary": item.summary,
+        "payload": item.payload_json or {},
+        "created_at": item.created_at.isoformat() if item.created_at else "",
+    }
 
 
 class PaperTooLengthyError(Exception):
@@ -1122,6 +1135,100 @@ async def upload_paper(
         return _lengthy_response(exc.detail)
     except MemoryError:
         return _lengthy_response("Paper is too lengthy for this deployment.")
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/saved-items")
+async def create_saved_item(
+    payload: SaveItemRequest,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        section = (payload.section or "").strip().lower()
+        title = (payload.title or "").strip()
+
+        if not section:
+            return JSONResponse({"error": "Section is required."}, status_code=400)
+        if not title:
+            return JSONResponse({"error": "Title is required."}, status_code=400)
+        if not isinstance(payload.payload, dict) or not payload.payload:
+            return JSONResponse({"error": "Payload must be a non-empty object."}, status_code=400)
+
+        summary = (payload.summary or "").strip() or None
+
+        item = SavedItem(
+            user_id=user_id,
+            section=section,
+            title=title,
+            summary=summary,
+            payload_json=payload.payload,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="save_section_item",
+            metadata_json={"section": section, "saved_item_id": item.id, "title": title},
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse(_serialize_saved_item(item))
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.get("/saved-items")
+async def list_saved_items(
+    section: Optional[str] = None,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        query = db.query(SavedItem).filter(SavedItem.user_id == user_id)
+        normalized_section = (section or "").strip().lower()
+        if normalized_section:
+            query = query.filter(SavedItem.section == normalized_section)
+
+        items = query.order_by(SavedItem.created_at.desc(), SavedItem.id.desc()).all()
+        serialized = [_serialize_saved_item(item) for item in items]
+        return JSONResponse({"items": serialized})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.delete("/saved-items/{item_id}")
+async def delete_saved_item(
+    item_id: int,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        item = (
+            db.query(SavedItem)
+            .filter(SavedItem.id == item_id, SavedItem.user_id == user_id)
+            .first()
+        )
+        if not item:
+            return JSONResponse({"error": "Saved item not found."}, status_code=404)
+
+        section = item.section
+        db.delete(item)
+        db.commit()
+
+        db_activity = Activity(
+            user_id=user_id,
+            action_type="delete_saved_item",
+            metadata_json={"section": section, "saved_item_id": item_id},
+        )
+        db.add(db_activity)
+        db.commit()
+
+        return JSONResponse({"ok": True})
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
 

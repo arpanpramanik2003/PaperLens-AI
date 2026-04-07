@@ -20,3 +20,15 @@ class Activity(Base):
     action_type = Column(String, nullable=False)
     metadata_json = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SavedItem(Base):
+    __tablename__ = "saved_items"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(String, index=True, nullable=False)
+    section = Column(String, index=True, nullable=False)
+    title = Column(String, nullable=False)
+    summary = Column(String, nullable=True)
+    payload_json = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

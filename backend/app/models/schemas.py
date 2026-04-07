@@ -61,6 +61,24 @@ class CitationDiscoveryRequest(BaseModel):
     topic_preset: Optional[str] = None
 
 
+class SaveItemRequest(BaseModel):
+
+    section: str
+    title: str
+    summary: Optional[str] = None
+    payload: dict
+
+
+class SavedItemResponse(BaseModel):
+
+    id: int
+    section: str
+    title: str
+    summary: Optional[str] = None
+    payload: dict
+    created_at: str
+
+
 # ---------------------------------------------------------------------------
 # New schemas for pgvector pipeline
 # ---------------------------------------------------------------------------

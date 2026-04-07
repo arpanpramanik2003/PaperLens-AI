@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Database, Trophy, Wrench, Sparkles, ArrowRight, X, Info } from "lucide-react";
+import { Database, Trophy, Wrench, Sparkles, ArrowRight, X, Info, BookmarkPlus } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export default function DatasetBenchmarkFinder() {
   const [projectPlan, setProjectPlan] = useState("");
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [domainSummary, setDomainSummary] = useState("");
   const [datasets, setDatasets] = useState<FinderItem[]>([]);
@@ -170,6 +171,47 @@ export default function DatasetBenchmarkFinder() {
     }
   };
 
+  const handleSaveRecommendations = async () => {
+    if (!generated) return;
+    if (!userId) {
+      alert("Please log in to save recommendations.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const res = await apiClient.fetch(
+        "/api/saved-items",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            section: "dataset_benchmark_finder",
+            title: projectTitle.trim() || "Dataset and Benchmark Recommendations",
+            summary: `${datasets.length} datasets • ${benchmarks.length} benchmarks • ${technologies.length} technologies`,
+            payload: {
+              projectTitle,
+              projectPlan,
+              domainSummary,
+              datasets,
+              benchmarks,
+              technologies,
+            },
+          }),
+        },
+        getToken
+      );
+
+      if (!res.ok) throw new Error("Failed to save recommendations.");
+      alert("Recommendations saved.");
+    } catch (error) {
+      console.error(error);
+      alert("Could not save recommendations.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
@@ -215,6 +257,13 @@ export default function DatasetBenchmarkFinder() {
 
       {generated && (
         <div className="space-y-8">
+          <div className="flex justify-end">
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleSaveRecommendations} disabled={saving}>
+              <BookmarkPlus className="w-4 h-4" />
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+
           {domainSummary && (
             <motion.div
               className="rounded-xl border border-border/50 bg-secondary/30 p-4 sm:p-5"

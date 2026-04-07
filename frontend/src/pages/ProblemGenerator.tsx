@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lightbulb, Star, ArrowRight, Sparkles, X, ChevronDown } from "lucide-react";
+import { Lightbulb, Star, ArrowRight, Sparkles, X, ChevronDown, BookmarkPlus } from "lucide-react";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -65,6 +65,7 @@ export default function ProblemGenerator() {
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
   const selectedIdea = expandedIdeaIndex !== null ? ideas[expandedIdeaIndex] : null;
@@ -225,6 +226,49 @@ export default function ProblemGenerator() {
 
     pdf.save(`${safeFileName(brief.title)}-brief.pdf`);
     setExportMenuOpen(false);
+  };
+
+  const handleSaveBrief = async () => {
+    if (!selectedIdea || !selectedIdeaDetails) return;
+    if (!userId) {
+      alert("Please log in to save this brief.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const brief = buildBrief();
+      if (!brief) throw new Error("No brief available to save.");
+
+      const res = await apiClient.fetch(
+        "/api/saved-items",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            section: "problem_generator",
+            title: brief.title,
+            summary: brief.problem_statement,
+            payload: {
+              domain,
+              subdomain,
+              complexity,
+              idea: selectedIdea,
+              brief,
+            },
+          }),
+        },
+        getToken
+      );
+
+      if (!res.ok) throw new Error("Failed to save brief.");
+      alert("Brief saved.");
+    } catch (err) {
+      console.error(err);
+      alert("Could not save brief.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -613,6 +657,16 @@ export default function ProblemGenerator() {
 
                 {/* Footer CTA */}
                 <div className="pt-4 border-t border-border/20 flex flex-col sm:flex-row gap-3">
+                  <Button
+                    variant="outline"
+                    className="gap-2 flex-1"
+                    onClick={handleSaveBrief}
+                    disabled={saving}
+                  >
+                    <BookmarkPlus className="w-4 h-4" />
+                    {saving ? "Saving..." : "Save"}
+                  </Button>
+
                   <Button 
                     variant="outline"
                     className="gap-2 flex-1"

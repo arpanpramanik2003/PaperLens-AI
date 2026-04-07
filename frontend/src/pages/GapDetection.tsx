@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanSearch, Info, Sparkles, FileText, Upload, Copy, Check } from "lucide-react";
+import { ScanSearch, Info, Sparkles, FileText, Upload, Copy, Check, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
@@ -23,6 +23,7 @@ export default function GapDetection() {
   const [loading, setLoading] = useState(false);
   const [detected, setDetected] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleDetect = async () => {
     if (activeTab === "text" && !inputText.trim()) return;
@@ -76,6 +77,45 @@ export default function GapDetection() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveGaps = async () => {
+    if (!detected || gaps.length === 0) return;
+    if (!userId) {
+      alert("Please log in to save detected gaps.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const res = await apiClient.fetch(
+        "/api/saved-items",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            section: "gap_detection",
+            title: activeTab === "text" ? "Gap Analysis (Project Plan)" : "Gap Analysis (Uploaded Paper)",
+            summary: `${gaps.length} research gaps identified`,
+            payload: {
+              activeTab,
+              sourceText: activeTab === "text" ? inputText : null,
+              fileName: selectedFile?.name || null,
+              gaps,
+            },
+          }),
+        },
+        getToken
+      );
+
+      if (!res.ok) throw new Error("Failed to save detected gaps.");
+      alert("Gap report saved.");
+    } catch (err) {
+      console.error(err);
+      alert("Could not save gap report.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -151,10 +191,16 @@ export default function GapDetection() {
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-muted-foreground font-medium font-mono">{gaps.length} gaps identified</p>
-              <Button size="sm" variant="outline" className="gap-2 h-8 text-xs border-border/50" onClick={copyToClipboard}>
-                {copied ? <Check className="w-3.5 h-3.5 text-accent" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? "Copied!" : "Copy Report"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" className="gap-2 h-8 text-xs border-border/50" onClick={handleSaveGaps} disabled={saving}>
+                  <BookmarkPlus className="w-3.5 h-3.5" />
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+                <Button size="sm" variant="outline" className="gap-2 h-8 text-xs border-border/50" onClick={copyToClipboard}>
+                  {copied ? <Check className="w-3.5 h-3.5 text-accent" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? "Copied!" : "Copy Report"}
+                </Button>
+              </div>
             </div>
             {gaps.map((gap, i) => (
               <motion.div

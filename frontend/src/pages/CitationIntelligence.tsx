@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, BarChart3, ExternalLink, SearchX, Sparkles, FileText, Loader2, CheckCircle2, BookOpen, Clock3, XCircle } from "lucide-react";
+import { Upload, BarChart3, ExternalLink, SearchX, Sparkles, FileText, Loader2, CheckCircle2, BookOpen, Clock3, XCircle, BookmarkPlus } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
@@ -112,7 +112,7 @@ type ProgressState = {
 };
 
 export default function CitationIntelligence() {
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
 
   const [mode, setMode] = useState<"upload" | "discover">("upload");
   const [file, setFile] = useState<File | null>(null);
@@ -128,6 +128,7 @@ export default function CitationIntelligence() {
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // SSE real-time progress
   const [progress, setProgress] = useState<ProgressState | null>(null);
@@ -449,6 +450,53 @@ export default function CitationIntelligence() {
 
   const missingReferences = report?.references.filter((entry) => !entry.matched) || [];
 
+  const handleSaveCitationResult = async () => {
+    if (!report) return;
+    if (!userId) {
+      alert("Please log in to save citation results.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const sectionTitle = resultMode === "discover"
+        ? (projectTitle.trim() || report.project_title || "Project Discovery Citations")
+        : (file?.name || "Uploaded Paper Citations");
+      const summary = `${report.references_processed} processed • ${report.matched_count} matched • ${report.top_cited.length} top cited`;
+
+      const res = await apiClient.fetch(
+        "/api/saved-items",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            section: "citation_intelligence",
+            title: sectionTitle,
+            summary,
+            payload: {
+              mode: resultMode,
+              projectTitle,
+              basicDetails,
+              topicPreset,
+              inferredTopicPreset,
+              report,
+              recommendations,
+            },
+          }),
+        },
+        getToken
+      );
+
+      if (!res.ok) throw new Error("Failed to save citation results.");
+      alert("Citation results saved.");
+    } catch (err) {
+      console.error(err);
+      alert("Could not save citation results.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
@@ -745,6 +793,13 @@ export default function CitationIntelligence() {
 
       {report && (
         <div className="space-y-8 overflow-hidden">
+          <div className="flex justify-end">
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleSaveCitationResult} disabled={saving}>
+              <BookmarkPlus className="w-4 h-4" />
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+
           {resultMode === "discover" ? (
             <section className="space-y-3">
               {report.discovery_profile?.intent_summary && (

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,6 +79,45 @@ export default function ExperimentPlanner() {
   const [generated, setGenerated] = useState(false);
   const [expandedStep, setExpandedStep] = useState<number | null>(0);
   const [visibleSteps, setVisibleSteps] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const handleSavePlan = async () => {
+    if (!generated || steps.length === 0) return;
+    if (!userId) {
+      alert("Please log in to save this plan.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const res = await apiClient.fetch(
+        "/api/saved-items",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            section: "experiment_planner",
+            title: topic.trim() || "Experiment Plan",
+            summary: `Difficulty: ${difficulty} • ${steps.length} steps`,
+            payload: {
+              topic,
+              difficulty,
+              steps,
+            },
+          }),
+        },
+        getToken
+      );
+
+      if (!res.ok) throw new Error("Failed to save experiment plan.");
+      alert("Experiment plan saved.");
+    } catch (err) {
+      console.error(err);
+      alert("Could not save experiment plan.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
@@ -184,7 +223,15 @@ export default function ExperimentPlanner() {
       {/* Steps */}
       <AnimatePresence>
         {generated && (
-          <div className="space-y-0">
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" className="gap-2" onClick={handleSavePlan} disabled={saving}>
+                <BookmarkPlus className="w-4 h-4" />
+                {saving ? "Saving..." : "Save Plan"}
+              </Button>
+            </div>
+
+            <div className="space-y-0">
             {steps.slice(0, visibleSteps).map((step, i) => {
               const IconComponent = STEP_ICON_MAP[step.iconName as keyof typeof STEP_ICON_MAP] ?? STEP_ICON_MAP.Cog;
               return (
@@ -250,6 +297,7 @@ export default function ExperimentPlanner() {
                 </div>
               </motion.div>
             )})}
+            </div>
           </div>
         )}
       </AnimatePresence>
