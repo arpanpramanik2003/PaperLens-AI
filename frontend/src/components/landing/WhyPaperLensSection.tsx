@@ -74,21 +74,7 @@ export default function WhyPaperLensSection() {
   const [showEvidenceQuote, setShowEvidenceQuote] = useState(false);
 
   return (
-    <section id="about" className="relative py-20 sm:py-32 overflow-hidden scroll-mt-20">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          className="absolute top-0 right-1/4 w-96 h-96 rounded-full bg-gradient-to-br from-violet-500/10 to-pink-500/10 blur-3xl"
-          animate={{ y: [0, 50, 0], x: [0, 30, 0] }}
-          transition={{ duration: 8, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute bottom-0 left-1/4 w-96 h-96 rounded-full bg-gradient-to-tr from-cyan-500/10 to-violet-500/10 blur-3xl"
-          animate={{ y: [0, -50, 0], x: [0, -30, 0] }}
-          transition={{ duration: 8, repeat: Infinity, delay: 1 }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-transparent" />
-      </div>
+    <section id="about" className="relative py-20 sm:py-32 scroll-mt-20">
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div

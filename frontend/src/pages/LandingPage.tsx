@@ -40,10 +40,13 @@ export default function LandingPage() {
           <SocialProofSection />
         </div>
       </div>
-      <FeaturesSection />
-      <HowItWorksSection />
-      <WhyPaperLensSection />
-      <TestimonialsSection />
+      {/* Shared pure black (dark) / pure white (light) background from Explore to Loved by researchers */}
+      <div className="bg-white dark:bg-black overflow-hidden">
+        <FeaturesSection />
+        <HowItWorksSection />
+        <WhyPaperLensSection />
+        <TestimonialsSection />
+      </div>
       <CTASection />
       <LandingFooter onOpenAbout={() => setShowAbout(true)} />
       <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />

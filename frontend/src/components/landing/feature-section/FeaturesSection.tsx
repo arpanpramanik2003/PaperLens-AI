@@ -10,8 +10,8 @@ export default function FeaturesSection() {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
 
   return (
-    <section id="features" className="py-12 sm:py-24 scroll-mt-20 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-accent/5 to-transparent pointer-events-none" />
+    <section id="features" className="py-12 sm:py-24 scroll-mt-20 relative">
+
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
         <motion.div
