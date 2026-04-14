@@ -1,17 +1,38 @@
-﻿import { motion } from "framer-motion";
+﻿import { motion, useScroll, useTransform } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useRef } from "react";
+import ShaderBackground from "@/components/ui/shader-background";
 
 const ease = [0.2, 0, 0, 1] as const;
 
 export default function HeroSection() {
-  return (
-    <section id="home" className="relative pt-32 pb-24 overflow-hidden scroll-mt-20">
-      <div className="absolute inset-0 grid-pattern" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-accent/5 blur-[120px]" />
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+  const shaderOpacity = useTransform(scrollYProgress, [0, 0.35, 0.7, 1], [1, 0.94, 0.72, 0.38]);
 
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+  return (
+    <section
+      ref={sectionRef}
+      id="home"
+      className="relative min-h-[100svh] bg-transparent pt-24 pb-16 sm:pt-28 sm:pb-20 overflow-hidden scroll-mt-20 flex items-center"
+    >
+      <motion.div style={{ opacity: shaderOpacity }} className="absolute inset-0 z-0">
+        <ShaderBackground
+          variant="line-only"
+          className="absolute inset-0 h-full w-full opacity-100 contrast-[1.35] saturate-[1.35] brightness-[1.02] dark:hidden"
+        />
+        <ShaderBackground
+          className="absolute inset-0 h-full w-full hidden dark:block"
+        />
+      </motion.div>
+      <div className="absolute inset-0 z-10 bg-gradient-to-b from-white/6 via-white/2 to-white/30 dark:from-slate-950/10 dark:via-transparent dark:to-background" />
+      <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[760px] rounded-full bg-transparent dark:bg-accent/5 blur-[140px]" />
+
+      <div className="relative z-20 w-full max-w-4xl mx-auto px-4 sm:px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -30,11 +51,11 @@ export default function HeroSection() {
           transition={{ duration: 0.6, delay: 0.1, ease }}
         >
           <span className="text-shimmer">Understand Research Papers</span>
-          <span className="block text-foreground mt-0">in Minutes, Not Hours</span>
+          <span className="block text-slate-900 dark:text-foreground mt-0">in Minutes, Not Hours</span>
         </motion.h1>
 
         <motion.p
-          className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
+          className="text-sm sm:text-base lg:text-lg text-slate-700 dark:text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease }}
