@@ -36,7 +36,7 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.08),rgba(255,255,255,0.02)_34%,rgba(255,255,255,0.06))] dark:bg-[linear-gradient(to_bottom,rgba(0,0,0,0.2),rgba(0,0,0,0.06)_34%,rgba(0,0,0,0.22))]" />
         </div>
         <div className="relative z-10">
-          <HeroSection />
+          <HeroSection isDark={isDark} />
           <SocialProofSection />
         </div>
       </div>
