@@ -83,6 +83,7 @@ This is the original pipeline used by the current analyzer UI:
 
 - Error examples:
   - 400: no file, invalid type, extraction failure
+  - 400: invalid DOCX container / malformed office package
   - 413: too large / too many pages / too many chars
 
 ```json
@@ -91,6 +92,15 @@ This is the original pipeline used by the current analyzer UI:
   "code": "PAPER_TOO_LENGTHY"
 }
 ```
+
+```json
+{
+  "error": "Invalid DOCX file structure. Please upload a valid .docx file (not .doc, PDF, or a renamed file).",
+  "code": "INVALID_DOCUMENT_FORMAT"
+}
+```
+
+- 413 can also occur for model token limits/rate limits (provider-side), not only file-size limits.
 
 ### POST /api/analyze_stream
 - Auth: Yes
@@ -209,6 +219,10 @@ Response:
 
 ## 6) Experiment Planner
 
+Model routing note (April 2026):
+- Primary: `openai/gpt-oss-120b`
+- Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
+
 ### POST /api/plan-experiment
 - Auth: Yes
 - Request body:
@@ -240,6 +254,9 @@ Response:
 ---
 
 ## 7) Problem Generator & Expansion
+
+Model routing note (April 2026):
+- Uses the same heavy-model fallback chain as Experiment Planner.
 
 ### POST /api/generate-problems
 - Auth: Yes
@@ -292,6 +309,10 @@ Response:
 
 ## 8) Gap Detection
 
+Model note (April 2026):
+- Pinned model: `llama-3.1-8b-instant`
+- Completion cap: `max_tokens=1000` to reduce TPM 413 failures
+
 ### POST /api/detect-gaps
 - Auth: Yes
 - Content-Type: multipart/form-data
@@ -324,6 +345,11 @@ At least one of file or text must be provided.
 ---
 
 ## 9) Dataset & Benchmark Finder
+
+Model routing note (April 2026):
+- Primary: `openai/gpt-oss-120b`
+- Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
+
 
 ### POST /api/find-datasets-benchmarks
 - Auth: Yes

@@ -31,6 +31,7 @@ Instead of just chatting with a PDF, PaperLens AI provides structured workflows:
 - **Memory-Safe Extraction:** Uses `PyMuPDF` with generator-based extraction to parse massive PDFs without memory spikes.
 - **Persistent Memory:** Chunks and embeddings are securely stored in **Supabase pgvector**, persisting beyond server reloads.
 - **Map-Reduce Summaries:** Generates cohesive summaries for large documents via a map-reduce summarization pipeline (`GET /api/summarize/{paper_id}`).
+- **Safer Parsing UX:** Malformed DOCX files now return a clean `INVALID_DOCUMENT_FORMAT` error instead of raw parser exceptions.
 
 ### 2) 🗂 Real-time Citation Intelligence
 - **Intelligent Reference Matcher:** Validates bibliography text against the Semantic Scholar API using a robust 4-strategy fallback search (DOI → Exact → Title → Loose).
@@ -52,6 +53,17 @@ Instead of just chatting with a PDF, PaperLens AI provides structured workflows:
 ### 6) 📊 Dataset & Benchmark Finder
 - **Intelligent Matching:** Recommends the most suitable datasets, evaluation benchmarks, and common framework technologies.
 
+### 7) 🧠 Model Routing & Fallbacks (April 2026)
+- **Pinned Lightweight Paths:**
+  - Paper Analyzer → `llama-3.1-8b-instant`
+  - Gap Detection → `llama-3.1-8b-instant`
+- **Heavy Paths with Automatic Fallback:**
+  - Experiment Planner, Problem Generator/Expansion, Dataset Finder, Citation Recommendations
+  - Primary: `openai/gpt-oss-120b`
+  - Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
+- **Observability:** Backend prints model traces in terminal (`[MODEL]`, `[MODEL-FALLBACK]`).
+- **TPM Safety:** Paper analyzer/gap flows now use response token caps to reduce provider-side 413 token-limit errors.
+
 ---
 
 ## 🏗 System Architecture
@@ -64,6 +76,13 @@ PaperLens AI uses a decoupled client-server architecture, highly optimized for d
 3. **Data Extraction:** PDFs are streamed through `PyMuPDF` via generators keeping memory overhead negligible.
 4. **Vector Storage:** Chunks are embedded (`all-MiniLM-L6-v2`) and upserted to remote **Supabase pgvector** immediately. The heavy `torch` engine is lazy-loaded to prevent idle server bloating.
 5. **AI Inference:** RAG context boundaries are orchestrated via prompt injection directly to **Groq**.
+
+### Service Layout (updated)
+- `backend/app/services/llm_sections/analysis.py`: paper analysis + stream helpers
+- `backend/app/services/llm_sections/generation.py`: experiment/problem/gap/dataset/citation recommendation generation
+- `backend/app/services/llm_sections/qa.py`: conversational Q&A (in-memory + pgvector)
+- `backend/app/services/model_fallback.py`: shared model fallback executor
+- `backend/app/services/llm.py`: compatibility re-export layer for legacy imports
 
 ### Two paper workflows (important)
 - **Legacy analyzer**: `POST /api/analyze` → returns `doc_id` → `POST /api/ask` with `doc_id` (in-memory; resets on backend restart)

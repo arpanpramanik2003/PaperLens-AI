@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 import re
 import time
@@ -9,6 +10,10 @@ import httpx
 from groq import Groq
 
 from app.core.config import settings
+from app.services.model_fallback import create_completion_with_fallback
+
+
+logger = logging.getLogger(__name__)
 
 
 REFERENCE_SECTION_HEADERS = [
@@ -619,6 +624,17 @@ def _build_heuristic_discovery_plan(
         "llm_used": False,
         "topic_preset": topic_preset,
     }
+
+    HEAVY_PRIMARY_MODEL = "openai/gpt-oss-120b"
+    HEAVY_FALLBACK_MODELS = "llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct"
+
+    logger.info(
+        "Model routing: citation intelligence primary='%s', fallbacks='%s'",
+        HEAVY_PRIMARY_MODEL,
+        HEAVY_FALLBACK_MODELS,
+    )
+
+
 def _build_discovery_query_plan(
     project_title: str,
     basic_details: str = "",
@@ -631,8 +647,11 @@ def _build_discovery_query_plan(
 
     try:
         llm_client = Groq(api_key=settings.GROQ_API_KEY)
-        response = llm_client.chat.completions.create(
-            model=settings.MODEL_NAME,
+        response = create_completion_with_fallback(
+            llm_client=llm_client,
+            task_name="citation_intelligence_discovery",
+            primary_model=HEAVY_PRIMARY_MODEL,
+            fallback_models=HEAVY_FALLBACK_MODELS,
             messages=[
                 {
                     "role": "system",

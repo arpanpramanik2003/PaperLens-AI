@@ -1,9 +1,17 @@
 import re
+import logging
 
-from app.core.config import settings
 from app.services.cache import get_active_indexes
 
 from .client import client
+
+
+logger = logging.getLogger(__name__)
+PAPER_ANALYZER_MODEL = "llama-3.1-8b-instant"
+PAPER_ANALYZER_MAX_TOKENS = 1200
+PAPER_ANALYZER_SUMMARY_MAX_TOKENS = 320
+
+logger.info("Model routing: paper analyzer uses '%s'", PAPER_ANALYZER_MODEL)
 
 
 def enforce_strict_analysis_format(text):
@@ -36,8 +44,12 @@ def summarize_chunks(chunks):
 
     for chunk in chunks:
 
+        logger.info("LLM task 'paper_analyzer_chunk_summary' using model '%s'", PAPER_ANALYZER_MODEL)
+        print(f"[MODEL] task=paper_analyzer_chunk_summary model={PAPER_ANALYZER_MODEL}")
+
         response = client.chat.completions.create(
-            model=settings.MODEL_NAME,
+            model=PAPER_ANALYZER_MODEL,
+            max_tokens=PAPER_ANALYZER_SUMMARY_MAX_TOKENS,
             messages=[
                 {
                     "role": "system",
@@ -280,8 +292,12 @@ Context:
 {format_context(sections["Future Work"]) or ""}
 """
 
+    logger.info("LLM task 'paper_analyzer_structured_analysis' using model '%s'", PAPER_ANALYZER_MODEL)
+    print(f"[MODEL] task=paper_analyzer_structured_analysis model={PAPER_ANALYZER_MODEL}")
+
     response = client.chat.completions.create(
-        model=settings.MODEL_NAME,
+        model=PAPER_ANALYZER_MODEL,
+        max_tokens=PAPER_ANALYZER_MAX_TOKENS,
         messages=[
             {
                 "role": "system",
@@ -296,8 +312,12 @@ Context:
 
 def stream_completion(prompt, system_text):
 
+    logger.info("LLM task 'paper_analyzer_stream' using model '%s'", PAPER_ANALYZER_MODEL)
+    print(f"[MODEL] task=paper_analyzer_stream model={PAPER_ANALYZER_MODEL}")
+
     response = client.chat.completions.create(
-        model=settings.MODEL_NAME,
+        model=PAPER_ANALYZER_MODEL,
+        max_tokens=PAPER_ANALYZER_MAX_TOKENS,
         messages=[
             {"role": "system", "content": system_text},
             {"role": "user", "content": prompt}

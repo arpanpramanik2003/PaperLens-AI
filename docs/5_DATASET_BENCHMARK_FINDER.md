@@ -149,10 +149,13 @@ This supports dashboard analytics and feature usage tracking.
 
 ## 3. LLM Recommendation Engine
 
-**File:** `backend/app/services/llm.py` → `generate_dataset_benchmark_finder(project_title, project_plan)`
+**File:** `backend/app/services/llm_sections/generation.py` → `generate_dataset_benchmark_finder(project_title, project_plan)`
 
 ### 3.1 LLM Invocation
-- Uses configured model via `settings.MODEL_NAME`.
+- Uses heavy-model routing with fallback:
+  - Primary: `openai/gpt-oss-120b`
+  - Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
+- Uses automatic retry to next model if a model fails or is rate-limited.
 - Enforces JSON output with:
 
 ```python
@@ -164,6 +167,8 @@ response_format={"type": "json_object"}
 ```python
 {"role": "system", "content": "You return strictly valid JSON for AI project dataset and benchmark recommendations."}
 ```
+
+- Runtime observability: terminal prints `[MODEL]` and `[MODEL-FALLBACK]` for this task.
 
 ### 3.2 Prompt Contract
 The prompt explicitly requests:

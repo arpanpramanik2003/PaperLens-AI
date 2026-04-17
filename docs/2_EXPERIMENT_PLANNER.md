@@ -95,10 +95,13 @@ async def plan_experiment(payload: ExperimentPlanRequest, ...):
 ```
 
 ### 2.2 LLM Call Architecture
-**File:** `backend/app/services/llm.py` → `generate_experiment_plan()`
+**File:** `backend/app/services/llm_sections/generation.py` → `generate_experiment_plan()`
 
 **LLM Provider:** Groq  
-**Model:** `settings.MODEL_NAME` (default: `llama-3.1-8b-instant`)  
+**Model Routing (April 2026):**
+- Primary: `openai/gpt-oss-120b`
+- Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
+- Fallback logic: tries next model if primary is unavailable/rate-limited
 **Response Format:** Strict JSON schema
 
 **Prompt Structure:**
@@ -159,8 +162,11 @@ Response MUST be JSON matching exact structure with:
 
 ### 3.2 JSON Schema Enforcement
 ```python
-response = client.chat.completions.create(
-    model=settings.MODEL_NAME,
+response = create_completion_with_fallback(
+  llm_client=client,
+  task_name="experiment_planner",
+  primary_model="openai/gpt-oss-120b",
+  fallback_models="llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct",
     messages=[
         {
             "role": "system",
@@ -179,6 +185,7 @@ result = json.loads(response.choices[0].message.content)
 - Guarantees all steps follow schema
 - Frontend can directly render without post-processing
 - Easier to validate step count matches difficulty
+- Model fallback prints terminal traces (`[MODEL]` / `[MODEL-FALLBACK]`) for observability.
 
 ### 3.3 Content Quality Standards
 

@@ -214,6 +214,12 @@ To reduce false positives, candidate results are validated using a fuzzy overlap
 | `CITATION_MAX_REFERENCES` | 60 | Limits how many extracted references are processed |
 | `SEMANTIC_SCHOLAR_API_KEY` | (required) | Enables Semantic Scholar matching and discovery |
 
+LLM routing notes (April 2026):
+- Citation recommendations and discovery-query planning use heavy-model routing with fallback.
+- Primary: `openai/gpt-oss-120b`.
+- Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`.
+- Runtime prints `[MODEL]` and `[MODEL-FALLBACK]` traces in backend terminal.
+
 ---
 
 ## 5) Failure Modes & Recovery

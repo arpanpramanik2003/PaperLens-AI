@@ -124,10 +124,13 @@ async def generate_problems(payload: ProblemGeneratorRequest, ...):
 ```
 
 ### 2.2 LLM Generation: `generate_research_problems()`
-**File:** `backend/app/services/llm.py`
+**File:** `backend/app/services/llm_sections/generation.py`
 
 **LLM Provider:** Groq  
-**Model:** `settings.MODEL_NAME` (default: `llama-3.1-8b-instant`)  
+**Model Routing (April 2026):**
+- Primary: `openai/gpt-oss-120b`
+- Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
+- Automatic fallback on model errors/rate limits
 **Response Format:** JSON with strict schema
 
 **Prompt:**
@@ -220,7 +223,9 @@ async def expand_problem(payload: ProblemDetailRequest, ...):
 ```
 
 ### 3.2 LLM Expansion: `expand_problem_details()`
-**File:** `backend/app/services/llm.py`
+**File:** `backend/app/services/llm_sections/generation.py`
+
+**Model Routing:** Same heavy model chain as problem generation.
 
 **Key Constraint:**  
 "Keep the SAME core problem statement; do not invent a different problem."
@@ -340,8 +345,11 @@ When expanding a problem, the LLM receives:
 
 ### 4.3 JSON Schema Enforcement
 ```python
-response = client.chat.completions.create(
-    model=settings.MODEL_NAME,
+response = create_completion_with_fallback(
+  llm_client=client,
+  task_name="problem_expansion",
+  primary_model="openai/gpt-oss-120b",
+  fallback_models="llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct",
     messages=[{
         "role": "system",
         "content": "You expand research problems into detailed plans. Return strict JSON."
@@ -618,10 +626,14 @@ Activity(
 
 | Config | Default | Usage |
 |--------|---------|-------|
-| `MODEL_NAME` | "llama-3.1-8b-instant" | Groq LLM |
+| `MODEL_NAME` | "llama-3.1-8b-instant" | General/default model in other modules |
 | `IDEA_SEED` | 42 | Reproducibility |
 | `MIN_IDEAS` | 4 | Minimum ideas per request |
 | `MAX_IDEAS` | 6 | Maximum ideas per request |
+
+Note:
+- Current generation path model routing is hardcoded in `llm_sections/generation.py` to heavy model + fallback chain.
+- `[MODEL]` and `[MODEL-FALLBACK]` traces are printed to terminal during execution.
 
 ---
 

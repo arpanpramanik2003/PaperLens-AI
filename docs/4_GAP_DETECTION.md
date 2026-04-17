@@ -176,10 +176,11 @@ content_to_analyze = text  # Used as-is
 ## 3. LLM Gap Detection
 
 ### 3.1 LLM Function
-**File:** `backend/app/services/llm.py` → `detect_research_gaps()`
+**File:** `backend/app/services/llm_sections/generation.py` → `detect_research_gaps()`
 
 **LLM Provider:** Groq  
-**Model:** `settings.MODEL_NAME` (default: `llama-3.1-8b-instant`)  
+**Model (April 2026):** `llama-3.1-8b-instant` (pinned in code as `GAP_DETECTION_MODEL`)  
+**Token Cap:** `GAP_DETECTION_MAX_TOKENS = 1000` to reduce TPM 413 errors  
 **Response Format:** JSON with strict schema
 
 **Prompt:**
@@ -262,7 +263,8 @@ Paper Summary:
 ### 3.4 JSON Schema Enforcement
 ```python
 response = client.chat.completions.create(
-    model=settings.MODEL_NAME,
+  model=GAP_DETECTION_MODEL,
+  max_tokens=GAP_DETECTION_MAX_TOKENS,
     messages=[
         {
             "role": "system",
@@ -300,7 +302,7 @@ summarize_chunks()
 ```
 
 ### 4.2 Summarization Strategy
-**File:** `backend/app/services/llm.py` → `summarize_chunks()`
+**File:** `backend/app/services/llm_sections/analysis.py` → `summarize_chunks()`
 
 ```python
 def summarize_chunks(chunks):
@@ -309,7 +311,8 @@ def summarize_chunks(chunks):
     
     for chunk in chunks:
         response = client.chat.completions.create(
-            model=settings.MODEL_NAME,
+        model=PAPER_ANALYZER_MODEL,
+        max_tokens=PAPER_ANALYZER_SUMMARY_MAX_TOKENS,
             messages=[{
                 "role": "system",
                 "content": "Summarize academic text faithfully and concisely."

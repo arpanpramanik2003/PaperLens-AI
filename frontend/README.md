@@ -51,10 +51,66 @@ API client operations are handled in `src/lib/api-client.ts` leveraging the `VIT
 **Standard REST Endpoints:**
 - `DashboardHome.tsx` → `GET /api/dashboard`
 - `ExperimentPlanner.tsx` → `POST /api/plan-experiment`
+- `PaperAnalyzer.tsx` → `POST /api/analyze`, `POST /api/ask`
+- `GapDetection.tsx` → `POST /api/detect-gaps`
+- `DatasetBenchmarkFinder.tsx` → `POST /api/find-datasets-benchmarks`
+- `ProblemGenerator.tsx` → `POST /api/generate-problems`, `POST /api/expand-problem`
 
 **Streaming Capabilities:**
 The frontend utilizes real-time streaming to provide users with visual feedback during long-running tasks:
 - **`CitationIntelligence.tsx`**: Uses the native fetch `ReadableStream` to consume the `POST /api/citation-intelligence/stream` endpoint. It processes `start`, `progress`, and `done` JSON chunks to animate the high-fidelity framer-motion progress bar.
+
+## Runtime Behavior Notes
+
+- Paper Analyzer and Gap Detection are pinned to a lightweight model in backend for stable throughput.
+- Planner/Generator/Finder/Citation recommendation routes use heavy model routing with fallback in backend.
+- Backend terminal prints model traces (`[MODEL]`, `[MODEL-FALLBACK]`) for each AI request.
+
+## Error Semantics (Important)
+
+- HTTP 413 is not always file size.
+	- It can also be model token/TPM limit exceeded from provider.
+- Invalid DOCX package now returns HTTP 400 with backend code `INVALID_DOCUMENT_FORMAT`.
+- Frontend can show clearer user messages by checking backend `code` values where available.
+
+## Troubleshooting (UI Messaging)
+
+Use backend `code` (when present) to show precise user-facing messages.
+
+### Recommended mapping
+
+- `INVALID_DOCUMENT_FORMAT` (HTTP 400)
+	- Show: "This DOCX file is invalid or corrupted. Please upload a valid .docx or PDF."
+
+- `PAPER_TOO_LENGTHY` (HTTP 413)
+	- Show: "Paper is too large for current limits. Try a shorter file or fewer pages."
+
+- Provider token-limit 413 (`rate_limit_exceeded`, `type=tokens`)
+	- Show: "Analysis request exceeded model token throughput. Please retry or use smaller input."
+
+### Quick payload checks
+
+If backend returns:
+
+```json
+{ "code": "INVALID_DOCUMENT_FORMAT", "error": "..." }
+```
+
+Treat as file-format issue.
+
+If backend returns:
+
+```json
+{ "code": "PAPER_TOO_LENGTHY", "error": "..." }
+```
+
+Treat as upload/parsing size-limit issue.
+
+If backend returns provider error body containing:
+- `"type": "tokens"`
+- `"code": "rate_limit_exceeded"`
+
+Treat as model TPM/token issue (not file-size issue).
 
 ## Auth Flow
 

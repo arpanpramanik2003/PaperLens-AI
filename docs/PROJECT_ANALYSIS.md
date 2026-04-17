@@ -49,7 +49,9 @@ PostgreSQL (Supabase-compatible connection)
 - Domain models: `backend/app/models/domain.py`
 - Request schemas: `backend/app/models/schemas.py`
 - Core services:
-	- LLM logic: `backend/app/services/llm.py`
+	- LLM compatibility export: `backend/app/services/llm.py`
+	- LLM modules: `backend/app/services/llm_sections/analysis.py`, `backend/app/services/llm_sections/qa.py`, `backend/app/services/llm_sections/generation.py`
+	- Model fallback helper: `backend/app/services/model_fallback.py`
 	- Parsing: `backend/app/services/parsing.py`
 	- Chunking: `backend/app/services/chunking.py`
 	- Retrieval: `backend/app/services/retrieval.py`

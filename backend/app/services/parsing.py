@@ -16,6 +16,13 @@ class ParsingLimitError(Exception):
         self.detail = detail
 
 
+class ParsingFormatError(Exception):
+
+    def __init__(self, detail: str):
+        super().__init__(detail)
+        self.detail = detail
+
+
 # ---------------------------------------------------------------------------
 # PDF – generator (memory-efficient, never loads full file at once)
 # ---------------------------------------------------------------------------
@@ -84,7 +91,13 @@ def extract_docx_pages(
     """
     from docx import Document
 
-    doc = Document(docx_path)
+    try:
+        doc = Document(docx_path)
+    except Exception as exc:
+        raise ParsingFormatError(
+            "Invalid DOCX file structure. Please upload a valid .docx file (not .doc, PDF, or a renamed file)."
+        ) from exc
+
     paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
 
     if not paragraphs:

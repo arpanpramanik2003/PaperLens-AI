@@ -18,7 +18,7 @@ from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGenerat
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
-from app.services.parsing import extract_docx_pages, extract_pdf_pages, ParsingLimitError
+from app.services.parsing import extract_docx_pages, extract_pdf_pages, ParsingFormatError, ParsingLimitError
 from app.services.retrieval import build_vector_store
 from app.services.citation_intelligence import run_citation_intelligence, discover_citations_by_topic
 
@@ -68,6 +68,16 @@ def _lengthy_response(message):
             "code": "PAPER_TOO_LENGTHY"
         },
         status_code=413
+    )
+
+
+def _invalid_document_response(message):
+    return JSONResponse(
+        {
+            "error": message,
+            "code": "INVALID_DOCUMENT_FORMAT"
+        },
+        status_code=400
     )
 
 
@@ -321,6 +331,10 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
 
         return _lengthy_response(exc.detail)
 
+    except ParsingFormatError as exc:
+
+        return _invalid_document_response(exc.detail)
+
     except Exception as exc:
 
         return JSONResponse({"error": str(exc)}, status_code=500)
@@ -443,6 +457,10 @@ async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(ge
     except ParsingLimitError as exc:
 
         return _lengthy_response(exc.detail)
+
+    except ParsingFormatError as exc:
+
+        return _invalid_document_response(exc.detail)
 
     except Exception as exc:
 

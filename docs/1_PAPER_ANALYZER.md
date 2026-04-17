@@ -78,6 +78,14 @@ Output Layers
 
 ## 2. Data Retrieval Flow
 
+### April 2026 Implementation Notes
+- Legacy analyzer logic now lives in `backend/app/services/llm_sections/analysis.py` (re-exported through `backend/app/services/llm.py` for compatibility).
+- Paper Analyzer is explicitly pinned to `llama-3.1-8b-instant` in code.
+- Analyzer requests now enforce completion caps to avoid Groq TPM 413 errors:
+  - `PAPER_ANALYZER_SUMMARY_MAX_TOKENS = 320`
+  - `PAPER_ANALYZER_MAX_TOKENS = 1200`
+- DOCX parsing now maps malformed DOCX package errors to a clean user-facing `INVALID_DOCUMENT_FORMAT` response.
+
 ### 2.1 Document Parsing
 **File:** `backend/app/services/parsing.py`
 
@@ -100,6 +108,7 @@ extract_docx_pages(file_path) → List[{"page": int, "text": str}]
 - Uses python-docx to extract text
 - Treats all paragraphs as a single “page” (DOCX is not paginated like PDF)
 - Same limit enforcement as PDF
+- Malformed `.docx` files now raise a format-specific parser error that is returned as HTTP 400 (`INVALID_DOCUMENT_FORMAT`) by analyzer endpoints.
 
 **Limits (Configurable):**
 - `MAX_UPLOAD_MB`: default 20 (file size cap)
@@ -165,7 +174,7 @@ build_vector_store(chunks) → (faiss_index, bm25_index)
 ## 3. Data Processing & Analysis
 
 ### 3.1 LLM Analysis Generation
-**File:** `backend/app/services/llm.py` → `analyze_paper(chunks)`
+**File:** `backend/app/services/llm_sections/analysis.py` → `analyze_paper(chunks)`
 
 **Input:** Semantic chunks with full document context  
 **Output:** Structured markdown analysis
@@ -291,7 +300,7 @@ db_activity = Activity(user_id=user_id, action_type="analyze_paper", ...)
 ## 4. Q&A Retrieval-Augmented Generation
 
 ### 4.1 Question Routing
-**File:** `backend/app/services/llm.py` → `answer_question(question)`
+**File:** `backend/app/services/llm_sections/qa.py` → `answer_question(question)`
 
 **Special Intent Detection:**
 1. **Page Count Queries:** "How many pages...", "Total pages..."
