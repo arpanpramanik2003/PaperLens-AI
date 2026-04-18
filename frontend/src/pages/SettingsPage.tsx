@@ -142,90 +142,165 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Settings</h1>
-        <p className="text-sm text-muted-foreground mb-8">Manage your account and preferences.</p>
-      </motion.div>
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--card)/0.94)_55%,hsl(var(--accent)/0.08)_100%)] px-6 py-6 sm:px-8 sm:py-7"
+      >
+        <div className="pointer-events-none absolute -top-24 left-8 h-48 w-48 rounded-full bg-cyan-500/12 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-48 w-48 rounded-full bg-accent/10 blur-3xl" />
 
-      <div className="space-y-6">
-        {/* Profile */}
-        <motion.div
-          className="rounded-xl border border-border/50 bg-card p-6"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1, ease }}
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <User className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Profile</h2>
+        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/45 px-3 py-1 mb-3">
+              <Palette className="w-3.5 h-3.5 text-accent" strokeWidth={1.8} />
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">Workspace Preferences</span>
+            </div>
+            <h1 className="text-3xl sm:text-[2rem] font-semibold tracking-tight mb-2">Settings</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
+              Manage your profile, review saved work, and keep the interface aligned with the way you work.
+            </p>
           </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-muted-foreground mb-1.5 block">Full Name</label>
-                <Input 
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="bg-secondary/50 border-border/50" 
-                  placeholder="Enter your full name"
-                />
+
+          <div className="grid grid-cols-2 gap-3 min-w-[280px]">
+            <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono">Saved Items</p>
+              <p className="mt-2 text-xl font-semibold text-foreground">{savedItems.length}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono">Profile</p>
+              <p className="mt-2 text-xl font-semibold text-foreground">Ready</p>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.45fr)] gap-6 items-start">
+        <div className="space-y-6">
+          {/* Profile */}
+          <motion.div
+            className="rounded-3xl border border-border/60 bg-card/90 p-6 premium-shadow"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1, ease }}
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-xl border border-border/60 bg-secondary/40 flex items-center justify-center">
+                <User className="w-4 h-4 text-accent" />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
-                <Input 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  type="email"
-                  className="bg-secondary/50 border-border/50"
-                  placeholder="Enter your email"
-                />
+                <h2 className="text-sm font-semibold text-foreground">Profile</h2>
+                <p className="text-xs text-muted-foreground">Store the basics you use across saved reports.</p>
               </div>
             </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1.5 block">Institution</label>
-              <Input 
-                value={institution}
-                onChange={(e) => setInstitution(e.target.value)}
-                className="bg-secondary/50 border-border/50"
-                placeholder="Enter your institution"
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Full Name</label>
+                  <Input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="bg-secondary/40 border-border/60 rounded-xl"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
+                  <Input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
+                    className="bg-secondary/40 border-border/60 rounded-xl"
+                    placeholder="Enter your email"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Institution</label>
+                <Input
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                  className="bg-secondary/40 border-border/60 rounded-xl"
+                  placeholder="Enter your institution"
+                />
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  size="sm"
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-xl shadow-[0_16px_30px_-22px_hsl(var(--accent))]"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+                {saveMessage && <span className="text-sm text-accent">{saveMessage}</span>}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Appearance */}
+          <motion.div
+            className="rounded-3xl border border-border/60 bg-card/90 p-6 premium-shadow"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2, ease }}
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-xl border border-border/60 bg-secondary/40 flex items-center justify-center">
+                <Palette className="w-4 h-4 text-accent" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Appearance</h2>
+                <p className="text-xs text-muted-foreground">Keep the interface comfortable for long sessions.</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-secondary/20 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Moon className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-foreground">Dark Mode</p>
+                  <p className="text-xs text-muted-foreground">Toggle between light and dark theme</p>
+                </div>
+              </div>
+              <Switch
+                defaultChecked
+                onCheckedChange={(checked) => {
+                  document.documentElement.classList.toggle("dark", checked);
+                }}
               />
             </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                size="sm" 
-                onClick={handleSaveProfile}
-                disabled={isSaving}
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-              {saveMessage && (
-                <span className="text-sm text-accent">{saveMessage}</span>
-              )}
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
 
         {/* Saved Content */}
         <motion.div
-          className="rounded-xl border border-border/50 bg-card p-6"
+          className="rounded-3xl border border-border/60 bg-card/90 p-6 premium-shadow min-h-[520px]"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.15, ease }}
         >
-          <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div className="flex items-center gap-3">
-              <Bookmark className="w-4 h-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold text-foreground">Saved Content</h2>
+              <div className="w-9 h-9 rounded-xl border border-border/60 bg-secondary/40 flex items-center justify-center">
+                <Bookmark className="w-4 h-4 text-accent" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Saved Content</h2>
+                <p className="text-xs text-muted-foreground">Review and manage items saved from the tools.</p>
+              </div>
             </div>
-            <Button size="sm" variant="outline" onClick={() => void fetchSavedItems()} disabled={savedLoading}>
+            <Button size="sm" variant="outline" onClick={() => void fetchSavedItems()} disabled={savedLoading} className="rounded-xl">
               {savedLoading ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
 
           {!userId && (
-            <p className="text-sm text-muted-foreground">Log in to view and manage saved items.</p>
+            <div className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
+              <p className="text-sm text-muted-foreground">Log in to view and manage saved items.</p>
+            </div>
           )}
 
           {userId && savedLoading && (
@@ -240,17 +315,24 @@ export default function SettingsPage() {
           )}
 
           {userId && !savedLoading && !savedError && groupedSavedItems.length === 0 && (
-            <p className="text-sm text-muted-foreground">No saved items yet. Save content from each section to see it here.</p>
+            <div className="rounded-2xl border border-dashed border-border/60 bg-secondary/20 p-6 text-center">
+              <p className="text-sm text-muted-foreground">No saved items yet. Save content from each section to see it here.</p>
+            </div>
           )}
 
           {userId && !savedLoading && !savedError && groupedSavedItems.length > 0 && (
             <div className="space-y-5">
               {groupedSavedItems.map((group) => (
-                <div key={group.section}>
-                  <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{group.label}</h3>
-                  <div className="space-y-2">
+                <div key={group.section} className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground">{group.label}</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground">
+                      {group.items.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2.5">
                     {group.items.map((item) => (
-                      <div key={item.id} className="rounded-lg border border-border/50 bg-secondary/20 p-3 flex items-start justify-between gap-3">
+                      <div key={item.id} className="rounded-2xl border border-border/60 bg-secondary/20 p-3.5 flex items-start justify-between gap-3 transition-colors hover:border-accent/25">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground break-words">{item.title}</p>
                           {item.summary && (
@@ -260,23 +342,25 @@ export default function SettingsPage() {
                             {new Date(item.created_at).toLocaleString()}
                           </p>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => setSelectedSavedItem(item)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => void handleDeleteSavedItem(item.id)}
-                          disabled={deletingId === item.id}
-                        >
-                          {deletingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        </Button>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg"
+                            onClick={() => setSelectedSavedItem(item)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                            onClick={() => void handleDeleteSavedItem(item.id)}
+                            disabled={deletingId === item.id}
+                          >
+                            {deletingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -285,47 +369,19 @@ export default function SettingsPage() {
             </div>
           )}
         </motion.div>
-
-        {/* Appearance */}
-        <motion.div
-          className="rounded-xl border border-border/50 bg-card p-6"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2, ease }}
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <Palette className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Appearance</h2>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Moon className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-foreground">Dark Mode</p>
-                <p className="text-xs text-muted-foreground">Toggle between light and dark theme</p>
-              </div>
-            </div>
-            <Switch
-              defaultChecked
-              onCheckedChange={(checked) => {
-                document.documentElement.classList.toggle("dark", checked);
-              }}
-            />
-          </div>
-        </motion.div>
       </div>
 
       <AnimatePresence>
         {selectedSavedItem && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedSavedItem(null)}
           >
             <motion.div
-              className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/50 bg-card shadow-2xl"
+              className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl premium-shadow"
               initial={{ opacity: 0, y: 16, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.97 }}

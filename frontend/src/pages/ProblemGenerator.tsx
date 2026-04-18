@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lightbulb, Star, ArrowRight, Sparkles, X, ChevronDown, BookmarkPlus } from "lucide-react";
+import { Lightbulb, Star, ArrowRight, Sparkles, X, ChevronDown, BookmarkPlus, Compass, FileText, Download } from "lucide-react";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -53,6 +53,29 @@ const safeFileName = (value: string) => {
 
   return normalized || "research-brief";
 };
+
+const workflowGuide = [
+  {
+    title: "Define Domain",
+    detail: "Set problem space and practical constraints.",
+    icon: Compass,
+  },
+  {
+    title: "Generate Candidates",
+    detail: "Get ranked research ideas with complexity control.",
+    icon: Sparkles,
+  },
+  {
+    title: "Expand to Brief",
+    detail: "Convert one idea into a complete execution roadmap.",
+    icon: FileText,
+  },
+  {
+    title: "Export & Execute",
+    detail: "Save and export the brief to run experiments faster.",
+    icon: Download,
+  },
+];
 
 export default function ProblemGenerator() {
   const { getToken, userId } = useAuth();
@@ -417,107 +440,176 @@ export default function ProblemGenerator() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Problem Statement Generator</h1>
-        <p className="text-sm text-muted-foreground mb-6">Generate research ideas from your domain.</p>
-      </motion.div>
-
-      <motion.div
-        className="rounded-xl border border-border/50 bg-card p-6 mb-8"
-        initial={{ opacity: 0, y: 12 }}
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1, ease }}
+        transition={{ duration: 0.4, ease }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(140deg,hsl(var(--card))_0%,hsl(var(--card)/0.9)_62%,hsl(var(--accent)/0.08)_100%)] px-6 py-6 sm:px-8 sm:py-7"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Domain</label>
-            <Input 
-              value={domain} 
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="e.g., Natural Language Processing" 
-              className="bg-secondary/50 border-border/50" 
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Subdomain</label>
-            <Input 
-              value={subdomain}
-              onChange={(e) => setSubdomain(e.target.value)}
-              placeholder="e.g., Sentiment Analysis" 
-              className="bg-secondary/50 border-border/50" 
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Complexity</label>
-            <Select value={complexity} onValueChange={setComplexity}>
-              <SelectTrigger className="bg-secondary/50 border-border/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <Button onClick={handleGenerate} disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-          <Sparkles className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} /> 
-          {loading ? "Ideating..." : "Generate Ideas"}
-        </Button>
-      </motion.div>
+        <div className="pointer-events-none absolute -top-20 left-6 h-44 w-44 rounded-full bg-accent/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-44 w-44 rounded-full bg-cyan-500/10 blur-3xl" />
 
-      <AnimatePresence>
-        {generated && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {ideas.map((idea, i) => (
+        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-1 mb-3">
+              <Lightbulb className="w-3.5 h-3.5 text-accent" strokeWidth={1.8} />
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">Idea Engine</span>
+            </div>
+            <h1 className="text-3xl sm:text-[2rem] font-semibold tracking-tight">Problem Statement Generator</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+              Discover high-potential research problems and expand any candidate into a structured execution brief.
+            </p>
+          </div>
+
+          <span className="inline-flex min-w-[8.5rem] items-center justify-center text-center whitespace-nowrap text-xs font-mono uppercase tracking-widest text-muted-foreground px-2.5 py-1.5 rounded-full border border-border/60 bg-background/40">
+            {generated ? "Ideas Ready" : loading ? "Ideating" : "Awaiting Input"}
+          </span>
+        </div>
+      </motion.section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <motion.div
+          className="lg:col-span-8 rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="sm:col-span-2">
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Domain</label>
+              <Input
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                placeholder="e.g., Natural Language Processing"
+                className="bg-secondary/50 border-border/50 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Subdomain</label>
+              <Input
+                value={subdomain}
+                onChange={(e) => setSubdomain(e.target.value)}
+                placeholder="e.g., Sentiment Analysis"
+                className="bg-secondary/50 border-border/50 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Complexity</label>
+              <Select value={complexity} onValueChange={setComplexity}>
+                <SelectTrigger className="bg-secondary/50 border-border/50 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button onClick={handleGenerate} disabled={loading} className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90 gap-2 rounded-xl">
+            <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+            {loading ? "Ideating..." : "Generate Ideas"}
+          </Button>
+        </motion.div>
+
+        <motion.aside
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease }}
+          className="lg:col-span-4 rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold tracking-wide">Workflow Example</h2>
+            <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">4 Stages</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {workflowGuide.map((item, index) => (
               <motion.div
-                key={idea.title + i}
-                className="rounded-xl border border-border/50 bg-card p-5 hover:border-accent/30 transition-colors group"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.1, ease }}
+                key={item.title}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.28, delay: 0.2 + index * 0.07, ease }}
+                className="group flex items-start gap-3 rounded-2xl border border-border/60 bg-background/45 p-3.5"
               >
-                <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star key={j} className={`w-3.5 h-3.5 ${j < idea.rating ? "fill-accent text-accent" : "text-border"}`} />
-                  ))}
+                <div className="w-9 h-9 rounded-xl border border-border/60 bg-card flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-4 h-4 text-accent" strokeWidth={1.7} />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground mb-2 leading-snug">{idea.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed mb-3">{idea.desc}</p>
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {(idea.tags || []).map((tag: string) => (
-                    <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{tag}</span>
-                  ))}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{index + 1}. {item.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.detail}</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs border-border/60 bg-secondary/40 text-foreground hover:bg-secondary hover:text-foreground hover:border-border transition-colors"
-                  onClick={() => handleUseIdea(idea, i)}
-                  disabled={expandingIdeaIndex === i}
-                >
-                  {expandingIdeaIndex === i ? "Loading details..." : expandedIdeaIndex === i ? "Hide details" : "Use this idea"}
-                  <ArrowRight className="w-3 h-3" />
-                </Button>
               </motion.div>
             ))}
           </div>
+        </motion.aside>
+      </section>
+
+      <AnimatePresence>
+        {generated && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold tracking-wide text-foreground">Generated Idea Cards</h2>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{ideas.length} Candidates</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {ideas.map((idea, i) => (
+                <motion.div
+                  key={idea.title + i}
+                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 hover:border-accent/35 transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_20px_45px_-32px_hsl(var(--accent))]"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.08, ease }}
+                >
+                  <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-accent/10 via-transparent to-accent/5" />
+
+                  <div className="relative z-10 flex gap-0.5 mb-3">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <Star key={j} className={`w-3.5 h-3.5 ${j < idea.rating ? "fill-accent text-accent" : "text-border"}`} />
+                    ))}
+                  </div>
+
+                  <h3 className="relative z-10 text-sm font-semibold text-foreground mb-2 leading-snug">{idea.title}</h3>
+                  <p className="relative z-10 text-xs text-muted-foreground leading-relaxed mb-3">{idea.desc}</p>
+
+                  <div className="relative z-10 flex flex-wrap gap-1.5 mb-4">
+                    {(idea.tags || []).map((tag: string) => (
+                      <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border/40">{tag}</span>
+                    ))}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="relative z-10 w-full gap-1.5 text-xs border-border/60 bg-secondary/40 text-foreground hover:bg-secondary hover:text-foreground hover:border-border transition-colors rounded-xl"
+                    onClick={() => handleUseIdea(idea, i)}
+                    disabled={expandingIdeaIndex === i}
+                  >
+                    {expandingIdeaIndex === i ? "Loading details..." : expandedIdeaIndex === i ? "Hide details" : "Use this idea"}
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
+          </section>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {selectedIdea && selectedIdeaDetails && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setExpandedIdeaIndex(null)}
           >
             <motion.div
-              className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/50 bg-gradient-to-b from-card to-card/95 shadow-2xl"
+              className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-gradient-to-b from-card to-card/95 shadow-2xl premium-shadow"
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.96 }}
@@ -726,7 +818,7 @@ export default function ProblemGenerator() {
       </AnimatePresence>
 
       {!generated && !loading && (
-        <div className="text-center py-16">
+        <div className="text-center py-12 sm:py-16">
           <Lightbulb className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1} />
           <p className="text-sm text-muted-foreground">Fill in your research domain and generate ideas.</p>
         </div>

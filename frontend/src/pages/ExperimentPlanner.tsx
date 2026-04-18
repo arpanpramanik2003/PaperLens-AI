@@ -11,6 +11,29 @@ import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@
 
 const ease = [0.2, 0, 0, 1] as const;
 
+const plannerGuide = [
+  {
+    title: "Define Scope",
+    detail: "Clarify hypothesis, constraints, and expected outcome.",
+    icon: Icons.Target,
+  },
+  {
+    title: "Design Pipeline",
+    detail: "Select data, model stack, and evaluation strategy.",
+    icon: Icons.Workflow,
+  },
+  {
+    title: "Mitigate Risk",
+    detail: "Identify failure modes and add validation checkpoints.",
+    icon: Icons.ShieldAlert,
+  },
+  {
+    title: "Execute",
+    detail: "Run staged experiments and compare ablation outcomes.",
+    icon: Icons.Rocket,
+  },
+];
+
 type PlanStep = {
   num: number;
   title: string;
@@ -178,133 +201,200 @@ export default function ExperimentPlanner() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Experiment Planner</h1>
-        <p className="text-sm text-muted-foreground mb-6">Generate a step-by-step research execution plan.</p>
-      </motion.div>
-
-      {/* Input */}
-      <motion.div
-        className="rounded-xl border border-border/50 bg-card p-6 mb-8"
-        initial={{ opacity: 0, y: 12 }}
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1, ease }}
+        transition={{ duration: 0.4, ease }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(140deg,hsl(var(--card))_0%,hsl(var(--card)/0.9)_62%,hsl(var(--accent)/0.08)_100%)] px-6 py-6 sm:px-8 sm:py-7"
       >
-        <div className="space-y-4">
+        <div className="pointer-events-none absolute -top-20 left-6 h-44 w-44 rounded-full bg-accent/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-44 w-44 rounded-full bg-cyan-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Research Topic</label>
-            <Input
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g., Fine-tuning BERT for sentiment analysis"
-              className="bg-secondary/50 border-border/50"
-            />
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-1 mb-3">
+              <Icons.Compass className="w-3.5 h-3.5 text-accent" strokeWidth={1.8} />
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">Research Workflow</span>
+            </div>
+            <h1 className="text-3xl sm:text-[2rem] font-semibold tracking-tight">Experiment Planner</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+              Generate a stage-wise execution roadmap with parameters, risks, and practical implementation checkpoints.
+            </p>
           </div>
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Difficulty Level</label>
-            <Select value={difficulty} onValueChange={setDifficulty}>
-              <SelectTrigger className="bg-secondary/50 border-border/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="beginner">Beginner</SelectItem>
-                <SelectItem value="intermediate">Intermediate</SelectItem>
-                <SelectItem value="advanced">Advanced</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex min-w-[7.5rem] items-center justify-center text-center whitespace-nowrap text-xs font-mono uppercase tracking-widest text-muted-foreground px-2.5 py-1.5 rounded-full border border-border/60 bg-background/40">
+              {generated ? "Plan Ready" : loading ? "Planning" : "Awaiting Input"}
+            </span>
+            {generated && (
+              <Button size="sm" variant="outline" className="gap-2 rounded-xl" onClick={handleSavePlan} disabled={saving}>
+                <BookmarkPlus className="w-4 h-4" />
+                {saving ? "Saving..." : "Save Plan"}
+              </Button>
+            )}
           </div>
-          <Button onClick={handleGenerate} disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-            <FlaskConical className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} /> 
-            {loading ? "Planning..." : "Generate Plan"}
-          </Button>
         </div>
-      </motion.div>
+      </motion.section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <motion.div
+          className="lg:col-span-8 rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Research Topic</label>
+              <Input
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="e.g., Fine-tuning BERT for sentiment analysis"
+                className="bg-secondary/50 border-border/50 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Difficulty Level</label>
+              <Select value={difficulty} onValueChange={setDifficulty}>
+                <SelectTrigger className="bg-secondary/50 border-border/50 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button onClick={handleGenerate} disabled={loading} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 rounded-xl">
+                <FlaskConical className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+                {loading ? "Planning..." : "Generate Plan"}
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.aside
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease }}
+          className="lg:col-span-4 rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold tracking-wide">Guide Menu</h2>
+            <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">4 Stages</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {plannerGuide.map((item, index) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.28, delay: 0.2 + index * 0.07, ease }}
+                className="group flex items-start gap-3 rounded-2xl border border-border/60 bg-background/45 p-3.5"
+              >
+                <div className="w-9 h-9 rounded-xl border border-border/60 bg-card flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-4 h-4 text-accent" strokeWidth={1.7} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{index + 1}. {item.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.detail}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.aside>
+      </section>
 
       {/* Steps */}
       <AnimatePresence>
         {generated && (
-          <div className="space-y-4">
-            <div className="flex justify-end">
-              <Button size="sm" variant="outline" className="gap-2" onClick={handleSavePlan} disabled={saving}>
-                <BookmarkPlus className="w-4 h-4" />
-                {saving ? "Saving..." : "Save Plan"}
-              </Button>
+          <section className="rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow">
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <h3 className="text-sm font-semibold tracking-wide text-foreground">Execution Timeline</h3>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{steps.length} Steps</span>
             </div>
 
             <div className="space-y-0">
-            {steps.slice(0, visibleSteps).map((step, i) => {
-              const IconComponent = STEP_ICON_MAP[step.iconName as keyof typeof STEP_ICON_MAP] ?? STEP_ICON_MAP.Cog;
-              return (
-              <motion.div
-                key={step.num || i}
-                className="relative pl-10"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, ease }}
-              >
-                {/* Connector line */}
-                {i < steps.length - 1 && (
-                  <div className="absolute left-[15px] top-10 w-[2px] h-[calc(100%-8px)] bg-border" />
-                )}
-
-                {/* Step number */}
-                <div className="absolute left-0 top-0 w-[32px] h-[32px] rounded-full border-2 border-border bg-card flex items-center justify-center z-10">
-                  <span className="text-xs font-mono font-medium text-foreground tabular-nums">{step.num}</span>
-                </div>
-
-                {/* Step content */}
-                <div
-                  className={`mb-6 rounded-xl border bg-card transition-all duration-200 ${
-                    expandedStep === i ? "border-accent/30" : "border-border/50"
-                  }`}
-                >
-                  <button
-                    onClick={() => setExpandedStep(expandedStep === i ? null : i)}
-                    className="w-full flex items-center gap-3 p-4 text-left"
+              {steps.slice(0, visibleSteps).map((step, i) => {
+                const IconComponent = STEP_ICON_MAP[step.iconName as keyof typeof STEP_ICON_MAP] ?? STEP_ICON_MAP.Cog;
+                return (
+                  <motion.div
+                    key={step.num || i}
+                    className="relative pl-11"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4, ease }}
                   >
-                    <IconComponent className="w-4 h-4 text-accent flex-shrink-0" strokeWidth={1.5} />
-                    <span className="text-sm font-semibold text-foreground flex-1">{step.title}</span>
-                    {expandedStep === i ? (
-                      <Icons.ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <Icons.ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    {i < steps.length - 1 && (
+                      <div className="absolute left-[17px] top-10 w-[2px] h-[calc(100%-8px)] bg-border" />
                     )}
-                  </button>
 
-                  <AnimatePresence>
-                    {expandedStep === i && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease }}
-                        className="overflow-hidden"
+                    <div className="absolute left-0 top-0 w-[36px] h-[36px] rounded-full border-2 border-border/70 bg-card flex items-center justify-center z-10">
+                      <span className="text-xs font-mono font-medium text-foreground tabular-nums">{step.num}</span>
+                    </div>
+
+                    <div
+                      className={`mb-6 rounded-2xl border bg-card transition-all duration-200 premium-shadow ${
+                        expandedStep === i ? "border-accent/30" : "border-border/50"
+                      }`}
+                    >
+                      <button
+                        onClick={() => setExpandedStep(expandedStep === i ? null : i)}
+                        className="w-full flex items-center gap-3 p-4 text-left"
                       >
-                        <div className="px-4 pb-4 space-y-3">
-                          <p className="text-sm text-muted-foreground leading-relaxed">{step.details}</p>
-                          <div className="rounded-lg bg-secondary/50 px-3 py-2">
-                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Parameters</p>
-                            <p className="text-xs font-mono text-muted-foreground">{step.params}</p>
-                          </div>
-                          <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                            <span className="text-destructive font-medium">Risk:</span>
-                            <span>{step.risks || fallbackRiskByTitle(step.title)}</span>
-                          </div>
+                        <div className="w-8 h-8 rounded-lg border border-border/60 bg-background/50 flex items-center justify-center flex-shrink-0">
+                          <IconComponent className="w-4 h-4 text-accent" strokeWidth={1.5} />
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            )})}
+                        <span className="text-sm font-semibold text-foreground flex-1">{step.title}</span>
+                        {expandedStep === i ? (
+                          <Icons.ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <Icons.ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+
+                      <AnimatePresence>
+                        {expandedStep === i && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-4 pb-4 space-y-3">
+                              <p className="text-sm text-muted-foreground leading-relaxed text-justify sm:text-left">{step.details}</p>
+
+                              <div className="rounded-lg bg-secondary/50 px-3 py-2 border border-border/50">
+                                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Parameters</p>
+                                <p className="text-xs font-mono text-muted-foreground break-words">{step.params}</p>
+                              </div>
+
+                              <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="text-destructive font-medium">Risk:</span>
+                                <span className="leading-relaxed">{step.risks || fallbackRiskByTitle(step.title)}</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
+          </section>
         )}
       </AnimatePresence>
 
       {!generated && (
-        <div className="text-center py-16">
+        <div className="text-center py-12 sm:py-16">
           <FlaskConical className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1} />
           <p className="text-sm text-muted-foreground">Enter a topic and generate your experiment plan.</p>
         </div>

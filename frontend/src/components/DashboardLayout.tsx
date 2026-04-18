@@ -248,6 +248,7 @@ export default function DashboardLayout() {
         className={`relative z-10 flex-1 flex flex-col min-h-screen transition-all duration-300 ${
           sidebarOpen ? "lg:pl-64" : "lg:pl-16"
         }`}
+        style={{ ["--dashboard-sidebar-offset" as string]: sidebarOpen ? "16rem" : "4rem" }}
       >
         {/* Top Navbar */}
         <header className="h-16 flex items-center justify-between px-4 lg:px-6 border-b border-border/60 glass-surface sticky top-0 z-20 flex-shrink-0 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">

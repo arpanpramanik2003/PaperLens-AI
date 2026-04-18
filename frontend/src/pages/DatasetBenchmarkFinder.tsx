@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Database, Trophy, Wrench, Sparkles, ArrowRight, X, Info, BookmarkPlus } from "lucide-react";
+import { Database, Trophy, Wrench, Sparkles, ArrowRight, X, Info, BookmarkPlus, Compass, SearchCheck, ListChecks, BadgeCheck } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,29 @@ type FinderItem = {
   used_for?: string[];
   details?: Record<string, any>;
 };
+
+const workflowGuide = [
+  {
+    title: "Describe Project",
+    detail: "Provide title and optional implementation plan.",
+    icon: Compass,
+  },
+  {
+    title: "Match Assets",
+    detail: "Find high-fit datasets and benchmark suites.",
+    icon: SearchCheck,
+  },
+  {
+    title: "Compare Options",
+    detail: "Review fit score, use cases, and constraints.",
+    icon: ListChecks,
+  },
+  {
+    title: "Finalize Stack",
+    detail: "Choose tools and save recommendations.",
+    icon: BadgeCheck,
+  },
+];
 
 export default function DatasetBenchmarkFinder() {
   const { userId, getToken } = useAuth();
@@ -214,84 +237,144 @@ export default function DatasetBenchmarkFinder() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Dataset & Benchmark Finder</h1>
-        <p className="text-sm text-muted-foreground mb-6">
-          Paste a project title or full project plan to discover suitable datasets, benchmarks, and common technology stack.
-        </p>
-      </motion.div>
-
-      <motion.div
-        className="rounded-xl border border-border/50 bg-card p-6 mb-8"
-        initial={{ opacity: 0, y: 12 }}
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1, ease }}
+        transition={{ duration: 0.4, ease }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(140deg,hsl(var(--card))_0%,hsl(var(--card)/0.9)_62%,hsl(var(--accent)/0.08)_100%)] px-6 py-6 sm:px-8 sm:py-7"
       >
-        <div className="space-y-4">
+        <div className="pointer-events-none absolute -top-20 left-6 h-44 w-44 rounded-full bg-accent/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-44 w-44 rounded-full bg-cyan-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Project Title</label>
-            <Input
-              value={projectTitle}
-              onChange={(e) => setProjectTitle(e.target.value)}
-              placeholder="e.g., Multimodal Brain Tumor Classification with Explainable AI"
-              className="bg-secondary/50 border-border/50"
-            />
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-1 mb-3">
+              <Compass className="w-3.5 h-3.5 text-accent" strokeWidth={1.8} />
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">Resource Matching</span>
+            </div>
+            <h1 className="text-3xl sm:text-[2rem] font-semibold tracking-tight">Dataset & Benchmark Finder</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+              Discover high-fit datasets, benchmark suites, and common technology stacks for your project scope.
+            </p>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Project Plan (Optional)</label>
-            <Textarea
-              value={projectPlan}
-              onChange={(e) => setProjectPlan(e.target.value)}
-              placeholder="Paste your full project plan, methodology, objectives, and expected outcomes..."
-              className="bg-secondary/50 border-border/50 min-h-[130px]"
-            />
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex min-w-[8.5rem] items-center justify-center text-center whitespace-nowrap text-xs font-mono uppercase tracking-widest text-muted-foreground px-2.5 py-1.5 rounded-full border border-border/60 bg-background/40">
+              {generated ? "Ready" : loading ? "Matching" : "Awaiting Input"}
+            </span>
+            {generated && (
+              <Button size="sm" variant="outline" className="gap-2 rounded-xl" onClick={handleSaveRecommendations} disabled={saving}>
+                <BookmarkPlus className="w-4 h-4" />
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            )}
           </div>
-
-          <Button onClick={handleFind} disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-            <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
-            {loading ? "Finding recommendations..." : "Find Datasets & Benchmarks"}
-          </Button>
         </div>
-      </motion.div>
+      </motion.section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <motion.div
+          className="lg:col-span-8 rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease }}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Project Title</label>
+              <Input
+                value={projectTitle}
+                onChange={(e) => setProjectTitle(e.target.value)}
+                placeholder="e.g., Multimodal Brain Tumor Classification with Explainable AI"
+                className="bg-secondary/50 border-border/50 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Project Plan (Optional)</label>
+              <Textarea
+                value={projectPlan}
+                onChange={(e) => setProjectPlan(e.target.value)}
+                placeholder="Paste your full project plan, methodology, objectives, and expected outcomes..."
+                className="bg-secondary/50 border-border/50 min-h-[140px] rounded-2xl"
+              />
+            </div>
+
+            <Button onClick={handleFind} disabled={loading} className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90 gap-2 rounded-xl">
+              <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+              {loading ? "Finding recommendations..." : "Find Datasets & Benchmarks"}
+            </Button>
+          </div>
+        </motion.div>
+
+        <motion.aside
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease }}
+          className="lg:col-span-4 rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold tracking-wide">Workflow Example</h2>
+            <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">4 Stages</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {workflowGuide.map((item, index) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.28, delay: 0.2 + index * 0.07, ease }}
+                className="group flex items-start gap-3 rounded-2xl border border-border/60 bg-background/45 p-3.5"
+              >
+                <div className="w-9 h-9 rounded-xl border border-border/60 bg-card flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-4 h-4 text-accent" strokeWidth={1.7} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{index + 1}. {item.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.detail}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.aside>
+      </section>
 
       {generated && (
         <div className="space-y-8">
-          <div className="flex justify-end">
-            <Button size="sm" variant="outline" className="gap-2" onClick={handleSaveRecommendations} disabled={saving}>
-              <BookmarkPlus className="w-4 h-4" />
-              {saving ? "Saving..." : "Save"}
-            </Button>
-          </div>
-
           {domainSummary && (
             <motion.div
-              className="rounded-xl border border-border/50 bg-secondary/30 p-4 sm:p-5"
+              className="rounded-2xl border border-border/60 bg-secondary/30 p-4 sm:p-5 premium-shadow"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease }}
             >
               <p className="text-xs uppercase tracking-widest text-accent font-semibold mb-1.5">Domain Understanding</p>
-              <p className="text-sm text-foreground/90 leading-relaxed">{domainSummary}</p>
+              <p className="text-sm text-foreground/90 leading-relaxed text-justify sm:text-left">{domainSummary}</p>
             </motion.div>
           )}
 
           <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Database className="w-4 h-4 text-accent" />
-              <h2 className="text-base sm:text-lg font-semibold">Recommended Datasets</h2>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-accent" />
+                <h2 className="text-base sm:text-lg font-semibold">Recommended Datasets</h2>
+              </div>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{datasets.length} Items</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {datasets.map((dataset, idx) => (
                 <motion.div
                   key={`${dataset.name}-${idx}`}
-                  className="rounded-xl border border-border/50 bg-card p-4 hover:border-accent/30 transition-colors"
+                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-4 hover:border-accent/35 transition-all duration-250 hover:-translate-y-0.5 premium-shadow"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: idx * 0.06, ease }}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-accent/10 via-transparent to-accent/5" />
+
+                  <div className="relative z-10 flex items-start justify-between gap-2 mb-2">
                     <h3 className="text-sm font-semibold text-foreground leading-snug">{dataset.name}</h3>
                     {typeof dataset.fit_score === "number" && (
                       <span className="text-[11px] px-2 py-1 rounded-full bg-accent/10 text-accent font-medium">
@@ -299,13 +382,13 @@ export default function DatasetBenchmarkFinder() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed mb-3">{dataset.short_description}</p>
-                  <div className="flex flex-wrap gap-1.5 mb-3">
+                  <p className="relative z-10 text-xs text-muted-foreground leading-relaxed mb-3">{dataset.short_description}</p>
+                  <div className="relative z-10 flex flex-wrap gap-1.5 mb-3">
                     {(dataset.best_for || []).slice(0, 3).map((item) => (
-                      <span key={item} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{item}</span>
+                      <span key={item} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border/40">{item}</span>
                     ))}
                   </div>
-                  <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => openDetails("dataset", dataset)}>
+                  <Button size="sm" variant="outline" className="relative z-10 gap-1.5 text-xs rounded-xl" onClick={() => openDetails("dataset", dataset)}>
                     View details <ArrowRight className="w-3 h-3" />
                   </Button>
                 </motion.div>
@@ -314,20 +397,25 @@ export default function DatasetBenchmarkFinder() {
           </section>
 
           <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Trophy className="w-4 h-4 text-accent" />
-              <h2 className="text-base sm:text-lg font-semibold">Relevant Benchmarks</h2>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-accent" />
+                <h2 className="text-base sm:text-lg font-semibold">Relevant Benchmarks</h2>
+              </div>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{benchmarks.length} Items</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {benchmarks.map((benchmark, idx) => (
                 <motion.div
                   key={`${benchmark.name}-${idx}`}
-                  className="rounded-xl border border-border/50 bg-card p-4 hover:border-accent/30 transition-colors"
+                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-4 hover:border-accent/35 transition-all duration-250 hover:-translate-y-0.5 premium-shadow"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: idx * 0.06, ease }}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-accent/10 via-transparent to-accent/5" />
+
+                  <div className="relative z-10 flex items-start justify-between gap-2 mb-2">
                     <h3 className="text-sm font-semibold text-foreground leading-snug">{benchmark.name}</h3>
                     {typeof benchmark.fit_score === "number" && (
                       <span className="text-[11px] px-2 py-1 rounded-full bg-accent/10 text-accent font-medium">
@@ -335,8 +423,8 @@ export default function DatasetBenchmarkFinder() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed mb-3">{benchmark.short_description}</p>
-                  <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => openDetails("benchmark", benchmark)}>
+                  <p className="relative z-10 text-xs text-muted-foreground leading-relaxed mb-3">{benchmark.short_description}</p>
+                  <Button size="sm" variant="outline" className="relative z-10 gap-1.5 text-xs rounded-xl" onClick={() => openDetails("benchmark", benchmark)}>
                     View benchmark details <ArrowRight className="w-3 h-3" />
                   </Button>
                 </motion.div>
@@ -345,15 +433,18 @@ export default function DatasetBenchmarkFinder() {
           </section>
 
           <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Wrench className="w-4 h-4 text-accent" />
-              <h2 className="text-base sm:text-lg font-semibold">Most Used Technologies in this Domain</h2>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-accent" />
+                <h2 className="text-base sm:text-lg font-semibold">Most Used Technologies in this Domain</h2>
+              </div>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{technologies.length} Items</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {technologies.map((tech, idx) => (
                 <motion.div
                   key={`${tech.name}-${idx}`}
-                  className="rounded-xl border border-border/50 bg-card p-4"
+                  className="rounded-2xl border border-border/60 bg-card/90 p-4 premium-shadow"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: idx * 0.04, ease }}
@@ -376,7 +467,7 @@ export default function DatasetBenchmarkFinder() {
       )}
 
       {!generated && !loading && (
-        <div className="text-center py-16">
+        <div className="text-center py-12 sm:py-16">
           <Database className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1} />
           <p className="text-sm text-muted-foreground">Enter your project information to discover datasets and benchmarks.</p>
         </div>
@@ -385,14 +476,14 @@ export default function DatasetBenchmarkFinder() {
       <AnimatePresence>
         {activeItem && activeType && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeDetails}
           >
             <motion.div
-              className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl border border-border/50 bg-card shadow-2xl"
+              className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl premium-shadow"
               initial={{ opacity: 0, y: 16, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.97 }}

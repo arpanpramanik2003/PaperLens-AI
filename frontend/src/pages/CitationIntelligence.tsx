@@ -499,33 +499,68 @@ export default function CitationIntelligence() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Citation Intelligence</h1>
-        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-          {modeIntro[mode].description}
-        </p>
-      </motion.div>
+    <div className="w-full max-w-7xl mx-auto space-y-5 pb-6">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(120deg,hsl(var(--card))_0%,hsl(var(--card)/0.92)_48%,hsl(210_90%_55%/.10)_100%)] px-6 py-6 sm:px-8 sm:py-7"
+      >
+        <div className="pointer-events-none absolute -top-24 left-8 h-48 w-48 rounded-full bg-cyan-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-48 w-48 rounded-full bg-blue-500/15 blur-3xl" />
+
+        <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/45 px-3 py-1 mb-3">
+              <BarChart3 className="w-3.5 h-3.5 text-accent" strokeWidth={1.8} />
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">Citation Command Center</span>
+            </div>
+            <h1 className="text-3xl sm:text-[2rem] font-semibold tracking-tight mb-2">Citation Intelligence</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">{modeIntro[mode].description}</p>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono mb-2">Current Mode</p>
+            <p className="text-sm font-semibold text-foreground mb-2">{mode === "upload" ? "Paper-based Analysis" : "Project Discovery"}</p>
+            <div className="space-y-1.5">
+              {modeIntro[mode].points.slice(0, 2).map((point) => (
+                <p key={point} className="text-xs text-muted-foreground leading-relaxed">• {point}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.section>
 
       <motion.div
-        className="rounded-xl border border-border/50 bg-card p-4 mb-6 overflow-hidden"
+        className="rounded-2xl border border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.95)_100%)] p-4 sm:p-5 overflow-hidden premium-shadow"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease }}
       >
-        <div className="flex w-full flex-wrap items-center gap-1 p-1 rounded-lg bg-secondary/50 border border-border/50 mb-3 sm:w-fit">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono">Execution Mode</p>
+          <span className="text-[11px] px-2 py-0.5 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground">
+            {mode === "upload" ? "Paper Workflow" : "Discovery Workflow"}
+          </span>
+        </div>
+
+        <div className="flex w-full flex-wrap items-center gap-1 p-1 rounded-xl bg-secondary/45 border border-border/60 mb-4 sm:w-fit">
           <button
             onClick={() => setMode("upload")}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs transition-colors ${
-              mode === "upload" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 ${
+              mode === "upload"
+                ? "bg-background text-foreground shadow-sm border border-border/60"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Upload Paper
           </button>
           <button
             onClick={() => setMode("discover")}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs transition-colors ${
-              mode === "discover" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 ${
+              mode === "discover"
+                ? "bg-background text-foreground shadow-sm border border-border/60"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Project Discovery
@@ -544,14 +579,14 @@ export default function CitationIntelligence() {
             {/* Row 1: Choose File button */}
             <label
               htmlFor="citation-file"
-              className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-md border border-border/60 bg-secondary/40 text-sm cursor-pointer hover:bg-secondary/60 transition-colors whitespace-nowrap mb-2"
+              className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl border border-border/60 bg-secondary/35 text-sm cursor-pointer hover:bg-secondary/55 transition-colors whitespace-nowrap mb-2"
             >
               <Upload className="w-4 h-4" />
               Choose File
             </label>
             {/* Row 2: File name (always on its own line) */}
             {file && (
-              <div className="w-full h-10 rounded-md border border-border/60 bg-background/50 px-3 flex items-center mb-2 overflow-hidden">
+              <div className="w-full h-10 rounded-xl border border-border/60 bg-background/45 px-3 flex items-center mb-2 overflow-hidden">
                 <span className="text-sm text-foreground whitespace-nowrap">
                   {file.name.length > 38 ? file.name.slice(0, 24) + "..." + file.name.slice(-10) : file.name}
                 </span>
@@ -561,7 +596,7 @@ export default function CitationIntelligence() {
               <p className="text-xs text-muted-foreground mb-2">No file selected</p>
             )}
             {/* Row 3: Analyze button — full width */}
-            <Button onClick={handleUploadRun} disabled={!file || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 w-full">
+            <Button onClick={handleUploadRun} disabled={!file || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 w-full rounded-xl shadow-[0_16px_32px_-22px_hsl(var(--accent))]">
               <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
               {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
             </Button>
@@ -570,13 +605,20 @@ export default function CitationIntelligence() {
           </>
         ) : (
           <>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-muted-foreground">Topic preset</label>
+            <div className="space-y-3.5">
+              <div className="space-y-2 rounded-xl border border-border/60 bg-secondary/20 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-xs uppercase tracking-wider text-muted-foreground">Topic preset</label>
+                  {topicPreset !== "auto" && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 bg-background/40 text-foreground/80 uppercase tracking-wider">
+                      Manual
+                    </span>
+                  )}
+                </div>
                 <select
                   value={topicPreset}
                   onChange={(e) => setTopicPreset(e.target.value as TopicPreset)}
-                  className="h-11 w-full rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground focus:outline-none"
+                  className="h-11 w-full rounded-xl border border-border/60 bg-background/45 px-3 text-sm text-foreground focus:outline-none"
                 >
                   {topicPresetOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -584,6 +626,9 @@ export default function CitationIntelligence() {
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {topicPresetOptions.find((option) => option.value === topicPreset)?.description}
+                </p>
                 {topicPreset === "auto" && inferredTopicPreset && (
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Suggested preset: <span className="text-foreground font-medium">{topicPresetOptions.find((option) => option.value === inferredTopicPreset)?.label}</span>
@@ -598,16 +643,16 @@ export default function CitationIntelligence() {
                 value={projectTitle}
                 onChange={(e) => setProjectTitle(e.target.value)}
                 placeholder="Project title (required)"
-                className="h-11 w-full rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                className="h-11 w-full rounded-xl border border-border/60 bg-background/45 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <input
                 type="text"
                 value={basicDetails}
                 onChange={(e) => setBasicDetails(e.target.value)}
                 placeholder="Basic details (optional): domain, method, dataset"
-                className="h-11 w-full rounded-md border border-border/60 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                className="h-11 w-full rounded-xl border border-border/60 bg-background/45 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
-              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="h-11 w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shrink-0 whitespace-nowrap lg:w-auto">
+              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="h-11 w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shrink-0 whitespace-nowrap lg:w-auto rounded-xl shadow-[0_16px_32px_-22px_hsl(var(--accent))]">
                 <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
                 {loading ? "Discovering papers..." : "Discover 30+ Papers"}
               </Button>
@@ -623,19 +668,29 @@ export default function CitationIntelligence() {
 
       {!report && !loading && (
         <motion.div
-          className="rounded-xl border border-border/50 bg-card p-4 mb-6"
+          className="relative overflow-hidden rounded-2xl border border-border/60 bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--card)/0.92)_100%)] p-5 mb-2"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <p className="text-sm font-semibold text-foreground mb-1">{modeIntro[mode].title}</p>
-          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{modeIntro[mode].description}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {modeIntro[mode].points.map((point) => (
-              <div key={point} className="rounded-lg border border-border/50 bg-secondary/30 px-3 py-2">
-                <p className="text-xs text-foreground/90 leading-relaxed">{point}</p>
-              </div>
-            ))}
+          <div className="pointer-events-none absolute inset-0 [background:radial-gradient(circle_at_10%_12%,hsl(var(--accent)/0.12),transparent_35%),radial-gradient(circle_at_92%_85%,hsl(var(--accent)/0.08),transparent_38%)]" />
+
+          <div className="relative z-10">
+            <p className="text-sm font-semibold text-foreground mb-1">{modeIntro[mode].title}</p>
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{modeIntro[mode].description}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {modeIntro[mode].points.map((point, idx) => (
+                <motion.div
+                  key={point}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.08, ease }}
+                  className="rounded-xl border border-border/60 bg-secondary/25 px-3.5 py-2.5"
+                >
+                  <p className="text-xs text-foreground/90 leading-relaxed">{point}</p>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </motion.div>
       )}
@@ -793,184 +848,79 @@ export default function CitationIntelligence() {
       )}
 
       {report && (
-        <div className="space-y-8 overflow-hidden">
+        <div className="space-y-6 overflow-hidden">
           <div className="flex justify-end">
-            <Button size="sm" variant="outline" className="gap-2" onClick={handleSaveCitationResult} disabled={saving}>
+            <Button size="sm" variant="outline" className="gap-2 rounded-xl" onClick={handleSaveCitationResult} disabled={saving}>
               <BookmarkPlus className="w-4 h-4" />
               {saving ? "Saving..." : "Save"}
             </Button>
           </div>
 
-          {resultMode === "discover" ? (
-            <section className="space-y-3">
-              {report.discovery_profile?.intent_summary && (
-                <div className="rounded-xl border border-border/50 bg-card p-4">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Discovery Focus</p>
-                    {report.discovery_profile.topic_preset && report.discovery_profile.topic_preset !== "auto" && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 bg-secondary/40 text-foreground/80">
-                        {report.discovery_profile.topic_preset.replaceAll("_", " ")}
-                      </span>
-                    )}
+          <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6">
+            <aside className="space-y-4 xl:sticky xl:top-20 h-fit">
+              <section className="rounded-2xl border border-border/60 bg-card p-4 premium-shadow">
+                <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono mb-3">Analytics Rail</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-border/60 bg-secondary/20 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Processed</p>
+                    <p className="text-sm font-semibold">{report.references_processed}</p>
                   </div>
-                  <p className="text-sm text-foreground/90 leading-relaxed">{report.discovery_profile.intent_summary}</p>
-                  {!!report.discovery_profile.search_queries?.length && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {report.discovery_profile.search_queries.slice(0, 5).map((query, index) => (
-                        <span key={`discovery-query-${index}`} className="text-[11px] px-2 py-1 rounded-full border border-border/60 bg-secondary/40 text-foreground/85">
-                          {query}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="rounded-lg border border-border/60 bg-secondary/20 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Matched</p>
+                    <p className="text-sm font-semibold text-accent">{report.matched_count}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-secondary/20 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Missing</p>
+                    <p className="text-sm font-semibold">{report.missing_count}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-secondary/20 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Year Buckets</p>
+                    <p className="text-sm font-semibold">{yearwiseCounts.length}</p>
+                  </div>
                 </div>
+              </section>
+
+              <section className="rounded-2xl border border-border/60 bg-card p-4 premium-shadow">
+                <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono mb-2">Sort Stream</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => setSortOrder("newest")}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] transition-colors ${sortOrder === "newest" ? "bg-accent/15 text-accent" : "bg-secondary/40 text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Newest
+                  </button>
+                  <button
+                    onClick={() => setSortOrder("oldest")}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] transition-colors ${sortOrder === "oldest" ? "bg-accent/15 text-accent" : "bg-secondary/40 text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Oldest
+                  </button>
+                  <button
+                    onClick={() => setSortOrder("highest")}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] transition-colors ${sortOrder === "highest" ? "bg-accent/15 text-accent" : "bg-secondary/40 text-muted-foreground hover:text-foreground"}`}
+                  >
+                    High Cite
+                  </button>
+                  <button
+                    onClick={() => setSortOrder("lowest")}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] transition-colors ${sortOrder === "lowest" ? "bg-accent/15 text-accent" : "bg-secondary/40 text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Low Cite
+                  </button>
+                </div>
+              </section>
+
+              {resultMode === "discover" && report.discovery_profile?.intent_summary && (
+                <section className="rounded-2xl border border-border/60 bg-card p-4 premium-shadow">
+                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono mb-1">Discovery Focus</p>
+                  <p className="text-xs text-foreground/90 leading-relaxed">{report.discovery_profile.intent_summary}</p>
+                </section>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-border/50 bg-card p-4">
-                  <p className="text-xs text-muted-foreground">Papers Gathered</p>
-                  <p className="text-xl font-semibold">{report.references_processed}</p>
-                </div>
-                <div className="rounded-xl border border-border/50 bg-card p-4">
-                  <p className="text-xs text-muted-foreground">Year Buckets</p>
-                  <p className="text-xl font-semibold">{yearwiseCounts.length}</p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/50 bg-card p-4">
-                <p className="text-xs text-muted-foreground mb-2">Year-wise Count</p>
-                {yearwiseCounts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Year metadata not available in discovered papers.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {yearwiseCounts.map((item) => (
-                      <span key={item.year} className="text-xs px-2.5 py-1 rounded-full border border-border/60 bg-secondary/40 text-foreground/90">
-                        {item.year}: {item.count}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          ) : (
-            <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-xl border border-border/50 bg-card p-4">
-                <p className="text-xs text-muted-foreground">Extracted</p>
-                <p className="text-xl font-semibold">{report.total_references_extracted}</p>
-              </div>
-              <div className="rounded-xl border border-border/50 bg-card p-4">
-                <p className="text-xs text-muted-foreground">Processed</p>
-                <p className="text-xl font-semibold">{report.references_processed}</p>
-              </div>
-              <div className="rounded-xl border border-border/50 bg-card p-4">
-                <p className="text-xs text-muted-foreground">Matched</p>
-                <p className="text-xl font-semibold">{report.matched_count}</p>
-              </div>
-              <div className="rounded-xl border border-border/50 bg-card p-4">
-                <p className="text-xs text-muted-foreground">Missing</p>
-                <p className="text-xl font-semibold">{report.missing_count}</p>
-              </div>
-            </section>
-          )}
-
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-            <div className="xl:col-span-3 space-y-6 min-w-0">
-              <section className="min-w-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-accent" />
-                    <h2 className="text-base sm:text-lg font-semibold">Top Cited References</h2>
-                  </div>
-
-                  <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/50 border border-border/50 overflow-x-auto whitespace-nowrap max-w-full [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <button
-                      onClick={() => setSortOrder("newest")}
-                      className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
-                        sortOrder === "newest" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Clock3 className="w-3.5 h-3.5 inline mr-1" /> Newest
-                    </button>
-                    <button
-                      onClick={() => setSortOrder("oldest")}
-                      className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
-                        sortOrder === "oldest" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Clock3 className="w-3.5 h-3.5 inline mr-1" /> Oldest
-                    </button>
-                    <button
-                      onClick={() => setSortOrder("highest")}
-                      className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
-                        sortOrder === "highest" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Highest Citation
-                    </button>
-                    <button
-                      onClick={() => setSortOrder("lowest")}
-                      className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
-                        sortOrder === "lowest" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Lowest Citation
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {sortedTopCited.length === 0 && (
-                    <div className="rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
-                      No matched references found.
-                    </div>
-                  )}
-                  {sortedTopCited.map((entry) => (
-                    <div key={`${entry.reference_index}-${entry.paper_id || entry.reference_text}`} className="rounded-xl border border-border/50 bg-card p-4 overflow-hidden">
-                      <div className="flex flex-col gap-2 mb-2">
-                        <h3 className="text-sm font-semibold text-foreground leading-snug break-words">{entry.title || "Unknown title"}</h3>
-                        <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent w-fit">
-                          {entry.citation_count} citations
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2 break-words">{entry.authors?.slice(0, 5).join(", ") || "Unknown authors"}</p>
-                      <p className="text-xs text-muted-foreground mb-3">{entry.venue || "Unknown venue"}{entry.year ? ` • ${entry.year}` : ""}</p>
-                      {entry.url && (
-                        <a href={entry.url} target="_blank" rel="noreferrer" className="text-xs text-accent inline-flex items-center gap-1 hover:underline break-all">
-                          Open in Semantic Scholar <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                        </a>
-                      )}
-                      <p className="text-xs text-foreground/80 mt-3 leading-relaxed break-words">{entry.reference_text}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <SearchX className="w-4 h-4 text-accent" />
-                  <h2 className="text-base sm:text-lg font-semibold">Unmatched References</h2>
-                </div>
-                <div className="space-y-2">
-                  {missingReferences.length === 0 && (
-                    <div className="rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
-                      All processed references were matched.
-                    </div>
-                  )}
-                  {missingReferences.map((entry) => (
-                    <div key={`missing-${entry.reference_index}`} className="rounded-xl border border-border/50 bg-card p-3 flex items-start gap-3">
-                      <FileText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-foreground/80 leading-relaxed break-all whitespace-normal">{entry.reference_text}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-
-            <div className="xl:col-span-2 min-w-0">
-              <section className="rounded-xl border border-border/50 bg-card p-4 xl:sticky xl:top-20 min-w-0 overflow-hidden">
+              <section className="rounded-2xl border border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.96)_100%)] p-4 premium-shadow min-w-0 overflow-hidden">
                 <div className="flex items-center gap-2 mb-3">
                   <BookOpen className="w-4 h-4 text-accent" />
-                  <h2 className="text-base font-semibold">AI Recommendations</h2>
+                  <h2 className="text-sm font-semibold">AI Recommendations</h2>
                 </div>
 
                 {recommendationLoading && (
@@ -985,55 +935,25 @@ export default function CitationIntelligence() {
                   </div>
                 )}
 
-                {recommendationError && (
-                  <p className="text-sm text-destructive">{recommendationError}</p>
-                )}
+                {recommendationError && <p className="text-sm text-destructive">{recommendationError}</p>}
 
                 {!recommendationLoading && !recommendationError && recommendations && (
-                  <div className="space-y-4">
+                  <div className="space-y-3.5">
                     {(recommendations.paper_focus || (recommendations as any).topic_focus) && (
                       <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{resultMode === "discover" ? "Topic Focus" : "Paper Focus"}</p>
-                        <p className="text-sm text-foreground/90 leading-relaxed">{(recommendations as any).topic_focus || recommendations.paper_focus}</p>
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{resultMode === "discover" ? "Topic Focus" : "Paper Focus"}</p>
+                        <p className="text-xs text-foreground/90 leading-relaxed">{(recommendations as any).topic_focus || recommendations.paper_focus}</p>
                       </div>
                     )}
 
                     {!!recommendations.must_read?.length && (
                       <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Must Read</p>
-                        <div className="space-y-2">
-                          {recommendations.must_read.slice(0, 6).map((item, index) => (
-                            <div key={`${item.title || "must-read"}-${index}`} className="rounded-lg border border-border/50 p-3">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="text-sm font-medium leading-snug">{item.title || "Untitled"}</p>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full ${item.priority === "high" ? "bg-accent/10 text-accent" : "bg-secondary text-muted-foreground"}`}>
-                                  {(item.priority || "medium").toUpperCase()}
-                                </span>
-                              </div>
-                              {item.why_read && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{item.why_read}</p>}
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Must Read</p>
+                        <div className="space-y-1.5">
+                          {recommendations.must_read.slice(0, 4).map((item, index) => (
+                            <div key={`${item.title || "must-read"}-${index}`} className="rounded-lg border border-border/50 px-2.5 py-2">
+                              <p className="text-xs font-medium leading-snug">{item.title || "Untitled"}</p>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {!!recommendations.reading_path?.length && (
-                      <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Reading Path</p>
-                        <div className="space-y-1.5">
-                          {recommendations.reading_path.slice(0, 3).map((step, index) => (
-                            <p key={`reading-step-${index}`} className="text-sm text-foreground/90">{index + 1}. {step}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {!!recommendations.coverage_gaps?.length && (
-                      <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Coverage Gaps</p>
-                        <div className="space-y-1.5">
-                          {recommendations.coverage_gaps.slice(0, 4).map((gap, index) => (
-                            <p key={`gap-${index}`} className="text-sm text-foreground/90">• {gap}</p>
                           ))}
                         </div>
                       </div>
@@ -1041,10 +961,10 @@ export default function CitationIntelligence() {
 
                     {!!recommendations.next_search_queries?.length && (
                       <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Search Queries</p>
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Search Queries</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {recommendations.next_search_queries.slice(0, 5).map((query, index) => (
-                            <span key={`query-${index}`} className="text-[11px] px-2 py-1 rounded-full border border-border/60 bg-secondary/40 text-foreground/85">
+                          {recommendations.next_search_queries.slice(0, 4).map((query, index) => (
+                            <span key={`query-${index}`} className="text-[10px] px-2 py-1 rounded-full border border-border/60 bg-secondary/40 text-foreground/85">
                               {query}
                             </span>
                           ))}
@@ -1053,6 +973,81 @@ export default function CitationIntelligence() {
                     )}
                   </div>
                 )}
+              </section>
+            </aside>
+
+            <div className="space-y-6 min-w-0">
+              <section className="min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-accent" />
+                    <h2 className="text-base sm:text-lg font-semibold">Live Citation Stream</h2>
+                  </div>
+                  <span className="text-[11px] px-2.5 py-1 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground font-mono uppercase tracking-widest">
+                    {sortedTopCited.length} entries
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {sortedTopCited.length === 0 && (
+                    <div className="rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
+                      No matched references found.
+                    </div>
+                  )}
+                  {sortedTopCited.map((entry, index) => (
+                    <motion.div
+                      key={`${entry.reference_index}-${entry.paper_id || entry.reference_text}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: index * 0.03 }}
+                      className="rounded-xl border border-border/60 bg-card p-4 overflow-hidden hover:border-accent/30 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary/50 text-muted-foreground font-mono">
+                          #{index + 1}
+                        </span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent w-fit">
+                          {entry.citation_count} citations
+                        </span>
+                      </div>
+
+                      <h3 className="text-sm font-semibold text-foreground leading-snug break-words mb-1">{entry.title || "Unknown title"}</h3>
+                      <p className="text-xs text-muted-foreground mb-2 break-words">{entry.authors?.slice(0, 5).join(", ") || "Unknown authors"}</p>
+                      <p className="text-xs text-muted-foreground mb-3">{entry.venue || "Unknown venue"}{entry.year ? ` • ${entry.year}` : ""}</p>
+                      {entry.url && (
+                        <a href={entry.url} target="_blank" rel="noreferrer" className="text-xs text-accent inline-flex items-center gap-1 hover:underline break-all">
+                          Open in Semantic Scholar <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        </a>
+                      )}
+                      <p className="text-xs text-foreground/80 mt-3 leading-relaxed break-words">{entry.reference_text}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <SearchX className="w-4 h-4 text-accent" />
+                    <h2 className="text-base sm:text-lg font-semibold">Unmatched References</h2>
+                  </div>
+                  <span className="text-[11px] px-2.5 py-1 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground font-mono uppercase tracking-widest">
+                    {missingReferences.length}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {missingReferences.length === 0 && (
+                    <div className="rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
+                      All processed references were matched.
+                    </div>
+                  )}
+                  {missingReferences.map((entry) => (
+                    <div key={`missing-${entry.reference_index}`} className="rounded-xl border border-border/60 bg-card p-3 flex items-start gap-3">
+                      <FileText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-foreground/80 leading-relaxed break-all whitespace-normal">{entry.reference_text}</p>
+                    </div>
+                  ))}
+                </div>
               </section>
             </div>
           </div>
