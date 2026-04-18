@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2, RefreshCw } from "lucide-react";
+import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2, RefreshCw, Compass, ShieldCheck, MessageSquareText, ScanText, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +10,36 @@ import { apiClient } from "@/lib/api-client";
 import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
+
+const guideSteps = [
+  {
+    title: "Upload",
+    description: "Add your PDF or DOCX paper.",
+    icon: Upload,
+  },
+  {
+    title: "Analyze",
+    description: "Get structured sections and insights.",
+    icon: ScanText,
+  },
+  {
+    title: "Interrogate",
+    description: "Ask focused follow-up questions.",
+    icon: MessageSquareText,
+  },
+  {
+    title: "Validate",
+    description: "Cross-check methods and claims quickly.",
+    icon: ShieldCheck,
+  },
+];
+
+const quickPromptSuggestions = [
+  "Summarize the core contribution in 5 bullets",
+  "What are the key assumptions and limitations?",
+  "List reproducibility risks in methodology",
+  "Suggest 3 follow-up experiment ideas",
+];
 
 const MarkdownComponents: any = {
   h1: ({node, ...props}: any) => <h1 className="text-2xl font-bold mt-6 mb-4 text-foreground" {...props} />,
@@ -38,6 +68,7 @@ type AnalyzeErrorPayload = {
 export default function PaperAnalyzer() {
   const { getToken, userId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const [file, setFile] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -212,23 +243,61 @@ export default function PaperAnalyzer() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  useEffect(() => {
+    if (!analyzed) return;
+
+    const scrollContainer = chatScrollRef.current;
+    if (!scrollContainer) return;
+
+    const rafId = window.requestAnimationFrame(() => {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [chatMessages, aiGenerating, analyzed]);
+
   return (
-    <div className="max-w-6xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <div className="flex items-center justify-between gap-3 mb-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Paper Analyzer</h1>
-          {(analyzed || file) && !analyzing && (
-            <Button variant="outline" size="sm" onClick={handleResetAnalyzer} className="gap-2">
-              <RefreshCw className="w-3.5 h-3.5" />
-              New Upload
-            </Button>
-          )}
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(140deg,hsl(var(--card))_0%,hsl(var(--card)/0.9)_62%,hsl(var(--accent)/0.08)_100%)] px-6 py-6 sm:px-8 sm:py-7"
+      >
+        <div className="pointer-events-none absolute -top-20 left-6 h-44 w-44 rounded-full bg-accent/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-44 w-44 rounded-full bg-cyan-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-1 mb-3">
+              <Compass className="w-3.5 h-3.5 text-accent" strokeWidth={1.8} />
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">Guided Analysis</span>
+            </div>
+            <h1 className="text-3xl sm:text-[2rem] font-semibold tracking-tight">Paper Analyzer</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+              Upload a paper, get structured AI insights, then interrogate claims through contextual Q&A.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground px-2.5 py-1.5 rounded-full border border-border/60 bg-background/40">
+              {analyzed ? "Ready" : analyzing ? "Processing" : "Awaiting File"}
+            </span>
+            {(analyzed || file) && !analyzing && (
+              <Button variant="outline" size="sm" onClick={handleResetAnalyzer} className="gap-2 rounded-xl">
+                <RefreshCw className="w-3.5 h-3.5" />
+                New Upload
+              </Button>
+            )}
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground mb-6">Upload a paper and get structured AI-powered insights.</p>
-      </motion.div>
+      </motion.section>
 
       {!file && !analyzed && (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -236,19 +305,61 @@ export default function PaperAnalyzer() {
             onChange={handleFileSelect} 
             accept=".pdf,.docx" 
           />
+
           <motion.div
-            className="border-2 border-dashed border-border/50 rounded-2xl p-16 text-center hover:border-accent/30 transition-colors cursor-pointer"
+            className="lg:col-span-3 relative overflow-hidden border border-border/60 rounded-3xl p-10 sm:p-14 text-center cursor-pointer bg-card/90 transition-all duration-300 hover:border-accent/35 hover:shadow-[0_24px_50px_-35px_hsl(var(--accent))]"
             onClick={() => fileInputRef.current?.click()}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1, ease }}
             whileHover={{ scale: 1.005 }}
           >
-            <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-4" strokeWidth={1.5} />
-            <p className="text-foreground font-medium mb-1">Drop your PDF or DOCX here</p>
-            <p className="text-sm text-muted-foreground">or click to browse files</p>
+            <div className="pointer-events-none absolute inset-0 [background:radial-gradient(circle_at_15%_15%,hsl(var(--accent)/0.12),transparent_32%),radial-gradient(circle_at_85%_80%,hsl(var(--accent)/0.08),transparent_38%)]" />
+            <div className="relative z-10 max-w-xl mx-auto">
+              <div className="w-16 h-16 rounded-2xl border border-border/60 bg-background/60 flex items-center justify-center mx-auto mb-5">
+                <Upload className="w-8 h-8 text-accent" strokeWidth={1.6} />
+              </div>
+              <p className="text-foreground text-xl font-semibold mb-2">Drop your PDF or DOCX here</p>
+              <p className="text-sm text-muted-foreground mb-5">or click to browse files and begin guided analysis</p>
+              <div className="inline-flex items-center gap-2 text-xs text-muted-foreground font-mono uppercase tracking-widest border border-border/60 rounded-full px-3 py-1.5 bg-background/50">
+                Max quality for 5-20 page papers
+              </div>
+            </div>
           </motion.div>
-        </>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15, ease }}
+            className="lg:col-span-2 rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold tracking-wide">Guide Menu</h2>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">4 Steps</span>
+            </div>
+
+            <div className="space-y-2.5">
+              {guideSteps.map((step, index) => (
+                <motion.div
+                  key={step.title}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.28, delay: 0.2 + index * 0.07, ease }}
+                  className="group flex items-start gap-3 rounded-2xl border border-border/60 bg-background/45 p-3.5"
+                >
+                  <div className="w-9 h-9 rounded-xl border border-border/60 bg-card flex items-center justify-center flex-shrink-0">
+                    <step.icon className="w-4 h-4 text-accent" strokeWidth={1.7} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{index + 1}. {step.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground ml-auto mt-1 group-hover:text-accent transition-colors" />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       )}
 
       {warningMessage && !analyzing && (
@@ -264,58 +375,74 @@ export default function PaperAnalyzer() {
       )}
 
       {analyzing && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-card">
-            <FileText className="w-5 h-5 text-accent" />
-                        <span className="text-sm text-foreground font-medium truncate max-w-[200px] sm:max-w-xs">{file}</span>
-            <span className="text-xs text-accent font-mono ml-auto">Analyzing...</span>
-          </div>
-          <div className="rounded-xl border border-border/50 bg-card p-4">
-            <p className="text-sm font-medium text-foreground mb-3">Processing steps</p>
-            <div className="space-y-2">
-              {analysisSteps.map((step, index) => {
-                const isDone = index < analyzingStep;
-                const isActive = index === analyzingStep;
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3 space-y-4">
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-border/60 bg-card/90 premium-shadow">
+              <div className="w-9 h-9 rounded-xl border border-border/60 bg-background/70 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-accent" />
+              </div>
+              <span className="text-sm text-foreground font-medium truncate max-w-[200px] sm:max-w-xs">{file}</span>
+              <span className="text-[11px] text-accent font-mono uppercase tracking-widest ml-auto">Analyzing...</span>
+            </div>
 
-                return (
-                  <div key={step} className="flex items-center gap-2.5">
-                    {isDone ? (
-                      <CheckCircle2 className="h-4 w-4 text-accent" />
-                    ) : isActive ? (
-                      <Loader2 className="h-4 w-4 text-accent animate-spin" />
-                    ) : (
-                      <div className="h-4 w-4 rounded-full border border-border/70" />
-                    )}
-                    <span className={`text-sm ${isActive ? "text-foreground" : "text-muted-foreground"}`}>{step}</span>
-                  </div>
-                );
-              })}
+            <div className="rounded-2xl border border-border/60 bg-card/90 p-5 premium-shadow">
+              <p className="text-sm font-semibold tracking-wide text-foreground mb-3">Processing Pipeline</p>
+              <div className="space-y-2.5">
+                {analysisSteps.map((step, index) => {
+                  const isDone = index < analyzingStep;
+                  const isActive = index === analyzingStep;
+
+                  return (
+                    <div
+                      key={step}
+                      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                        isActive ? "border-accent/35 bg-accent/5" : "border-border/60 bg-background/40"
+                      }`}
+                    >
+                      {isDone ? (
+                        <CheckCircle2 className="h-4 w-4 text-accent" />
+                      ) : isActive ? (
+                        <Loader2 className="h-4 w-4 text-accent animate-spin" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border border-border/70" />
+                      )}
+                      <span className={`text-sm ${isActive ? "text-foreground" : "text-muted-foreground"}`}>{step}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <div className="space-y-3">
-            {["Summary", "Methodology", "Results"].map((s) => (
-              <div key={s} className="rounded-xl border border-border/50 bg-card p-5">
-                <Skeleton className="h-4 w-24 mb-3" />
-                <Skeleton className="h-3 w-full mb-2" />
-                <Skeleton className="h-3 w-4/5" />
-              </div>
-            ))}
+
+          <div className="lg:col-span-2 rounded-2xl border border-border/60 bg-card/90 p-5 premium-shadow">
+            <p className="text-sm font-semibold tracking-wide text-foreground mb-3">Live Preview</p>
+            <div className="space-y-3">
+              {["Summary", "Methodology", "Results"].map((s) => (
+                <div key={s} className="rounded-xl border border-border/60 bg-background/45 p-4">
+                  <Skeleton className="h-4 w-24 mb-3" />
+                  <Skeleton className="h-3 w-full mb-2" />
+                  <Skeleton className="h-3 w-4/5" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {analyzed && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-0 lg:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Analysis */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-card">
-              <FileText className="w-5 h-5 text-accent" />
-                            <span className="text-sm text-foreground font-medium truncate max-w-[200px] sm:max-w-xs">{file}</span>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-accent/10 text-accent ml-auto">Analyzed</span>
+          <div className="lg:col-span-8 space-y-4">
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-border/60 bg-card/90 premium-shadow">
+              <div className="w-9 h-9 rounded-xl border border-border/60 bg-background/70 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-accent" />
+              </div>
+              <span className="text-sm text-foreground font-medium truncate max-w-[200px] sm:max-w-xs">{file}</span>
+              <span className="text-[11px] font-mono uppercase tracking-widest px-2 py-1 rounded-md bg-accent/10 text-accent ml-auto">Analyzed</span>
             </div>
 
             <motion.div
-              className="rounded-xl border border-border/50 bg-card p-5 overflow-auto"
+              className="rounded-2xl border border-border/60 bg-card/90 p-5 overflow-auto premium-shadow"
               style={{ maxHeight: "calc(100vh - 250px)" }}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -323,15 +450,15 @@ export default function PaperAnalyzer() {
             >
               <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground capitalize">Analysis Result</h3>
+                  <h3 className="text-sm font-semibold text-foreground capitalize tracking-wide">Analysis Result</h3>
                 </div>
                 {typeof pageCount === "number" && pageCount > 0 && (
-                  <div className="text-xs font-mono px-2 py-1 rounded-md bg-secondary text-foreground border border-border/60 whitespace-nowrap">
+                  <div className="text-xs font-mono px-2 py-1 rounded-md bg-secondary text-foreground border border-border/60 whitespace-nowrap uppercase tracking-wider">
                     {pageCount} {pageCount === 1 ? "page" : "pages"}
                   </div>
                 )}
               </div>
-              <div className="text-sm">
+              <div className="text-sm [&_p]:text-justify sm:[&_p]:text-left">
                 {analysisResult ? (
                   <ReactMarkdown components={MarkdownComponents}>
                     {normalizeMarkdown(analysisResult)}
@@ -344,15 +471,15 @@ export default function PaperAnalyzer() {
           </div>
 
           {/* Chat */}
-          <div className="lg:col-span-2">
-            <div className="rounded-xl border border-border/50 bg-card flex flex-col lg:h-[540px] lg:sticky lg:top-20">
+          <div className="lg:col-span-4 space-y-4">
+            <div className="rounded-2xl border border-border/60 bg-card/90 flex flex-col lg:h-[560px] lg:sticky lg:top-20 premium-shadow">
               <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-accent" />
                 <span className="text-sm font-medium text-foreground">Chat with Paper</span>
-                <span className="text-xs text-muted-foreground font-mono ml-auto">Context: This Document</span>
+                <span className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider ml-auto">Context: This Document</span>
               </div>
 
-              <div className="overflow-y-auto p-4 max-h-[38vh] sm:max-h-[42vh] lg:flex-1 lg:max-h-none">
+              <div ref={chatScrollRef} className="overflow-y-auto p-4 max-h-[38vh] sm:max-h-[42vh] lg:flex-1 lg:max-h-none">
                 <div className="flex flex-col gap-4 lg:min-h-full lg:justify-end">
                   {chatMessages.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center">Ask a question about the document.</p>
@@ -413,11 +540,23 @@ export default function PaperAnalyzer() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     placeholder="Ask about this paper..."
-                    className="text-sm bg-secondary/50 border-border/50"
+                    className="text-sm bg-secondary/50 border-border/50 rounded-xl"
                   />
-                  <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 flex-shrink-0">
+                  <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 flex-shrink-0 rounded-xl">
                     <Send className="w-4 h-4" />
                   </Button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {quickPromptSuggestions.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => setChatInput(prompt)}
+                      className="text-[11px] px-2 py-1 rounded-full border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:border-accent/30 transition-colors"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
                 </div>
               </form>
             </div>

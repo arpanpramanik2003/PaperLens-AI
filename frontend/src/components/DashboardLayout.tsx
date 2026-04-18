@@ -159,7 +159,10 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background relative overflow-hidden flex">
+      <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(circle_at_8%_12%,hsl(var(--accent)/0.14),transparent_34%),radial-gradient(circle_at_92%_88%,hsl(var(--accent)/0.1),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(to_right,hsl(var(--border)/0.18)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.18)_1px,transparent_1px)] [background-size:38px_38px]" />
+
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -170,19 +173,25 @@ export default function DashboardLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen flex-shrink-0 transition-all duration-300 bg-card border-r border-border/50 overflow-hidden ${
+        className={`fixed top-0 left-0 z-40 h-screen flex-shrink-0 transition-all duration-300 overflow-hidden border-r border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.94)_100%)] ${
           sidebarOpen ? "w-64" : "w-0 lg:w-16"
         }`}
       >
         <div className="h-full flex flex-col w-64 lg:w-auto">
           {/* Logo */}
-          <div className="h-14 flex items-center justify-center px-4 border-b border-border/50 flex-shrink-0">
+          <div className="h-16 flex items-center justify-center px-4 border-b border-border/60 flex-shrink-0 relative">
+            <div className="absolute inset-x-5 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
             <img src="/favicon.svg" alt="PaperLens Logo" className="w-8 h-8 flex-shrink-0" />
-            {sidebarOpen && <span className="font-semibold text-foreground whitespace-nowrap ml-2">PaperLens AI</span>}
+            {sidebarOpen && (
+              <div className="ml-2.5 flex flex-col leading-tight">
+                <span className="font-semibold text-foreground whitespace-nowrap text-sm tracking-wide">PaperLens AI</span>
+                <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Research OS</span>
+              </div>
+            )}
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-3.5 space-y-1.5 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -192,41 +201,41 @@ export default function DashboardLayout() {
                   onClick={() => {
                     if (window.innerWidth < 1024) setSidebarOpen(false);
                   }}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors relative whitespace-nowrap ${
+                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 relative whitespace-nowrap ${
                     isActive
-                      ? "bg-accent/10 text-accent font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      ? "bg-gradient-to-r from-accent/15 to-accent/5 text-accent border border-accent/20 shadow-[0_8px_22px_-16px_hsl(var(--accent))]"
+                      : "text-muted-foreground border border-transparent hover:text-foreground hover:bg-secondary/40 hover:border-border/50"
                   }`}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-accent rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-accent rounded-r-full" />
                   )}
-                  <item.icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
-                  {sidebarOpen && <span>{item.title}</span>}
+                  <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? "text-accent" : "text-muted-foreground group-hover:text-foreground"}`} strokeWidth={1.6} />
+                  {sidebarOpen && <span className="font-medium tracking-wide text-[13px]">{item.title}</span>}
                 </Link>
               );
             })}
           </nav>
 
           {/* Auth Actions */}
-          <div className="p-3 border-t border-border/50">
+          <div className="p-3 border-t border-border/60">
             <SignedIn>
               <SignOutButton>
                 <button
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors whitespace-nowrap"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent hover:border-border/50 transition-all whitespace-nowrap"
                 >
-                  <LogOut className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
-                  {sidebarOpen && <span>Logout</span>}
+                  <LogOut className="w-4 h-4 flex-shrink-0" strokeWidth={1.6} />
+                  {sidebarOpen && <span className="font-medium">Logout</span>}
                 </button>
               </SignOutButton>
             </SignedIn>
             <SignedOut>
               <SignInButton mode="modal">
                 <button
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-accent bg-accent/10 hover:bg-accent/20 transition-colors whitespace-nowrap"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-accent bg-accent/10 hover:bg-accent/20 border border-accent/20 transition-colors whitespace-nowrap"
                 >
-                  <User className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
-                  {sidebarOpen && <span>Sign In</span>}
+                  <User className="w-4 h-4 flex-shrink-0" strokeWidth={1.6} />
+                  {sidebarOpen && <span className="font-medium">Sign In</span>}
                 </button>
               </SignInButton>
             </SignedOut>
@@ -236,17 +245,17 @@ export default function DashboardLayout() {
 
       {/* Main */}
       <div
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+        className={`relative z-10 flex-1 flex flex-col min-h-screen transition-all duration-300 ${
           sidebarOpen ? "lg:pl-64" : "lg:pl-16"
         }`}
       >
         {/* Top Navbar */}
-        <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-border/50 glass-surface sticky top-0 z-20 flex-shrink-0">
+        <header className="h-16 flex items-center justify-between px-4 lg:px-6 border-b border-border/60 glass-surface sticky top-0 z-20 flex-shrink-0 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9 rounded-xl border border-border/60 bg-card/50 hover:bg-card"
               onClick={() => setSidebarOpen(!sidebarOpen)}
               aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
               title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
@@ -262,8 +271,8 @@ export default function DashboardLayout() {
               <img src="/favicon.svg" alt="PaperLens Logo" className="w-6 h-6" />
               <span className="font-semibold text-sm">PaperLens AI</span>
             </div>
-            <div className="hidden sm:flex items-center">
-              <span className="font-mono text-xs text-muted-foreground">
+            <div className="hidden sm:flex items-center rounded-full border border-border/60 bg-card/50 px-3 py-1.5">
+              <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
                 {navItems.find((i) => i.path === location.pathname)?.title || "Dashboard"}
               </span>
             </div>
@@ -275,13 +284,13 @@ export default function DashboardLayout() {
               <Input
                 ref={searchInputRef}
                 placeholder="Search..."
-                className="pl-9 h-8 w-56 text-sm bg-secondary/50 border-border/50"
+                className="pl-9 h-9 w-64 text-sm bg-card/70 border-border/60 rounded-xl focus-visible:ring-2 focus-visible:ring-accent/50"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowSearchResults(true)}
               />
               {showSearchResults && searchQuery && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 mt-2 w-56 bg-card border border-border/50 rounded-lg shadow-lg overflow-hidden z-50">
+                <div className="absolute top-full left-0 mt-2 w-64 bg-card border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50">
                   {searchResults.map((result, idx) => (
                     <Link
                       key={`${result.path}-${idx}`}
@@ -290,7 +299,7 @@ export default function DashboardLayout() {
                         setSearchQuery("");
                         setShowSearchResults(false);
                       }}
-                      className="block px-4 py-2.5 text-sm text-foreground hover:bg-secondary/50 border-b border-border/30 last:border-b-0 transition-colors"
+                      className="block px-4 py-2.5 text-sm text-foreground hover:bg-secondary/40 border-b border-border/40 last:border-b-0 transition-colors"
                     >
                       <div className="font-medium">{result.title}</div>
                       <div className="text-xs text-muted-foreground">{result.description}</div>
@@ -299,7 +308,7 @@ export default function DashboardLayout() {
                 </div>
               )}
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl border border-border/60 bg-card/50 hover:bg-card" onClick={toggleTheme}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
             <SignedIn>
@@ -309,7 +318,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <main className="flex-1 p-4 lg:p-7 overflow-auto">
           <Outlet />
         </main>
       </div>

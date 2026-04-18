@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Clock, ArrowUpRight } from "lucide-react";
+import { FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Clock, ArrowUpRight, Sparkles, Activity, CalendarClock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
@@ -31,6 +31,14 @@ const quickActions = [
   { title: "Detect Gaps", desc: "Find research gaps", path: "/dashboard/gaps", icon: ScanSearch },
   { title: "Dataset Finder", desc: "Find datasets & benchmarks", path: "/dashboard/dataset-benchmarks", icon: Database },
   { title: "Citation Intelligence", desc: "Analyze references & citation impact", path: "/dashboard/citation-intelligence", icon: BarChart3 },
+];
+
+const statSurface = [
+  "from-cyan-500/10 via-cyan-500/5 to-transparent",
+  "from-emerald-500/10 via-emerald-500/5 to-transparent",
+  "from-amber-500/10 via-amber-500/5 to-transparent",
+  "from-indigo-500/10 via-indigo-500/5 to-transparent",
+  "from-rose-500/10 via-rose-500/5 to-transparent",
 ];
 
 export default function DashboardHome() {
@@ -80,94 +88,141 @@ export default function DashboardHome() {
   }, [getToken, userId, isLoaded]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">Here's an overview of your research activity.</p>
-      </motion.div>
+    <div className="max-w-7xl mx-auto space-y-8 pb-4">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(130deg,hsl(var(--card))_0%,hsl(var(--card)/0.84)_65%,hsl(var(--accent)/0.08)_100%)] px-6 py-7 sm:px-8 sm:py-8"
+      >
+        <div className="pointer-events-none absolute -top-28 left-0 h-56 w-56 rounded-full bg-accent/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 right-10 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/55 px-3 py-1">
+              <Sparkles className="w-3.5 h-3.5 text-accent" strokeWidth={1.7} />
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Research Dashboard</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight text-foreground">
+              Welcome back. Your research cockpit is ready.
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-xl">
+              Track momentum, jump into the right tool, and keep your workflow moving from paper reading to experimentation.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 min-w-[250px]">
+            <div className="rounded-2xl border border-border/60 bg-background/55 px-4 py-3">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground font-mono">
+                <Activity className="w-3.5 h-3.5 text-accent" />
+                Activity
+              </div>
+              <p className="mt-2 text-xl font-semibold text-foreground">High</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/55 px-4 py-3">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground font-mono">
+                <CalendarClock className="w-3.5 h-3.5 text-accent" />
+                This Week
+              </div>
+              <p className="mt-2 text-xl font-semibold text-foreground">Focused</p>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {dashboardData.stats.map((s, i) => {
           const Icon = iconMap[s.icon as keyof typeof iconMap] || FileText;
           return (
             <motion.div
               key={s.label}
-              className="rounded-2xl border border-border/50 bg-card p-5"
-              initial={{ opacity: 0, y: 12 }}
+              className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 premium-shadow"
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: i * 0.05, ease }}
+              transition={{ duration: 0.45, delay: i * 0.06, ease }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <Icon className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-                <span className="text-xs text-accent font-mono">{s.change}</span>
+              <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${statSurface[i % statSurface.length]}`} />
+              <div className="relative z-10 flex items-center justify-between mb-3">
+                <div className="w-9 h-9 rounded-xl bg-background/70 border border-border/60 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-foreground" strokeWidth={1.6} />
+                </div>
+                <span className="text-[11px] text-accent font-mono uppercase tracking-wider">{s.change}</span>
               </div>
-              <p className="text-2xl font-semibold text-foreground tabular-nums">
+              <p className="relative z-10 text-2xl font-semibold text-foreground tabular-nums">
                 {loading ? <Skeleton className="h-8 w-12" /> : s.value}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+              <p className="relative z-10 text-xs text-muted-foreground mt-1.5 tracking-wide">{s.label}</p>
             </motion.div>
           );
         })}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-sm font-medium text-muted-foreground">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-wide text-foreground">Quick Actions</h2>
+            <span className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Launch Tools</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {quickActions.map((a, i) => (
               <motion.div
                 key={a.title}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 9 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 + i * 0.05, ease }}
+                transition={{ duration: 0.35, delay: 0.2 + i * 0.05, ease }}
               >
                 <Link
                   to={a.path}
-                  className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-card hover:border-accent/30 hover:bg-accent/5 transition-all duration-200 group"
+                  className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-4 transition-all duration-250 hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_16px_40px_-26px_hsl(var(--accent))]"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <a.icon className="w-5 h-5 text-accent" strokeWidth={1.5} />
+                  <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-accent/10 via-transparent to-accent/5" />
+                  <div className="relative z-10 w-11 h-11 rounded-xl bg-background/70 border border-border/60 flex items-center justify-center flex-shrink-0">
+                    <a.icon className="w-5 h-5 text-accent" strokeWidth={1.6} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">{a.title}</p>
+                  <div className="relative z-10 flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground tracking-wide">{a.title}</p>
                     <p className="text-xs text-muted-foreground">{a.desc}</p>
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+                  <ArrowUpRight className="relative z-10 w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
                 </Link>
               </motion.div>
             ))}
           </div>
         </div>
 
-        {/* Recent */}
         <div className="space-y-4">
-          <h2 className="text-sm font-medium text-muted-foreground">Recent Papers</h2>
-          <div className="rounded-xl border border-border/50 bg-card divide-y divide-border/50">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-wide text-foreground">Recent Papers</h2>
+            <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Timeline</span>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-card/90 overflow-hidden premium-shadow">
             {loading ? (
-              <div className="p-4 space-y-3">
+              <div className="p-5 space-y-3">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-3 w-2/3" />
               </div>
             ) : dashboardData.recentPapers.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">
+              <div className="p-10 text-center text-muted-foreground text-sm">
                 No recent papers analyzed.
               </div>
             ) : (
               dashboardData.recentPapers.map((p, i) => (
                 <motion.div
                   key={i}
-                  className="p-4 hover:bg-secondary/30 transition-colors"
+                  className="px-4 py-4 border-b border-border/50 last:border-b-0 hover:bg-secondary/25 transition-colors"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 + i * 0.1 }}
                 >
                   <p className="text-sm font-medium text-foreground truncate">{p.title}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1.5">
                     <Clock className="w-3 h-3 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{p.date}</span>
-                    <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${p.status === "Analyzed" ? "bg-accent/10 text-accent" : "bg-secondary text-muted-foreground"}`}>
+                    <span className={`text-[11px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider ${p.status === "Analyzed" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-secondary text-muted-foreground"}`}>
                       {p.status}
                     </span>
                   </div>
@@ -176,7 +231,7 @@ export default function DashboardHome() {
             )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
