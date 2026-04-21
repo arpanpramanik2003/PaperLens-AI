@@ -43,6 +43,13 @@ type PlanStep = {
   risks: string;
 };
 
+type StructuredDetailSections = {
+  objective: string;
+  execution: string;
+  validation: string;
+  deliverable: string;
+};
+
 const STEP_ICON_MAP = {
   Database: Icons.Database,
   Cog: Icons.Cog,
@@ -92,6 +99,34 @@ const sanitizePlanSteps = (rawSteps: unknown[]): PlanStep[] => {
         risks: risks.length >= 10 ? risks : fallbackRiskByTitle(title),
       };
     });
+};
+
+const parseStructuredDetails = (details: string): StructuredDetailSections | null => {
+  const text = (details || "").trim();
+  if (!text) return null;
+
+  const patterns = {
+    objective: /objective\s*:\s*([\s\S]*?)(?=\bexecution\s*:|\bvalidation\s*:|\bdeliverable\s*:|$)/i,
+    execution: /execution\s*:\s*([\s\S]*?)(?=\bobjective\s*:|\bvalidation\s*:|\bdeliverable\s*:|$)/i,
+    validation: /validation\s*:\s*([\s\S]*?)(?=\bobjective\s*:|\bexecution\s*:|\bdeliverable\s*:|$)/i,
+    deliverable: /deliverable\s*:\s*([\s\S]*?)(?=\bobjective\s*:|\bexecution\s*:|\bvalidation\s*:|$)/i,
+  };
+
+  const objective = (text.match(patterns.objective)?.[1] || "").trim();
+  const execution = (text.match(patterns.execution)?.[1] || "").trim();
+  const validation = (text.match(patterns.validation)?.[1] || "").trim();
+  const deliverable = (text.match(patterns.deliverable)?.[1] || "").trim();
+
+  if (!objective && !execution && !validation && !deliverable) {
+    return null;
+  }
+
+  return {
+    objective,
+    execution,
+    validation,
+    deliverable,
+  };
 };
 
 export default function ExperimentPlanner() {
@@ -323,6 +358,7 @@ export default function ExperimentPlanner() {
             <div className="space-y-0">
               {steps.slice(0, visibleSteps).map((step, i) => {
                 const IconComponent = STEP_ICON_MAP[step.iconName as keyof typeof STEP_ICON_MAP] ?? STEP_ICON_MAP.Cog;
+                const structuredDetails = parseStructuredDetails(step.details);
                 return (
                   <motion.div
                     key={step.num || i}
@@ -369,7 +405,28 @@ export default function ExperimentPlanner() {
                             className="overflow-hidden"
                           >
                             <div className="px-4 pb-4 space-y-3">
-                              <p className="text-sm text-muted-foreground leading-relaxed text-justify sm:text-left">{step.details}</p>
+                              {structuredDetails ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                  <div className="rounded-lg border border-border/50 bg-secondary/35 px-3 py-2.5">
+                                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Objective</p>
+                                    <p className="text-xs text-foreground/90 leading-relaxed">{structuredDetails.objective || "Not specified."}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-border/50 bg-secondary/35 px-3 py-2.5">
+                                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Execution</p>
+                                    <p className="text-xs text-foreground/90 leading-relaxed">{structuredDetails.execution || "Not specified."}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-border/50 bg-secondary/35 px-3 py-2.5">
+                                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Validation</p>
+                                    <p className="text-xs text-foreground/90 leading-relaxed">{structuredDetails.validation || "Not specified."}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-border/50 bg-secondary/35 px-3 py-2.5">
+                                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Deliverable</p>
+                                    <p className="text-xs text-foreground/90 leading-relaxed">{structuredDetails.deliverable || "Not specified."}</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground leading-relaxed text-justify sm:text-left">{step.details}</p>
+                              )}
 
                               <div className="rounded-lg bg-secondary/50 px-3 py-2 border border-border/50">
                                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Parameters</p>

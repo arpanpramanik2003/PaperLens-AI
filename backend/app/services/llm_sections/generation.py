@@ -81,6 +81,46 @@ def _infer_step_risk(title: str, details: str) -> str:
     return "Integration and reproducibility risks may appear if assumptions are not validated at this stage."
 
 
+def _coerce_structured_details(title: str, topic: str, details: str) -> str:
+    compact = re.sub(r"\s+", " ", (details or "")).strip()
+    markers = ["objective:", "execution:", "validation:", "deliverable:"]
+
+    if len(compact.split()) >= 28 and all(marker in compact.lower() for marker in markers):
+        return compact
+
+    return (
+        f"Objective: Deliver a robust implementation of {title.lower()} for {topic}. "
+        "Execution: Define concrete tasks, sequencing, ownership, and required artifacts for this stage. "
+        "Validation: Specify measurable checks against baselines, acceptance thresholds, and failure criteria. "
+        "Deliverable: Produce reproducible outputs (configs, logs, reports, and versioned artifacts) required by the next stage."
+    )
+
+
+def _coerce_structured_params(params: str) -> str:
+    compact = re.sub(r"\s+", " ", (params or "")).strip()
+    required_terms = ["dataset", "metric", "hyper", "threshold"]
+
+    if len(compact.split()) >= 16 and any(term in compact.lower() for term in required_terms):
+        return compact
+
+    return (
+        "Datasets: named data sources + split policy | "
+        "Metrics: primary and secondary metrics with targets | "
+        "Hyperparameters: optimizer, learning rate, batch size, regularization | "
+        "Compute/Budget: hardware profile and runtime budget | "
+        "Exit Criteria: quantitative threshold that gates progression"
+    )
+
+
+def _coerce_structured_risk(title: str, details: str, risks: str) -> str:
+    compact = re.sub(r"\s+", " ", (risks or "")).strip()
+    if len(compact.split()) >= 14 and "mitigation" in compact.lower() and "trigger" in compact.lower():
+        return compact
+
+    inferred = _infer_step_risk(title, details)
+    return f"Trigger: Data, model, or optimization assumptions fail in this stage. Impact: {inferred} Mitigation: Add diagnostics, fallback baselines, and stage-level rollback criteria."
+
+
 def _supplemental_step_templates(topic: str) -> list[dict]:
     return [
         {
@@ -140,14 +180,11 @@ def _normalize_experiment_plan(topic: str, plan_payload: dict, min_steps: int, m
         if icon_name not in EXPERIMENT_PLAN_ICONS:
             icon_name = "Cog"
 
-        if len(details.split()) < 12:
-            details = f"Implement {title.lower()} for {topic} with explicit engineering checkpoints, validation gates, and measurable technical outcomes."
+        details = _coerce_structured_details(title, topic, details)
 
-        if len(params.split()) < 4:
-            params = "Define concrete metrics, hyperparameters, dataset references, and acceptance thresholds for this stage."
+        params = _coerce_structured_params(params)
 
-        if not risks or len(risks.split()) < 4:
-            risks = _infer_step_risk(title, details)
+        risks = _coerce_structured_risk(title, details, risks)
 
         normalized_steps.append(
             {
@@ -212,9 +249,11 @@ Step-count requirement:
 - For technically complex topics, include additional stages for error analysis, ablation, reproducibility, and deployment hardening.
 
 Mandatory quality rules for EACH step:
-- "details" must be substantive (at least 2 complete sentences).
-- "params" must include concrete measurable or identifiable items (metrics, identifiers, hyperparameters, protocols, thresholds).
-- "risks" must never be empty and must mention a specific technical failure mode.
+- "details" must be implementation-grade and include all four components in one field:
+    Objective, Execution, Validation, Deliverable.
+- "params" must include concrete measurable or identifiable items (named datasets/tools, metrics with targets, hyperparameters, and gating thresholds).
+- "risks" must never be empty and must include Trigger + Impact + Mitigation.
+- Avoid generic wording such as "improve performance" without defining how it will be measured.
 
 Encouraged Modules (especially for advanced/hard topics):
 - Dataset Selection & Curation (Icon: "Database")
