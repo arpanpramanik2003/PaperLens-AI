@@ -3,8 +3,6 @@ import logging
 
 from app.services.cache import get_active_indexes
 from app.services.model_fallback import (
-    DEFAULT_FALLBACK_MODELS,
-    DEFAULT_PRIMARY_MODEL,
     create_completion_with_fallback,
 )
 
@@ -12,8 +10,8 @@ from .client import client
 
 
 logger = logging.getLogger(__name__)
-PAPER_ANALYZER_PRIMARY_MODEL = DEFAULT_PRIMARY_MODEL
-PAPER_ANALYZER_FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
+PAPER_ANALYZER_PRIMARY_MODEL = "qwen/qwen3-32b"
+PAPER_ANALYZER_FALLBACK_MODELS = "llama-3.1-8b-instant"
 PAPER_ANALYZER_MAX_TOKENS = 1200
 PAPER_ANALYZER_SUMMARY_MAX_TOKENS = 320
 
@@ -31,17 +29,29 @@ def enforce_strict_analysis_format(text):
 
     cleaned = text.replace("\r\n", "\n")
 
+    # Strip accidental reasoning blocks if model emits internal tags.
+    cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+
     cleaned = re.sub(r"([^\n])\s*(#{2,6})(?!#)\s*", r"\1\n\n\2 ", cleaned)
     cleaned = re.sub(r"^(\s*#{2,6})([^\s#])", r"\1 \2", cleaned, flags=re.MULTILINE)
+    cleaned = re.sub(r"^\s*\*\*(.+?)\*\*\s*$", r"## \1", cleaned, flags=re.MULTILINE)
 
+    # Drop any preface before the first section-like heading.
     first_heading = re.search(
-        r"^\s*##\s*(Summary|Problem Statement|Methodology|Results(?:\s*\(.*?\))?|Limitations|Future Work)\b",
+        r"^\s*(?:#{1,6}\s+|(?:summary|overview|problem statement|methodology|approach|results|findings|limitations|future work)\s*$)",
         cleaned,
         flags=re.IGNORECASE | re.MULTILINE,
     )
-
     if first_heading:
         cleaned = cleaned[first_heading.start():]
+
+    # Normalize plain section labels into markdown headings for consistent rendering.
+    cleaned = re.sub(
+        r"^\s*(summary|overview|problem statement|methodology|approach|results|findings|limitations|future work)\s*$",
+        r"## \1",
+        cleaned,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
 
     return cleaned.strip()
 
@@ -200,17 +210,20 @@ Analyze the following summarized research paper.
 
 Return the response in Markdown format with these sections:
 
-## Summary
-## Problem Statement
-## Methodology
-## Results (include explicit metrics if available)
-## Limitations
-## Future Work
+- Core summary
+- Problem statement
+- Methodology
+- Results (include explicit metrics if available)
+- Limitations
+- Future work
 
 Rules:
 - Use only the provided summary text and section contexts.
 - If a section is not explicitly stated, you may infer it, but label it as "Inferred:".
 - Keep each section concise and specific.
+- Write the Summary as a short paragraph (not bullets).
+- Use pointwise formatting for remaining sections (short bullet points, not long prose blocks).
+- Prefer 3-6 bullets per non-summary section when content is available.
 
 Paper summary:
 {summary_text}
@@ -258,14 +271,18 @@ def analyze_paper(chunks):
     prompt = f"""
 You are a research assistant.
 
-Write a structured analysis of the paper using ONLY the context provided for each section.
+Write a structured markdown analysis of the paper using ONLY the context provided for each section.
 
 Rules:
-- Output MUST start with exactly "## Summary" as the first non-whitespace text.
-- Do NOT include any title, preface, greeting, or text before "## Summary".
-- Use each required section heading exactly once and in this order.
-- Put every heading on its own line using markdown (## Heading).
+- Use section headings in markdown, but choose heading wording naturally (do not force exact fixed phrases).
+- Cover themes in this preferred sequence: summary, problem statement, methodology, results, limitations, future work.
+- Keep one heading per section and separate sections clearly.
+- Do NOT reveal chain-of-thought, scratchpad notes, or any internal reasoning.
+- Never output tags like <think> or meta commentary such as "let's think".
 - Leave one blank line between sections.
+- Summary section must be a short coherent paragraph.
+- For all non-summary sections, present content as concise pointwise bullets.
+- Prefer short bullets with one idea per bullet; avoid dense paragraph blocks.
 - If a section context is empty, you may infer likely points, but label them clearly as "Inferred:".
 - Use citations like [Page 2] to support any explicit claims.
 - Keep each section concise and specific.
@@ -274,31 +291,25 @@ Rules:
 - Avoid vague results like "best" or "competitive" without citing metrics.
 - If no metrics are available, explicitly say "Metrics not provided in extracted context."
 
-## Summary
-Context:
+Summary context:
 {summary_context}
 
-## Problem Statement
-Context:
+Problem statement context:
 {format_context(sections["Problem Statement"]) or summary_context}
 
-## Methodology
-Context:
+Methodology context:
 {format_context(sections["Methodology"]) or summary_context}
 
-## Results
-Context:
+Results context:
 {format_context(sections["Results"]) or summary_context}
 
 Key Metrics (use if relevant):
 {metrics_context}
 
-## Limitations
-Context:
+Limitations context:
 {format_context(sections["Limitations"]) or ""}
 
-## Future Work
-Context:
+Future work context:
 {format_context(sections["Future Work"]) or ""}
 """
 
@@ -311,7 +322,7 @@ Context:
         messages=[
             {
                 "role": "system",
-                "content": "You write strict markdown research summaries. Never add a title before the first required heading."
+                "content": "You write concise, well-structured markdown research analyses with clear section headings and grounded claims."
             },
             {"role": "user", "content": prompt}
         ],
