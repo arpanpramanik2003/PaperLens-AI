@@ -1,8 +1,74 @@
-from app.core.config import settings
+import logging
+
 from app.services.retrieval import search_chunks
 
-from .analysis import get_first_page_chunks, get_total_pages, stream_completion
+from .analysis import get_first_page_chunks, get_total_pages
 from .client import client
+
+
+logger = logging.getLogger(__name__)
+
+# Dedicated models for conversation QA (kept separate from summary model).
+QA_PRIMARY_MODEL = "openai/gpt-oss-120b"
+QA_FALLBACK_MODEL = "llama-3.3-70b-versatile"
+QA_MAX_TOKENS = 900
+
+
+def _log_model_event(event: str, model: str, extra: str = "") -> None:
+
+    message = f"[QA_MODEL] event={event} model={model}"
+    if extra:
+        message += f" {extra}"
+    print(message)
+    logger.info(message)
+
+
+def _create_chat_with_fallback(messages: list[dict]):
+
+    try:
+        response = client.chat.completions.create(
+            model=QA_PRIMARY_MODEL,
+            max_tokens=QA_MAX_TOKENS,
+            messages=messages,
+        )
+        _log_model_event("primary_success", QA_PRIMARY_MODEL)
+        return response
+    except Exception as primary_error:
+        _log_model_event("primary_failed", QA_PRIMARY_MODEL, f"error={primary_error}")
+
+        response = client.chat.completions.create(
+            model=QA_FALLBACK_MODEL,
+            max_tokens=QA_MAX_TOKENS,
+            messages=messages,
+        )
+        _log_model_event("fallback_success", QA_FALLBACK_MODEL)
+        return response
+
+
+def _stream_chat_with_fallback(messages: list[dict]):
+
+    try:
+        response = client.chat.completions.create(
+            model=QA_PRIMARY_MODEL,
+            max_tokens=QA_MAX_TOKENS,
+            messages=messages,
+            stream=True,
+        )
+        _log_model_event("stream_primary_success", QA_PRIMARY_MODEL)
+    except Exception as primary_error:
+        _log_model_event("stream_primary_failed", QA_PRIMARY_MODEL, f"error={primary_error}")
+        response = client.chat.completions.create(
+            model=QA_FALLBACK_MODEL,
+            max_tokens=QA_MAX_TOKENS,
+            messages=messages,
+            stream=True,
+        )
+        _log_model_event("stream_fallback_success", QA_FALLBACK_MODEL)
+
+    for chunk in response:
+        delta = chunk.choices[0].delta
+        if delta and delta.content:
+            yield delta.content
 
 
 def _normalize_history(history, max_turns=8):
@@ -198,11 +264,13 @@ Latest question:
 {question}
 """
 
-    response = client.chat.completions.create(
-        model=settings.MODEL_NAME,
-        messages=[
-            {"role": "system", "content": "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present."},
-            {"role": "user", "content": prompt}
+    response = _create_chat_with_fallback(
+        [
+            {
+                "role": "system",
+                "content": "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present.",
+            },
+            {"role": "user", "content": prompt},
         ]
     )
 
@@ -305,10 +373,15 @@ Latest question:
 {question}
 """
 
-    for token in stream_completion(
-        prompt,
-        "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present."
-    ):
+    stream_messages = [
+        {
+            "role": "system",
+            "content": "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present.",
+        },
+        {"role": "user", "content": prompt},
+    ]
+
+    for token in _stream_chat_with_fallback(stream_messages):
         yield token
 
 
@@ -385,15 +458,14 @@ Latest question:
 {question}
 """
 
-    response = client.chat.completions.create(
-        model=settings.MODEL_NAME,
-        messages=[
+    response = _create_chat_with_fallback(
+        [
             {
                 "role": "system",
                 "content": "You are a precise research assistant that answers questions strictly based on provided paper context.",
             },
             {"role": "user", "content": prompt},
-        ],
+        ]
     )
 
     return response.choices[0].message.content
