@@ -2,16 +2,26 @@ import re
 import logging
 
 from app.services.cache import get_active_indexes
+from app.services.model_fallback import (
+    DEFAULT_FALLBACK_MODELS,
+    DEFAULT_PRIMARY_MODEL,
+    create_completion_with_fallback,
+)
 
 from .client import client
 
 
 logger = logging.getLogger(__name__)
-PAPER_ANALYZER_MODEL = "llama-3.1-8b-instant"
+PAPER_ANALYZER_PRIMARY_MODEL = DEFAULT_PRIMARY_MODEL
+PAPER_ANALYZER_FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
 PAPER_ANALYZER_MAX_TOKENS = 1200
 PAPER_ANALYZER_SUMMARY_MAX_TOKENS = 320
 
-logger.info("Model routing: paper analyzer uses '%s'", PAPER_ANALYZER_MODEL)
+logger.info(
+    "Model routing: paper analyzer primary='%s', fallbacks='%s'",
+    PAPER_ANALYZER_PRIMARY_MODEL,
+    PAPER_ANALYZER_FALLBACK_MODELS,
+)
 
 
 def enforce_strict_analysis_format(text):
@@ -44,11 +54,11 @@ def summarize_chunks(chunks):
 
     for chunk in chunks:
 
-        logger.info("LLM task 'paper_analyzer_chunk_summary' using model '%s'", PAPER_ANALYZER_MODEL)
-        print(f"[MODEL] task=paper_analyzer_chunk_summary model={PAPER_ANALYZER_MODEL}")
-
-        response = client.chat.completions.create(
-            model=PAPER_ANALYZER_MODEL,
+        response = create_completion_with_fallback(
+            llm_client=client,
+            task_name="paper_analyzer_chunk_summary",
+            primary_model=PAPER_ANALYZER_PRIMARY_MODEL,
+            fallback_models=PAPER_ANALYZER_FALLBACK_MODELS,
             max_tokens=PAPER_ANALYZER_SUMMARY_MAX_TOKENS,
             messages=[
                 {
@@ -64,7 +74,7 @@ Text:
 {chunk["text"]}
 """
                 }
-            ]
+            ],
         )
 
         summaries.append(response.choices[0].message.content)
@@ -292,11 +302,11 @@ Context:
 {format_context(sections["Future Work"]) or ""}
 """
 
-    logger.info("LLM task 'paper_analyzer_structured_analysis' using model '%s'", PAPER_ANALYZER_MODEL)
-    print(f"[MODEL] task=paper_analyzer_structured_analysis model={PAPER_ANALYZER_MODEL}")
-
-    response = client.chat.completions.create(
-        model=PAPER_ANALYZER_MODEL,
+    response = create_completion_with_fallback(
+        llm_client=client,
+        task_name="paper_analyzer_structured_analysis",
+        primary_model=PAPER_ANALYZER_PRIMARY_MODEL,
+        fallback_models=PAPER_ANALYZER_FALLBACK_MODELS,
         max_tokens=PAPER_ANALYZER_MAX_TOKENS,
         messages=[
             {
@@ -304,7 +314,7 @@ Context:
                 "content": "You write strict markdown research summaries. Never add a title before the first required heading."
             },
             {"role": "user", "content": prompt}
-        ]
+        ],
     )
 
     return enforce_strict_analysis_format(response.choices[0].message.content)
@@ -312,17 +322,17 @@ Context:
 
 def stream_completion(prompt, system_text):
 
-    logger.info("LLM task 'paper_analyzer_stream' using model '%s'", PAPER_ANALYZER_MODEL)
-    print(f"[MODEL] task=paper_analyzer_stream model={PAPER_ANALYZER_MODEL}")
-
-    response = client.chat.completions.create(
-        model=PAPER_ANALYZER_MODEL,
+    response = create_completion_with_fallback(
+        llm_client=client,
+        task_name="paper_analyzer_stream",
+        primary_model=PAPER_ANALYZER_PRIMARY_MODEL,
+        fallback_models=PAPER_ANALYZER_FALLBACK_MODELS,
         max_tokens=PAPER_ANALYZER_MAX_TOKENS,
         messages=[
             {"role": "system", "content": system_text},
             {"role": "user", "content": prompt}
         ],
-        stream=True
+        stream=True,
     )
 
     for chunk in response:

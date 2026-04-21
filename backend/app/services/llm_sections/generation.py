@@ -2,23 +2,25 @@ import json
 import logging
 import re
 
-from app.services.model_fallback import create_completion_with_fallback
+from app.services.model_fallback import (
+    DEFAULT_FALLBACK_MODELS,
+    DEFAULT_PRIMARY_MODEL,
+    create_completion_with_fallback,
+)
 
 from .client import client
 
 
 logger = logging.getLogger(__name__)
 
-HEAVY_PRIMARY_MODEL = "openai/gpt-oss-120b"
-HEAVY_FALLBACK_MODELS = "llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct"
-GAP_DETECTION_MODEL = "llama-3.1-8b-instant"
+HEAVY_PRIMARY_MODEL = DEFAULT_PRIMARY_MODEL
+HEAVY_FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
 GAP_DETECTION_MAX_TOKENS = 1000
 
 logger.info(
-    "Model routing: heavy tasks primary='%s', fallbacks='%s', gap_detection='%s'",
+    "Model routing: generation tasks primary='%s', fallbacks='%s'",
     HEAVY_PRIMARY_MODEL,
     HEAVY_FALLBACK_MODELS,
-    GAP_DETECTION_MODEL,
 )
 
 
@@ -381,17 +383,17 @@ Paper Summary:
 {analysis_text}
 """
 
-    logger.info("LLM task 'gap_detection' using model '%s'", GAP_DETECTION_MODEL)
-    print(f"[MODEL] task=gap_detection model={GAP_DETECTION_MODEL}")
-
-    response = client.chat.completions.create(
-        model=GAP_DETECTION_MODEL,
+    response = create_completion_with_fallback(
+        llm_client=client,
+        task_name="gap_detection",
+        primary_model=HEAVY_PRIMARY_MODEL,
+        fallback_models=HEAVY_FALLBACK_MODELS,
         max_tokens=GAP_DETECTION_MAX_TOKENS,
         messages=[
             {"role": "system", "content": "You are a critical research reviewer designed to output structured JSON."},
             {"role": "user", "content": prompt}
         ],
-        response_format={"type": "json_object"}
+        response_format={"type": "json_object"},
     )
 
     return json.loads(response.choices[0].message.content)

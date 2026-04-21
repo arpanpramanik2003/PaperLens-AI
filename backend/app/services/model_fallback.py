@@ -9,6 +9,10 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_PRIMARY_MODEL = "openai/gpt-oss-120b"
+DEFAULT_FALLBACK_MODELS = "llama-3.3-70b-versatile"
+
+
 def _split_model_list(raw: str | None) -> list[str]:
     if not raw:
         return []
@@ -64,13 +68,31 @@ def create_completion_with_fallback(
 
     for model_name in model_chain:
         try:
-            logger.info("LLM task '%s' using model '%s'", task_name, model_name)
-            print(f"[MODEL] task={task_name} model={model_name}")
-            return llm_client.chat.completions.create(
+            attempt_index = model_chain.index(model_name)
+            route_type = "primary" if attempt_index == 0 else "fallback"
+
+            logger.info(
+                "LLM task '%s' trying %s model '%s' (%d/%d)",
+                task_name,
+                route_type,
+                model_name,
+                attempt_index + 1,
+                len(model_chain),
+            )
+            print(
+                f"[MODEL-TRY] task={task_name} route={route_type} model={model_name} "
+                f"attempt={attempt_index + 1}/{len(model_chain)}"
+            )
+
+            response = llm_client.chat.completions.create(
                 model=model_name,
                 messages=messages,
                 **kwargs,
             )
+
+            print(f"[MODEL-SUCCESS] task={task_name} route={route_type} model={model_name}")
+            logger.info("LLM task '%s' succeeded with model '%s'", task_name, model_name)
+            return response
         except Exception as exc:
             logger.warning(
                 "LLM task '%s' model '%s' failed: %s",

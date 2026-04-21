@@ -8,17 +8,22 @@ Designed for large PDFs (20-50 pages) without exceeding token limits.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from typing import Optional
 
-from groq import Groq
-
 from app.core.config import settings
+from app.services.llm_sections.client import client
+from app.services.model_fallback import (
+    DEFAULT_FALLBACK_MODELS,
+    DEFAULT_PRIMARY_MODEL,
+    create_completion_with_fallback,
+)
 
 logger = logging.getLogger(__name__)
-client = Groq(api_key=settings.GROQ_API_KEY)
+
+SUMMARIZATION_PRIMARY_MODEL = DEFAULT_PRIMARY_MODEL
+SUMMARIZATION_FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
 
 # Rate-limit guard: minimum seconds between consecutive Groq map calls
 # Groq free tier allows ~30 requests/min for llama-3.1-8b-instant
@@ -49,8 +54,11 @@ def map_summarize_chunk(chunk_text: str) -> Optional[str]:
     Returns summary string or None on failure.
     """
     try:
-        response = client.chat.completions.create(
-            model=settings.MODEL_NAME,
+        response = create_completion_with_fallback(
+            llm_client=client,
+            task_name="map_reduce_chunk_summary",
+            primary_model=SUMMARIZATION_PRIMARY_MODEL,
+            fallback_models=SUMMARIZATION_FALLBACK_MODELS,
             messages=[
                 {
                     "role": "system",
@@ -109,8 +117,11 @@ Individual chunk summaries:
 """
 
     try:
-        response = client.chat.completions.create(
-            model=settings.MODEL_NAME,
+        response = create_completion_with_fallback(
+            llm_client=client,
+            task_name="map_reduce_reduce_summary",
+            primary_model=SUMMARIZATION_PRIMARY_MODEL,
+            fallback_models=SUMMARIZATION_FALLBACK_MODELS,
             messages=[
                 {"role": "system", "content": "You combine research summaries into a single coherent narrative."},
                 {"role": "user", "content": prompt},
