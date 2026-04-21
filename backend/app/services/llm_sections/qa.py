@@ -1,4 +1,5 @@
 import logging
+import re
 
 from app.services.retrieval import search_chunks
 
@@ -21,6 +22,50 @@ def _log_model_event(event: str, model: str, extra: str = "") -> None:
         message += f" {extra}"
     print(message)
     logger.info(message)
+
+
+def _sanitize_no_table_output(text: str) -> str:
+
+    if not text:
+        return text
+
+    lines = text.splitlines()
+    table_row_pattern = re.compile(r"^\s*\|.*\|\s*$")
+    table_sep_pattern = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$")
+
+    if not any(table_row_pattern.match(line) for line in lines):
+        return text
+
+    sanitized_lines = []
+    headers = None
+
+    for line in lines:
+        if not table_row_pattern.match(line):
+            sanitized_lines.append(line)
+            continue
+
+        if table_sep_pattern.match(line):
+            continue
+
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if not cells or all(not cell for cell in cells):
+            continue
+
+        if headers is None:
+            headers = cells
+            continue
+
+        pairs = []
+        for idx, value in enumerate(cells):
+            key = headers[idx] if idx < len(headers) and headers[idx] else f"Field {idx + 1}"
+            if value:
+                pairs.append(f"{key}: {value}")
+
+        if pairs:
+            sanitized_lines.append("- " + "; ".join(pairs))
+
+    output = "\n".join(sanitized_lines).strip()
+    return output or "Not mentioned in the paper."
 
 
 def _create_chat_with_fallback(messages: list[dict]):
@@ -248,6 +293,8 @@ Rules:
 - If the answer is not present, provide a brief inferred answer and label it as "Inferred:".
 - Cite page numbers like [Page 5] for any explicit claims.
 - Be concise, academic, and conversationally aware.
+- Strictly DO NOT use markdown tables or ASCII tables.
+- Present comparisons as bullet points or numbered lists only.
 - If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve what "that" refers to.
 - Do NOT say that prior context is missing when conversation history exists.
 - For confirmations like "are you sure?", explicitly confirm or correct the previous answer using the document context.
@@ -274,7 +321,7 @@ Latest question:
         ]
     )
 
-    return response.choices[0].message.content
+    return _sanitize_no_table_output(response.choices[0].message.content)
 
 
 def stream_answer(question, history=None):
@@ -357,6 +404,8 @@ Rules:
 - If the answer is not present, provide a brief inferred answer and label it as "Inferred:".
 - Cite page numbers like [Page 5] for any explicit claims.
 - Be concise, academic, and conversationally aware.
+- Strictly DO NOT use markdown tables or ASCII tables.
+- Present comparisons as bullet points or numbered lists only.
 - If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve what "that" refers to.
 - Do NOT say that prior context is missing when conversation history exists.
 - For confirmations like "are you sure?", explicitly confirm or correct the previous answer using the document context.
@@ -381,8 +430,12 @@ Latest question:
         {"role": "user", "content": prompt},
     ]
 
+    buffered_tokens = []
     for token in _stream_chat_with_fallback(stream_messages):
-        yield token
+        buffered_tokens.append(token)
+
+    sanitized = _sanitize_no_table_output("".join(buffered_tokens))
+    yield sanitized
 
 
 def answer_question_with_pgvector(
@@ -444,6 +497,8 @@ Rules:
 - If the answer is not explicitly in the context, say "Not explicitly mentioned in this paper."
 - Cite page numbers like [Page 5] for any explicit claims.
 - Be concise, academic, and conversationally aware.
+- Strictly DO NOT use markdown tables or ASCII tables.
+- Present comparisons as bullet points or numbered lists only.
 - If the question is a follow-up, use conversation history to resolve references.
 
 Conversation history:
@@ -468,4 +523,4 @@ Latest question:
         ]
     )
 
-    return response.choices[0].message.content
+    return _sanitize_no_table_output(response.choices[0].message.content)
