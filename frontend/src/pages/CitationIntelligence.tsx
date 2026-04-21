@@ -532,138 +532,205 @@ export default function CitationIntelligence() {
       </motion.section>
 
       <motion.div
-        className="rounded-2xl border border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.95)_100%)] p-4 sm:p-5 overflow-hidden premium-shadow"
+        className="relative rounded-3xl border border-border/60 bg-[linear-gradient(165deg,hsl(var(--card))_0%,hsl(var(--card)/0.93)_52%,hsl(214_92%_56%/.10)_100%)] p-4 sm:p-5 overflow-hidden premium-shadow"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease }}
       >
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono">Execution Mode</p>
-          <span className="text-[11px] px-2 py-0.5 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground">
-            {mode === "upload" ? "Paper Workflow" : "Discovery Workflow"}
-          </span>
-        </div>
+        <div className="pointer-events-none absolute -top-20 left-8 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 right-10 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
 
-        <div className="flex w-full flex-wrap items-center gap-1 p-1 rounded-xl bg-secondary/45 border border-border/60 mb-4 sm:w-fit">
-          <button
-            onClick={() => setMode("upload")}
-            className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 ${
-              mode === "upload"
-                ? "bg-background text-foreground shadow-sm border border-border/60"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Upload Paper
-          </button>
-          <button
-            onClick={() => setMode("discover")}
-            className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 ${
-              mode === "discover"
-                ? "bg-background text-foreground shadow-sm border border-border/60"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Project Discovery
-          </button>
-        </div>
+        <div className="relative z-10 space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-mono">Execution Mode</p>
+              <h2 className="mt-1 text-lg font-semibold text-foreground">Choose how you want to work</h2>
+              <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+                Upload a paper for reference extraction, or switch to discovery and fill in a project brief to find related papers.
+              </p>
+            </div>
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full border border-border/60 bg-background/45 text-foreground/80 shadow-sm w-fit">
+              {mode === "upload" ? "Paper Workflow" : "Discovery Workflow"}
+            </span>
+          </div>
 
-        {mode === "upload" ? (
-          <>
-            <input
-              type="file"
-              id="citation-file"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              accept=".pdf,.docx"
-            />
-            {/* Row 1: Choose File button */}
-            <label
-              htmlFor="citation-file"
-              className="inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl border border-border/60 bg-secondary/35 text-sm cursor-pointer hover:bg-secondary/55 transition-colors whitespace-nowrap mb-2"
+          <div className="flex w-full flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-background/45 border border-border/60 sm:w-fit shadow-[inset_0_1px_0_hsl(var(--border)/0.35)]">
+            <button
+              onClick={() => setMode("upload")}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs transition-all duration-200 ${
+                mode === "upload"
+                  ? "bg-[linear-gradient(140deg,hsl(var(--background))_0%,hsl(var(--background)/0.88)_100%)] text-foreground shadow-[0_10px_20px_-16px_hsl(var(--accent))] border border-border/60"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/25"
+              }`}
             >
-              <Upload className="w-4 h-4" />
-              Choose File
-            </label>
-            {/* Row 2: File name (always on its own line) */}
-            {file && (
-              <div className="w-full h-10 rounded-xl border border-border/60 bg-background/45 px-3 flex items-center mb-2 overflow-hidden">
-                <span className="text-sm text-foreground whitespace-nowrap">
-                  {file.name.length > 38 ? file.name.slice(0, 24) + "..." + file.name.slice(-10) : file.name}
-                </span>
-              </div>
-            )}
-            {!file && (
-              <p className="text-xs text-muted-foreground mb-2">No file selected</p>
-            )}
-            {/* Row 3: Analyze button — full width */}
-            <Button onClick={handleUploadRun} disabled={!file || loading} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 w-full rounded-xl shadow-[0_16px_32px_-22px_hsl(var(--accent))]">
-              <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
-              {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
-            </Button>
+              Upload Paper
+            </button>
+            <button
+              onClick={() => setMode("discover")}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs transition-all duration-200 ${
+                mode === "discover"
+                  ? "bg-[linear-gradient(140deg,hsl(var(--background))_0%,hsl(var(--background)/0.88)_100%)] text-foreground shadow-[0_10px_20px_-16px_hsl(var(--accent))] border border-border/60"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/25"
+              }`}
+            >
+              Project Discovery
+            </button>
+          </div>
 
-            <p className="text-xs text-muted-foreground mt-2">PDF/DOCX • Max 12MB</p>
-          </>
-        ) : (
-          <>
-            <div className="space-y-3.5">
-              <div className="space-y-2 rounded-xl border border-border/60 bg-secondary/20 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <label className="text-xs uppercase tracking-wider text-muted-foreground">Topic preset</label>
-                  {topicPreset !== "auto" && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 bg-background/40 text-foreground/80 uppercase tracking-wider">
-                      Manual
-                    </span>
+          {mode === "upload" ? (
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-4">
+              <div className="rounded-2xl border border-border/60 bg-[linear-gradient(160deg,hsl(var(--background)/0.55)_0%,hsl(var(--background)/0.25)_100%)] p-4 shadow-[inset_0_1px_0_hsl(var(--border)/0.35)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Upload className="w-4 h-4 text-accent" />
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Step 1 · Select a paper</p>
+                </div>
+
+                <input
+                  type="file"
+                  id="citation-file"
+                  className="hidden"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  accept=".pdf,.docx"
+                />
+
+                <label
+                  htmlFor="citation-file"
+                  className="flex min-h-24 w-full items-center justify-between gap-4 rounded-2xl border border-dashed border-border/60 bg-background/45 px-4 py-4 cursor-pointer hover:border-accent/45 hover:bg-background/55 transition-colors"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Drop your PDF or DOCX here</p>
+                    <p className="text-xs text-muted-foreground mt-1">Pick one file to extract references and run citation analysis.</p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-border/60 bg-secondary/30 px-3 py-1 text-xs text-foreground/85">
+                    Browse
+                  </span>
+                </label>
+
+                <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Selected file</p>
+                  {file ? (
+                    <p className="text-sm text-foreground break-all">{file.name}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No file selected yet</p>
                   )}
                 </div>
-                <select
-                  value={topicPreset}
-                  onChange={(e) => setTopicPreset(e.target.value as TopicPreset)}
-                  className="h-11 w-full rounded-xl border border-border/60 bg-background/45 px-3 text-sm text-foreground focus:outline-none"
-                >
-                  {topicPresetOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {topicPresetOptions.find((option) => option.value === topicPreset)?.description}
-                </p>
-                {topicPreset === "auto" && inferredTopicPreset && (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Suggested preset: <span className="text-foreground font-medium">{topicPresetOptions.find((option) => option.value === inferredTopicPreset)?.label}</span>
-                    . You can keep auto-detect or override it manually.
-                  </p>
-                )}
+
+                <p className="text-xs text-muted-foreground mt-3">PDF/DOCX • Max 12MB</p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-              <input
-                type="text"
-                value={projectTitle}
-                onChange={(e) => setProjectTitle(e.target.value)}
-                placeholder="Project title (required)"
-                className="h-11 w-full rounded-xl border border-border/60 bg-background/45 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-              />
-              <input
-                type="text"
-                value={basicDetails}
-                onChange={(e) => setBasicDetails(e.target.value)}
-                placeholder="Basic details (optional): domain, method, dataset"
-                className="h-11 w-full rounded-xl border border-border/60 bg-background/45 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-              />
-              <Button onClick={handleDiscoverRun} disabled={!projectTitle.trim() || loading} className="h-11 w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shrink-0 whitespace-nowrap lg:w-auto rounded-xl shadow-[0_16px_32px_-22px_hsl(var(--accent))]">
-                <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
-                {loading ? "Discovering papers..." : "Discover 30+ Papers"}
-              </Button>
+              <div className="rounded-2xl border border-border/60 bg-[linear-gradient(165deg,hsl(var(--card)/0.98)_0%,hsl(var(--card)/0.88)_100%)] p-4 shadow-[0_14px_30px_-28px_hsl(var(--accent))]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-accent" />
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Step 2 · Run analysis</p>
+                </div>
+                <p className="text-sm text-foreground/90 leading-relaxed">
+                  After selection, the system extracts references, matches them with Semantic Scholar, and ranks the results by citation signal.
+                </p>
+                <Button
+                  onClick={handleUploadRun}
+                  disabled={!file || loading}
+                  className="mt-4 h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shadow-[0_16px_32px_-22px_hsl(var(--accent))]"
+                >
+                  <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+                  {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
+                </Button>
+                <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-background/35 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">What happens next</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">1. Extract references from the uploaded file.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">2. Match papers against Semantic Scholar metadata.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">3. Rank the matched references by citation impact.</p>
+                </div>
               </div>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-4 items-start">
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-border/60 bg-[linear-gradient(160deg,hsl(var(--background)/0.55)_0%,hsl(var(--background)/0.25)_100%)] p-4 shadow-[inset_0_1px_0_hsl(var(--border)/0.35)]">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Step 1 · Choose a domain</p>
+                      <p className="text-sm text-foreground/90 mt-1">Use a preset or let the system infer one from your brief.</p>
+                    </div>
+                    {topicPreset !== "auto" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 bg-background/50 text-foreground/85 uppercase tracking-wider">
+                        Manual
+                      </span>
+                    )}
+                  </div>
+                  <select
+                    value={topicPreset}
+                    onChange={(e) => setTopicPreset(e.target.value as TopicPreset)}
+                    className="h-12 w-full rounded-2xl border border-border/60 bg-background/60 px-4 text-sm text-foreground focus:outline-none"
+                  >
+                    {topicPresetOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-3">
+                    {topicPresetOptions.find((option) => option.value === topicPreset)?.description}
+                  </p>
+                  {topicPreset === "auto" && inferredTopicPreset && (
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+                      Suggested preset: <span className="text-foreground font-medium">{topicPresetOptions.find((option) => option.value === inferredTopicPreset)?.label}</span>. You can keep auto-detect or override it manually.
+                    </p>
+                  )}
+                </div>
 
-            <p className="text-xs text-muted-foreground mt-2">Finds up to 35 related papers from Semantic Scholar for your topic</p>
-          </>
-        )}
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <label className="space-y-2 rounded-2xl border border-border/60 bg-background/45 p-3.5">
+                    <span className="block text-xs uppercase tracking-wider text-muted-foreground">Project title</span>
+                    <input
+                      type="text"
+                      value={projectTitle}
+                      onChange={(e) => setProjectTitle(e.target.value)}
+                      placeholder="Required: e.g. brain tumor detection with CNNs"
+                      className="h-11 w-full rounded-xl border border-border/60 bg-background/60 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                    />
+                  </label>
 
-        {error && <p className="text-sm text-destructive mt-3">{error}</p>}
+                  <label className="space-y-2 rounded-2xl border border-border/60 bg-background/45 p-3.5">
+                    <span className="block text-xs uppercase tracking-wider text-muted-foreground">Basic details</span>
+                    <input
+                      type="text"
+                      value={basicDetails}
+                      onChange={(e) => setBasicDetails(e.target.value)}
+                      placeholder="Optional: method, dataset, task, or constraints"
+                      className="h-11 w-full rounded-xl border border-border/60 bg-background/60 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border/60 bg-[linear-gradient(165deg,hsl(var(--card)/0.98)_0%,hsl(var(--card)/0.88)_100%)] p-4 shadow-[0_14px_30px_-28px_hsl(var(--accent))]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-accent" />
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Step 2 · Generate results</p>
+                </div>
+                <p className="text-sm text-foreground/90 leading-relaxed">
+                  This panel turns your short project brief into a ranked list of related papers, then generates reading recommendations from the discovered evidence.
+                </p>
+                <Button
+                  onClick={handleDiscoverRun}
+                  disabled={!projectTitle.trim() || loading}
+                  className="mt-4 h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shadow-[0_16px_32px_-22px_hsl(var(--accent))]"
+                >
+                  <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+                  {loading ? "Discovering papers..." : "Discover 30+ Papers"}
+                </Button>
+                <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-background/35 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Writing guide</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Use the title field for the exact project name.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Add methods, datasets, or constraints in the second field to improve retrieval quality.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">The tool can auto-detect a topic preset if your brief is descriptive enough.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="text-sm text-destructive mt-3">{error}</p>}
+        </div>
       </motion.div>
 
       {!report && !loading && (
@@ -878,6 +945,21 @@ export default function CitationIntelligence() {
                     <p className="text-sm font-semibold">{yearwiseCounts.length}</p>
                   </div>
                 </div>
+                {yearwiseCounts.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Year Distribution</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {yearwiseCounts.slice(0, 8).map((item) => (
+                        <span
+                          key={`year-bucket-${item.year}`}
+                          className="text-[10px] px-2 py-1 rounded-full border border-border/60 bg-secondary/30 text-foreground"
+                        >
+                          {item.year}: {item.count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </section>
 
               <section className="rounded-2xl border border-border/60 bg-card p-4 premium-shadow">
@@ -952,7 +1034,41 @@ export default function CitationIntelligence() {
                         <div className="space-y-1.5">
                           {recommendations.must_read.slice(0, 4).map((item, index) => (
                             <div key={`${item.title || "must-read"}-${index}`} className="rounded-lg border border-border/50 px-2.5 py-2">
-                              <p className="text-xs font-medium leading-snug">{item.title || "Untitled"}</p>
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-xs font-medium leading-snug">{item.title || "Untitled"}</p>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-border/60 bg-secondary/30 text-foreground/85 uppercase">
+                                  {item.priority || "medium"}
+                                </span>
+                              </div>
+                              {item.why_read && (
+                                <p className="text-[11px] text-foreground/80 mt-1 leading-relaxed">{item.why_read}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!!recommendations.reading_path?.length && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Reading Path</p>
+                        <div className="space-y-1.5">
+                          {recommendations.reading_path.slice(0, 3).map((step, index) => (
+                            <div key={`reading-step-${index}`} className="rounded-lg border border-border/50 px-2.5 py-2 bg-secondary/20">
+                              <p className="text-[11px] text-foreground/90 leading-relaxed">{index + 1}. {step}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!!recommendations.coverage_gaps?.length && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Coverage Gaps</p>
+                        <div className="space-y-1.5">
+                          {recommendations.coverage_gaps.slice(0, 3).map((gap, index) => (
+                            <div key={`gap-${index}`} className="rounded-lg border border-border/50 px-2.5 py-2 bg-secondary/20">
+                              <p className="text-[11px] text-foreground/85 leading-relaxed">{gap}</p>
                             </div>
                           ))}
                         </div>

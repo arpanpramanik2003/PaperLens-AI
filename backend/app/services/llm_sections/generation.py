@@ -495,7 +495,7 @@ def generate_citation_recommendations(
 ) -> dict:
 
                 compact_top_cited = []
-                for entry in (top_cited or [])[:20]:
+                for entry in (top_cited or [])[:35]:
                         compact_top_cited.append(
                                 {
                                         "title": entry.get("title"),
@@ -556,6 +556,10 @@ Rules:
 - Keep must_read between 3 and 6 entries when possible.
 - reading_path must contain exactly 3 concise steps.
 - next_search_queries must contain 3 to 5 practical scholar-search queries.
+- Use a professional research-advisor tone (formal, precise, and decision-oriented).
+- why_read must be constructive and specific: mention method relevance, evidence quality, or expected practical impact.
+- coverage_gaps should identify concrete technical blind spots (dataset scope, baseline strength, evaluation protocol, reproducibility, or deployment constraints).
+- Prioritize recommendations that create a coherent progression from fundamentals to advanced/adjacent work.
 - If mode is project discovery, avoid claiming an uploaded paper was analyzed.
 
 Mode:

@@ -1,6 +1,11 @@
 import logging
 import re
 
+from app.services.model_fallback import (
+    DEFAULT_FALLBACK_MODELS,
+    DEFAULT_PRIMARY_MODEL,
+    create_completion_with_fallback,
+)
 from app.services.retrieval import search_chunks
 
 from .analysis import get_first_page_chunks, get_total_pages
@@ -10,18 +15,9 @@ from .client import client
 logger = logging.getLogger(__name__)
 
 # Dedicated models for conversation QA (kept separate from summary model).
-QA_PRIMARY_MODEL = "openai/gpt-oss-120b"
-QA_FALLBACK_MODEL = "llama-3.3-70b-versatile"
+QA_PRIMARY_MODEL = DEFAULT_PRIMARY_MODEL
+QA_FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
 QA_MAX_TOKENS = 900
-
-
-def _log_model_event(event: str, model: str, extra: str = "") -> None:
-
-    message = f"[QA_MODEL] event={event} model={model}"
-    if extra:
-        message += f" {extra}"
-    print(message)
-    logger.info(message)
 
 
 def _sanitize_no_table_output(text: str) -> str:
@@ -70,45 +66,27 @@ def _sanitize_no_table_output(text: str) -> str:
 
 def _create_chat_with_fallback(messages: list[dict]):
 
-    try:
-        response = client.chat.completions.create(
-            model=QA_PRIMARY_MODEL,
-            max_tokens=QA_MAX_TOKENS,
-            messages=messages,
-        )
-        _log_model_event("primary_success", QA_PRIMARY_MODEL)
-        return response
-    except Exception as primary_error:
-        _log_model_event("primary_failed", QA_PRIMARY_MODEL, f"error={primary_error}")
-
-        response = client.chat.completions.create(
-            model=QA_FALLBACK_MODEL,
-            max_tokens=QA_MAX_TOKENS,
-            messages=messages,
-        )
-        _log_model_event("fallback_success", QA_FALLBACK_MODEL)
-        return response
+    return create_completion_with_fallback(
+        llm_client=client,
+        task_name="qa_conversation",
+        primary_model=QA_PRIMARY_MODEL,
+        fallback_models=QA_FALLBACK_MODELS,
+        max_tokens=QA_MAX_TOKENS,
+        messages=messages,
+    )
 
 
 def _stream_chat_with_fallback(messages: list[dict]):
 
-    try:
-        response = client.chat.completions.create(
-            model=QA_PRIMARY_MODEL,
-            max_tokens=QA_MAX_TOKENS,
-            messages=messages,
-            stream=True,
-        )
-        _log_model_event("stream_primary_success", QA_PRIMARY_MODEL)
-    except Exception as primary_error:
-        _log_model_event("stream_primary_failed", QA_PRIMARY_MODEL, f"error={primary_error}")
-        response = client.chat.completions.create(
-            model=QA_FALLBACK_MODEL,
-            max_tokens=QA_MAX_TOKENS,
-            messages=messages,
-            stream=True,
-        )
-        _log_model_event("stream_fallback_success", QA_FALLBACK_MODEL)
+    response = create_completion_with_fallback(
+        llm_client=client,
+        task_name="qa_conversation_stream",
+        primary_model=QA_PRIMARY_MODEL,
+        fallback_models=QA_FALLBACK_MODELS,
+        max_tokens=QA_MAX_TOKENS,
+        messages=messages,
+        stream=True,
+    )
 
     for chunk in response:
         delta = chunk.choices[0].delta

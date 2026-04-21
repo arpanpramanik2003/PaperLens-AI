@@ -1115,7 +1115,7 @@ def discover_citations_by_topic(
     recent_year_cutoff = current_year - 3
     query_plan = _build_discovery_query_plan(normalized_title, normalized_details, topic_preset=topic_preset)
     search_queries = query_plan.get("search_queries") or [normalized_title]
-    fetch_limit_per_query = min(max(requested_limit, 10), 20)
+    fetch_limit_per_query = min(max(requested_limit, 15), 100)
 
     client = SemanticScholarClient(semantic_scholar_api_key)
 
