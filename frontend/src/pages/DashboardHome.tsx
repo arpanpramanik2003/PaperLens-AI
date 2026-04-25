@@ -131,13 +131,15 @@ export default function DashboardHome() {
         </div>
       </motion.section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <section className="grid grid-cols-2 gap-4">
         {dashboardData.stats.map((s, i) => {
           const Icon = iconMap[s.icon as keyof typeof iconMap] || FileText;
+          const isLastOddCard = dashboardData.stats.length % 2 !== 0 && i === dashboardData.stats.length - 1;
+
           return (
             <motion.div
               key={s.label}
-              className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 premium-shadow"
+              className={`relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 premium-shadow ${isLastOddCard ? "col-span-2" : ""}`}
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: i * 0.06, ease }}
