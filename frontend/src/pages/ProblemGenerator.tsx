@@ -560,7 +560,7 @@ export default function ProblemGenerator() {
               {ideas.map((idea, i) => (
                 <motion.div
                   key={idea.title + i}
-                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 hover:border-accent/35 transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_20px_45px_-32px_hsl(var(--accent))]"
+                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 hover:border-accent/35 transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_20px_45px_-32px_hsl(var(--accent))] flex flex-col h-full"
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: i * 0.08, ease }}
@@ -574,7 +574,7 @@ export default function ProblemGenerator() {
                   </div>
 
                   <h3 className="relative z-10 text-sm font-semibold text-foreground mb-2 leading-snug">{idea.title}</h3>
-                  <p className="relative z-10 text-xs text-muted-foreground leading-relaxed mb-3">{idea.desc}</p>
+                  <p className="relative z-10 text-xs text-muted-foreground leading-relaxed text-justify mb-3">{idea.desc}</p>
 
                   <div className="relative z-10 flex flex-wrap gap-1.5 mb-4">
                     {(idea.tags || []).map((tag: string) => (
@@ -585,12 +585,12 @@ export default function ProblemGenerator() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="relative z-10 w-full gap-1.5 text-xs border-border/60 bg-secondary/40 text-foreground hover:bg-secondary hover:text-foreground hover:border-border transition-colors rounded-xl"
+                    className="relative z-10 w-full gap-1.5 text-xs border-border/60 bg-secondary/40 text-foreground hover:bg-secondary hover:text-foreground hover:border-border transition-colors rounded-xl mt-auto"
                     onClick={() => handleUseIdea(idea, i)}
                     disabled={expandingIdeaIndex === i}
                   >
                     {expandingIdeaIndex === i ? "Loading details..." : expandedIdeaIndex === i ? "Hide details" : "Use this idea"}
-                    <ArrowRight className="w-3 h-3" />
+                    <ArrowRight className="w-3 h-3 flex-shrink-0" />
                   </Button>
                 </motion.div>
               ))}
@@ -602,14 +602,14 @@ export default function ProblemGenerator() {
       <AnimatePresence>
         {selectedIdea && selectedIdeaDetails && (
           <motion.div
-            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            className="fixed inset-0 lg:left-[var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-2 sm:p-6 flex items-end sm:items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setExpandedIdeaIndex(null)}
           >
             <motion.div
-              className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-gradient-to-b from-card to-card/95 shadow-2xl premium-shadow"
+              className="w-full max-w-[calc(100vw-1rem)] sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-border/60 bg-gradient-to-b from-card to-card/95 shadow-2xl premium-shadow"
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.96 }}
@@ -617,7 +617,7 @@ export default function ProblemGenerator() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="sticky top-0 z-10 bg-gradient-to-r from-card via-card to-accent/5 px-6 sm:px-8 py-5 border-b border-border/30 flex items-start justify-between gap-4 backdrop-blur-sm">
+              <div className="sticky top-0 z-10 bg-gradient-to-r from-card via-card to-accent/5 px-4 sm:px-8 py-4 sm:py-5 border-b border-border/30 flex items-start justify-between gap-3 sm:gap-4 backdrop-blur-sm">
                 <div className="min-w-0">
                   <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight truncate">
                     {selectedIdeaDetails.title || selectedIdea.title}
@@ -635,14 +635,14 @@ export default function ProblemGenerator() {
               </div>
 
               {/* Content */}
-              <div className="px-6 sm:px-8 py-7 space-y-7">
+              <div className="px-4 sm:px-8 py-5 sm:py-7 space-y-6 sm:space-y-7">
                 {/* Problem Statement Section */}
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-2">
                     <div className="w-1.5 h-6 bg-accent rounded-full" />
                     <p className="text-xs uppercase tracking-widest font-semibold text-accent">Problem Statement</p>
                   </div>
-                  <p className="text-sm leading-relaxed text-foreground/90 pl-2 border-l-2 border-accent/20 py-2">
+                  <p className="text-sm leading-relaxed text-foreground/90 text-justify pl-2 border-l-2 border-accent/20 py-2">
                     {selectedIdeaDetails.problem_statement || selectedIdea.desc}
                   </p>
                 </div>
@@ -752,7 +752,7 @@ export default function ProblemGenerator() {
                 <div className="pt-4 border-t border-border/20 flex flex-col sm:flex-row gap-3">
                   <Button
                     variant="outline"
-                    className="gap-2 flex-1"
+                    className="gap-2 w-full sm:flex-1"
                     onClick={handleSaveBrief}
                     disabled={saving}
                   >
@@ -762,7 +762,7 @@ export default function ProblemGenerator() {
 
                   <Button 
                     variant="outline"
-                    className="gap-2 flex-1"
+                    className="gap-2 w-full sm:flex-1"
                     onClick={() => {
                       setExportMenuOpen(false);
                       setExpandedIdeaIndex(null);
@@ -771,7 +771,7 @@ export default function ProblemGenerator() {
                     Close
                   </Button>
 
-                  <div className="flex-1" ref={exportMenuRef}>
+                  <div className="w-full sm:flex-1" ref={exportMenuRef}>
                     <Button
                       className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 justify-between"
                       onClick={() => setExportMenuOpen((prev) => !prev)}
