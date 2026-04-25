@@ -173,7 +173,7 @@ export default function DashboardLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen flex-shrink-0 transition-all duration-300 overflow-hidden border-r border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.94)_100%)] ${
+        className={`fixed top-0 left-0 z-40 h-screen flex-shrink-0 transition-all duration-300 overflow-hidden lg:overflow-visible border-r border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.94)_100%)] ${
           sidebarOpen ? "w-64" : "w-0 lg:w-16"
         }`}
       >
@@ -206,11 +206,18 @@ export default function DashboardLayout() {
                       ? "bg-gradient-to-r from-accent/15 to-accent/5 text-accent border border-accent/20 shadow-[0_8px_22px_-16px_hsl(var(--accent))]"
                       : "text-muted-foreground border border-transparent hover:text-foreground hover:bg-secondary/40 hover:border-border/50"
                   }`}
+                  title={!sidebarOpen ? item.title : undefined}
                 >
                   {isActive && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-accent rounded-r-full" />
                   )}
                   <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? "text-accent" : "text-muted-foreground group-hover:text-foreground"}`} strokeWidth={1.6} />
+                  {!sidebarOpen && (
+                    <span className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-50 hidden -translate-y-1/2 rounded-lg border border-border/70 bg-card/95 px-2.5 py-1.5 text-xs font-medium text-foreground shadow-xl opacity-0 translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 lg:block">
+                      <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border-l border-t border-border/70 bg-card/95" />
+                      {item.title}
+                    </span>
+                  )}
                   {sidebarOpen && <span className="font-medium tracking-wide text-[13px]">{item.title}</span>}
                 </Link>
               );
