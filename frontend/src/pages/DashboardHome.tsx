@@ -147,7 +147,7 @@ export default function DashboardHome() {
         </div>
       </motion.section>
 
-      <section className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
+      <section className="grid grid-cols-2 gap-4 lg:[grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
         {dashboardData.stats.map((s, i) => {
           const Icon = iconMap[s.icon as keyof typeof iconMap] || FileText;
 
