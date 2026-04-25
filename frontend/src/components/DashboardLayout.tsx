@@ -258,7 +258,7 @@ export default function DashboardLayout() {
         style={{ ["--dashboard-sidebar-offset" as string]: sidebarOpen ? "16rem" : "4rem" }}
       >
         {/* Top Navbar */}
-        <header className="fixed top-0 left-0 right-0 lg:left-[var(--dashboard-sidebar-offset,4rem)] h-14 lg:h-16 flex items-center justify-between px-4 lg:px-6 border-b border-border/60 z-30 flex-shrink-0 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72 bg-background/72">
+        <header className="fixed top-0 left-0 right-0 h-14 flex items-center justify-between px-4 border-b border-border/60 z-30 flex-shrink-0 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72 bg-background/72 lg:sticky lg:top-0 lg:h-16 lg:px-6 lg:z-20 lg:glass-surface lg:supports-[backdrop-filter]:bg-background/70">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -326,7 +326,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-4 pt-16 lg:p-7 lg:pt-24 overflow-auto">
+        <main className="flex-1 p-4 pt-16 lg:p-7 overflow-auto">
           <Outlet />
         </main>
       </div>

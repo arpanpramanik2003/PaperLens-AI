@@ -13,6 +13,7 @@ const iconMap = {
   FlaskConical,
   Lightbulb,
   ScanSearch,
+  Database,
   BarChart3,
 };
 
@@ -21,8 +22,19 @@ const defaultStats = [
   { label: "Experiments Planned", value: "0", icon: "FlaskConical", change: "Get started" },
   { label: "Ideas Generated", value: "0", icon: "Lightbulb", change: "Get started" },
   { label: "Gaps Detected", value: "0", icon: "ScanSearch", change: "Get started" },
+  { label: "Datasets & Benchmarks", value: "0", icon: "Database", change: "Get started" },
   { label: "Citations Analyzed", value: "0", icon: "BarChart3", change: "Get started" },
 ];
+
+const normalizeStats = (stats: typeof defaultStats): typeof defaultStats => {
+  const hasDatasetBenchmarkStat = stats.some((s) => /dataset|benchmark/i.test(s.label));
+  if (hasDatasetBenchmarkStat) return stats;
+
+  return [
+    ...stats,
+    { label: "Datasets & Benchmarks", value: "0", icon: "Database", change: "Get started" },
+  ];
+};
 
 const quickActions = [
   { title: "Analyze Paper", desc: "Upload & analyze a new PDF", path: "/dashboard/analyzer", icon: FileText },
@@ -59,6 +71,7 @@ export default function DashboardHome() {
               { label: "Experiments Planned", value: "12", icon: "FlaskConical", change: "+2 this week" },
               { label: "Ideas Generated", value: "89", icon: "Lightbulb", change: "+15 this week" },
               { label: "Gaps Detected", value: "31", icon: "ScanSearch", change: "+5 this week" },
+              { label: "Datasets & Benchmarks", value: "41", icon: "Database", change: "+6 this week" },
               { label: "Citations Analyzed", value: "19", icon: "BarChart3", change: "+4 this week" },
             ],
             recentPapers: [
@@ -76,7 +89,10 @@ export default function DashboardHome() {
         const res = await apiClient.fetch("/api/dashboard", {}, getToken);
         if (res.ok) {
           const data = await res.json();
-          setDashboardData(data);
+          setDashboardData({
+            ...data,
+            stats: normalizeStats(Array.isArray(data.stats) ? data.stats : defaultStats),
+          });
         }
       } catch (err) {
         console.error(err);
@@ -131,15 +147,14 @@ export default function DashboardHome() {
         </div>
       </motion.section>
 
-      <section className="grid grid-cols-2 gap-4">
+      <section className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
         {dashboardData.stats.map((s, i) => {
           const Icon = iconMap[s.icon as keyof typeof iconMap] || FileText;
-          const isLastOddCard = dashboardData.stats.length % 2 !== 0 && i === dashboardData.stats.length - 1;
 
           return (
             <motion.div
               key={s.label}
-              className={`relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 premium-shadow ${isLastOddCard ? "col-span-2" : ""}`}
+              className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-5 premium-shadow"
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: i * 0.06, ease }}

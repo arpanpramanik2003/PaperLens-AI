@@ -37,6 +37,10 @@ async def get_dashboard(user_id: str = Depends(get_current_user), db: Session = 
     experiments_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "plan_experiment").count()
     ideas_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "generate_problems").count()
     gaps_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "detect_gaps").count()
+    dataset_benchmark_count = db.query(Activity).filter(
+        Activity.user_id == user_id,
+        Activity.action_type.in_(["find_datasets_benchmarks", "dataset_benchmark_finder"])
+    ).count()
     citation_count = db.query(Activity).filter(
         Activity.user_id == user_id,
         Activity.action_type.in_(["citation_intelligence", "citation_discovery"])
@@ -67,6 +71,7 @@ async def get_dashboard(user_id: str = Depends(get_current_user), db: Session = 
             { "label": "Experiments Planned", "value": str(experiments_count), "icon": "FlaskConical", "change": "" },
             { "label": "Ideas Generated", "value": str(ideas_count), "icon": "Lightbulb", "change": "" },
             { "label": "Gaps Detected", "value": str(gaps_count), "icon": "ScanSearch", "change": "" },
+            { "label": "Datasets & Benchmarks", "value": str(dataset_benchmark_count), "icon": "Database", "change": "" },
             { "label": "Citations Analyzed", "value": str(citation_count), "icon": "BarChart3", "change": "" },
         ],
         "recentPapers": recent_papers_formatted
