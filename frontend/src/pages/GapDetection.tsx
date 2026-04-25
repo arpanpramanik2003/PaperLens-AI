@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScanSearch, Info, Sparkles, FileText, Upload, Copy, Check, BookmarkPlus, Compass, ShieldAlert, SearchCheck, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
@@ -229,10 +230,10 @@ export default function GapDetection() {
           )}
 
           <div className="mt-6 flex justify-end">
-            <Button onClick={handleDetect} disabled={loading} className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 rounded-xl">
+            <ShinyButton onClick={handleDetect} disabled={loading} className="w-full sm:w-auto px-8 rounded-xl">
               <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
               {loading ? "Searching for Gaps..." : "Detect Gaps"}
-            </Button>
+            </ShinyButton>
           </div>
         </motion.div>
 

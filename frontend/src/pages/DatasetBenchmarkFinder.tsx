@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Database, Trophy, Wrench, Sparkles, ArrowRight, X, Info, BookmarkPlus, Compass, SearchCheck, ListChecks, BadgeCheck } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api-client";
@@ -301,10 +302,10 @@ export default function DatasetBenchmarkFinder() {
               />
             </div>
 
-            <Button onClick={handleFind} disabled={loading} className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90 gap-2 rounded-xl">
+            <ShinyButton onClick={handleFind} disabled={loading} className="w-full sm:w-auto rounded-xl">
               <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
               {loading ? "Finding recommendations..." : "Find Datasets & Benchmarks"}
-            </Button>
+            </ShinyButton>
           </div>
         </motion.div>
 

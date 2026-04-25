@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2, RefreshCw, Compass, ShieldCheck, MessageSquareText, ScanText, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
@@ -542,9 +543,9 @@ export default function PaperAnalyzer() {
                     placeholder="Ask about this paper..."
                     className="text-sm bg-secondary/50 border-border/50 rounded-xl"
                   />
-                  <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 flex-shrink-0 rounded-xl">
+                  <ShinyButton type="submit" variant="inline" className="h-9 w-9 p-0 flex-shrink-0 rounded-xl">
                     <Send className="w-4 h-4" />
-                  </Button>
+                  </ShinyButton>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {quickPromptSuggestions.map((prompt) => (

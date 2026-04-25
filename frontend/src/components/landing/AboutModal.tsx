@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 
 type AboutModalProps = {
   open: boolean;
@@ -48,12 +48,13 @@ export default function AboutModal({ open, onClose }: AboutModalProps) {
         </div>
 
         <div className="mt-8 flex gap-3">
-          <Button
+          <ShinyButton
+            variant="inline"
             onClick={onClose}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
+            className="rounded-xl"
           >
             Close
-          </Button>
+          </ShinyButton>
         </div>
       </motion.div>
     </div>

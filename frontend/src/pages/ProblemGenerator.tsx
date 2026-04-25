@@ -5,6 +5,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
@@ -509,10 +510,10 @@ export default function ProblemGenerator() {
             </div>
           </div>
 
-          <Button onClick={handleGenerate} disabled={loading} className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90 gap-2 rounded-xl">
+          <ShinyButton onClick={handleGenerate} disabled={loading} className="w-full sm:w-auto rounded-xl">
             <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
             {loading ? "Ideating..." : "Generate Ideas"}
-          </Button>
+          </ShinyButton>
         </motion.div>
 
         <motion.aside
@@ -772,8 +773,8 @@ export default function ProblemGenerator() {
                   </Button>
 
                   <div className="w-full sm:flex-1" ref={exportMenuRef}>
-                    <Button
-                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 justify-between"
+                    <ShinyButton
+                      className="w-full rounded-xl"
                       onClick={() => setExportMenuOpen((prev) => !prev)}
                     >
                       <span className="inline-flex items-center gap-2">
@@ -781,7 +782,7 @@ export default function ProblemGenerator() {
                         Export Brief
                       </span>
                       <ChevronDown className={`w-4 h-4 transition-transform ${exportMenuOpen ? "rotate-180" : ""}`} />
-                    </Button>
+                    </ShinyButton>
 
                     <AnimatePresence>
                       {exportMenuOpen && (

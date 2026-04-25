@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Palette, Moon, Bookmark, Trash2, Loader2, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@clerk/clerk-react";
@@ -228,14 +229,14 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <Button
-                  size="sm"
+                <ShinyButton
+                  variant="inline"
                   onClick={handleSaveProfile}
                   disabled={isSaving}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-xl shadow-[0_16px_30px_-22px_hsl(var(--accent))]"
+                  className="h-9 px-4 rounded-xl"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
-                </Button>
+                </ShinyButton>
                 {saveMessage && <span className="text-sm text-accent">{saveMessage}</span>}
               </div>
             </div>

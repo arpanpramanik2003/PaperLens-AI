@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Upload, BarChart3, ExternalLink, SearchX, Sparkles, FileText, Loader2, CheckCircle2, BookOpen, Clock3, XCircle, BookmarkPlus } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { apiClient } from "@/lib/api-client";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
@@ -626,14 +627,14 @@ export default function CitationIntelligence() {
                 <p className="text-sm text-foreground/90 leading-relaxed">
                   After selection, the system extracts references, matches them with Semantic Scholar, and ranks the results by citation signal.
                 </p>
-                <Button
+                <ShinyButton
                   onClick={handleUploadRun}
                   disabled={!file || loading}
-                  className="mt-4 h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shadow-[0_16px_32px_-22px_hsl(var(--accent))]"
+                  className="mt-4 h-11 w-full rounded-xl px-8"
                 >
                   <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
                   {loading ? "Analyzing citations..." : "Run Citation Intelligence"}
-                </Button>
+                </ShinyButton>
                 <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-background/35 p-3">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground">What happens next</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">1. Extract references from the uploaded file.</p>
@@ -711,14 +712,14 @@ export default function CitationIntelligence() {
                 <p className="text-sm text-foreground/90 leading-relaxed">
                   This panel turns your short project brief into a ranked list of related papers, then generates reading recommendations from the discovered evidence.
                 </p>
-                <Button
+                <ShinyButton
                   onClick={handleDiscoverRun}
                   disabled={!projectTitle.trim() || loading}
-                  className="mt-4 h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 gap-2 px-8 shadow-[0_16px_32px_-22px_hsl(var(--accent))]"
+                  className="mt-4 h-11 w-full rounded-xl px-8"
                 >
                   <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
                   {loading ? "Discovering papers..." : "Discover 30+ Papers"}
-                </Button>
+                </ShinyButton>
                 <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-background/35 p-3">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Writing guide</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">Use the title field for the exact project name.</p>

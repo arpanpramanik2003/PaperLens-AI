@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
 import { FlaskConical, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
@@ -305,10 +306,10 @@ export default function ExperimentPlanner() {
             </div>
 
             <div className="flex items-end">
-              <Button onClick={handleGenerate} disabled={loading} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2 rounded-xl">
+              <ShinyButton onClick={handleGenerate} disabled={loading} className="w-full rounded-xl">
                 <FlaskConical className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
                 {loading ? "Planning..." : "Generate Plan"}
-              </Button>
+              </ShinyButton>
             </div>
           </div>
         </motion.div>

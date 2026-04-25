@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -18,9 +18,9 @@ export default function CTASection() {
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight mb-4">Ready to accelerate your research?</h2>
           <p className="text-muted-foreground mb-8 text-sm sm:text-base">Start analyzing papers in minutes. No credit card required.</p>
           <Link to="/signup">
-            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 w-full sm:w-auto">
+            <ShinyButton variant="hero" className="w-full sm:w-auto rounded-full px-7 py-3 text-base">
               Get Started Free <ArrowRight className="w-4 h-4" />
-            </Button>
+            </ShinyButton>
           </Link>
         </motion.div>
       </div>
