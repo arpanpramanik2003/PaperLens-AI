@@ -653,6 +653,87 @@
   }
 }
 
+/* ── Mobile Hero Feature Chips ── */
+.hero-mobile-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--secondary) / 0.45);
+  border: 1px solid hsl(var(--border) / 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dark .hero-mobile-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Mobile Hero Stats Row ── */
+.hero-mobile-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.85rem;
+  background: hsl(var(--secondary) / 0.35);
+  border: 1px solid hsl(var(--border) / 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.dark .hero-mobile-stats {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.hero-mobile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 1;
+}
+
+.hero-mobile-stat-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, rgb(6, 182, 212), rgb(139, 92, 246));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-mobile-stat-label {
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.hero-mobile-stat-divider {
+  width: 1px;
+  height: 28px;
+  background: hsl(var(--border) / 0.4);
+  flex-shrink: 0;
+}
+
+.dark .hero-mobile-stat-divider {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* ─── Modern Custom Scrollbar ─── */
 
 /* Firefox */

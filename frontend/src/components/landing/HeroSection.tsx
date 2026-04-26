@@ -1,5 +1,5 @@
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Sparkles, FileSearch, Quote, Lightbulb, FlaskConical, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
 import ShaderBackground from "@/components/ui/shader-background";
@@ -88,19 +88,21 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
       <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[760px] rounded-full bg-transparent dark:bg-accent/5 blur-[140px]" />
 
       <div className="relative z-20 w-full max-w-4xl mx-auto px-4 sm:px-6 text-center">
+        {/* ─── Badge ─── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease }}
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border/50 bg-secondary/50 text-xs sm:text-sm text-muted-foreground mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border/50 bg-secondary/50 text-xs sm:text-sm text-muted-foreground mb-6 sm:mb-8">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             AI-Powered Research Assistant
           </div>
         </motion.div>
 
+        {/* ─── Heading ─── */}
         <motion.h1
-          className="text-3xl sm:text-4xl lg:text-6xl font-semibold tracking-tighter text-balance leading-[1.0] mb-6"
+          className="text-[1.75rem] sm:text-4xl lg:text-6xl font-semibold tracking-tighter text-balance leading-[1.1] sm:leading-[1.0] mb-4 sm:mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease }}
@@ -109,8 +111,9 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
           <span className="block text-slate-900 dark:text-foreground mt-0">in Minutes, Not Hours</span>
         </motion.h1>
 
+        {/* ─── Description ─── */}
         <motion.p
-          className="text-sm sm:text-base lg:text-lg text-slate-700 dark:text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
+          className="text-[0.82rem] sm:text-base lg:text-lg text-slate-700 dark:text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease }}
@@ -118,11 +121,40 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
           AI-powered platform to analyze papers, generate ideas, detect research gaps, and plan experiments.
         </motion.p>
 
+        {/* ─── Mobile: Feature Capability Chips ─── */}
+        {isMobile && (
+          <motion.div
+            className="grid grid-cols-2 gap-2.5 mb-7 max-w-xs mx-auto"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3, ease }}
+          >
+            {[
+              { icon: FileSearch, label: "Smart Summaries", color: "text-cyan-400" },
+              { icon: Quote, label: "Citation Intel", color: "text-purple-400" },
+              { icon: Lightbulb, label: "Research Gaps", color: "text-amber-400" },
+              { icon: FlaskConical, label: "Experiment Plans", color: "text-pink-400" },
+            ].map((item, i) => (
+              <motion.div
+                key={item.label}
+                className="hero-mobile-chip"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: 0.35 + i * 0.08, ease }}
+              >
+                <item.icon className={`w-3.5 h-3.5 ${item.color} flex-shrink-0`} />
+                <span>{item.label}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* ─── Buttons ─── */}
         <motion.div
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6"
+          className="flex flex-row items-center justify-center gap-3 sm:gap-6 mb-8 sm:mb-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3, ease }}
+          transition={{ duration: 0.6, delay: isMobile ? 0.5 : 0.3, ease }}
         >
           <div className="flex-shrink-0">
             <Link to="/signup" className="inline-block">
@@ -149,6 +181,49 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
             </a>
           </div>
         </motion.div>
+
+        {/* ─── Mobile: Stats Row ─── */}
+        {isMobile && (
+          <motion.div
+            className="hero-mobile-stats"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6, ease }}
+          >
+            <div className="hero-mobile-stat">
+              <span className="hero-mobile-stat-value">PDF</span>
+              <span className="hero-mobile-stat-label">Upload & Analyze</span>
+            </div>
+            <div className="hero-mobile-stat-divider" />
+            <div className="hero-mobile-stat">
+              <span className="hero-mobile-stat-value">AI</span>
+              <span className="hero-mobile-stat-label">Powered Insights</span>
+            </div>
+            <div className="hero-mobile-stat-divider" />
+            <div className="hero-mobile-stat">
+              <span className="hero-mobile-stat-value">Fast</span>
+              <span className="hero-mobile-stat-label">Results in Seconds</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ─── Mobile: Scroll Indicator ─── */}
+        {isMobile && (
+          <motion.div
+            className="mt-8 flex flex-col items-center gap-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.9 }}
+          >
+            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground/60">Scroll to explore</span>
+            <motion.div
+              animate={{ y: [0, 6, 0] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <ChevronDown className="w-4 h-4 text-muted-foreground/40" />
+            </motion.div>
+          </motion.div>
+        )}
       </div>
     </section>
   );
