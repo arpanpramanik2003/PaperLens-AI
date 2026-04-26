@@ -395,6 +395,264 @@
   66% { transform: translate(60px, -30px) scale(0.94); }
 }
 
+/* ─── Mobile Hero Animated Background ─── */
+
+.hero-mobile-bg {
+  overflow: hidden;
+}
+
+/* ── Gradient Orbs ── */
+.hero-mobile-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.hero-mobile-orb--1 {
+  width: 280px;
+  height: 280px;
+  top: 5%;
+  left: -20%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+  animation: heroMobOrb1 14s ease-in-out infinite;
+}
+
+.hero-mobile-orb--2 {
+  width: 240px;
+  height: 240px;
+  top: 35%;
+  right: -15%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, transparent 70%);
+  animation: heroMobOrb2 16s ease-in-out infinite;
+}
+
+.hero-mobile-orb--3 {
+  width: 260px;
+  height: 260px;
+  bottom: 0;
+  left: 10%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.18) 0%, transparent 70%);
+  animation: heroMobOrb3 18s ease-in-out infinite;
+}
+
+.dark .hero-mobile-orb--1 {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.5) 0%, rgba(139, 92, 246, 0.05) 60%, transparent 70%);
+}
+
+.dark .hero-mobile-orb--2 {
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(6, 182, 212, 0.04) 60%, transparent 70%);
+}
+
+.dark .hero-mobile-orb--3 {
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.35) 0%, rgba(236, 72, 153, 0.04) 60%, transparent 70%);
+}
+
+/* ── Subtle Grid Overlay ── */
+.hero-mobile-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(100, 100, 100, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 100, 100, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+  mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+}
+
+.dark .hero-mobile-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* ── Concentric Glow Rings ── */
+.hero-mobile-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px solid;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.hero-mobile-ring--1 {
+  width: 200px;
+  height: 200px;
+  margin-top: -100px;
+  margin-left: -100px;
+  border-color: rgba(139, 92, 246, 0.12);
+  animation: heroMobRingPulse 5s ease-in-out infinite;
+}
+
+.hero-mobile-ring--2 {
+  width: 320px;
+  height: 320px;
+  margin-top: -160px;
+  margin-left: -160px;
+  border-color: rgba(6, 182, 212, 0.08);
+  animation: heroMobRingPulse 5s ease-in-out 1s infinite;
+}
+
+.hero-mobile-ring--3 {
+  width: 440px;
+  height: 440px;
+  margin-top: -220px;
+  margin-left: -220px;
+  border-color: rgba(236, 72, 153, 0.06);
+  animation: heroMobRingPulse 5s ease-in-out 2s infinite;
+}
+
+.dark .hero-mobile-ring--1 { border-color: rgba(139, 92, 246, 0.2); }
+.dark .hero-mobile-ring--2 { border-color: rgba(6, 182, 212, 0.14); }
+.dark .hero-mobile-ring--3 { border-color: rgba(236, 72, 153, 0.1); }
+
+/* ── Central Glow Pulse ── */
+.hero-mobile-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(114, 66, 195, 0.15) 0%, transparent 70%);
+  animation: heroMobGlow 4s ease-in-out infinite;
+}
+
+.dark .hero-mobile-glow {
+  background: radial-gradient(circle, rgba(114, 66, 195, 0.3) 0%, transparent 70%);
+}
+
+/* ── Floating Particles ── */
+.hero-mobile-particle {
+  position: absolute;
+  bottom: -10px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.25);
+  animation: heroMobParticle linear infinite;
+}
+
+.dark .hero-mobile-particle {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ── Sweeping Scan Line ── */
+.hero-mobile-scanline {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(6, 182, 212, 0.3) 25%,
+    rgba(139, 92, 246, 0.5) 50%,
+    rgba(236, 72, 153, 0.3) 75%,
+    transparent 100%
+  );
+  animation: heroMobScanline 8s ease-in-out infinite;
+  opacity: 0;
+}
+
+.dark .hero-mobile-scanline {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(6, 182, 212, 0.5) 25%,
+    rgba(139, 92, 246, 0.6) 50%,
+    rgba(236, 72, 153, 0.5) 75%,
+    transparent 100%
+  );
+}
+
+/* ── Vignette Depth ── */
+.hero-mobile-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.12) 100%);
+}
+
+.dark .hero-mobile-vignette {
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+/* ── Mobile Hero Keyframes ── */
+@keyframes heroMobOrb1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(40px, 30px) scale(1.15); }
+  50% { transform: translate(20px, -20px) scale(0.9); }
+  75% { transform: translate(-30px, 40px) scale(1.08); }
+}
+
+@keyframes heroMobOrb2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-35px, 25px) scale(1.1); }
+  50% { transform: translate(-15px, -30px) scale(0.92); }
+  75% { transform: translate(25px, 15px) scale(1.12); }
+}
+
+@keyframes heroMobOrb3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -25px) scale(1.06); }
+  66% { transform: translate(-25px, 20px) scale(0.95); }
+}
+
+@keyframes heroMobRingPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes heroMobGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+}
+
+@keyframes heroMobParticle {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.6; }
+  100% {
+    transform: translateY(-100vh) translateX(15px);
+    opacity: 0;
+  }
+}
+
+@keyframes heroMobScanline {
+  0% {
+    top: -1px;
+    opacity: 0;
+  }
+  5% { opacity: 0.6; }
+  95% { opacity: 0.6; }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
 /* ─── Modern Custom Scrollbar ─── */
 
 /* Firefox */

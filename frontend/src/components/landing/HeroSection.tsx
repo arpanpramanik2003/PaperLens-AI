@@ -1,11 +1,18 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import ShaderBackground from "@/components/ui/shader-background";
 import LightHeroBackground from "@/components/ui/light-hero-background";
 
 const ease = [0.2, 0, 0, 1] as const;
+
+const MOBILE_PARTICLES = Array.from({ length: 15 }, (_, i) => ({
+  left: `${5 + ((i * 6.5) % 90)}%`,
+  delay: `${((i * 0.7) % 5).toFixed(1)}s`,
+  duration: `${4 + (i % 4) * 1.5}s`,
+  size: `${1.5 + (i % 3)}px`,
+}));
 
 type HeroSectionProps = {
   isDark?: boolean;
@@ -13,6 +20,19 @@ type HeroSectionProps = {
 
 export default function HeroSection({ isDark = true }: HeroSectionProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 767px)").matches
+      : false
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end start"],
@@ -25,15 +45,45 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
       id="home"
       className="relative min-h-[100svh] bg-transparent pt-24 pb-16 sm:pt-28 sm:pb-20 overflow-hidden scroll-mt-20 flex items-center"
     >
-      <motion.div style={{ opacity: shaderOpacity }} className="absolute inset-0 z-0">
-        {isDark ? (
-          <ShaderBackground
-            className="absolute inset-0 h-full w-full"
-          />
-        ) : (
-          <LightHeroBackground />
-        )}
-      </motion.div>
+      {/* ─── Desktop: Shader / Aurora background ─── */}
+      {!isMobile && (
+        <motion.div style={{ opacity: shaderOpacity }} className="absolute inset-0 z-0">
+          {isDark ? (
+            <ShaderBackground className="absolute inset-0 h-full w-full" />
+          ) : (
+            <LightHeroBackground />
+          )}
+        </motion.div>
+      )}
+
+      {/* ─── Mobile: Animated gradient mesh background ─── */}
+      {isMobile && (
+        <div className="hero-mobile-bg absolute inset-0 z-0" aria-hidden="true">
+          <div className="hero-mobile-orb hero-mobile-orb--1" />
+          <div className="hero-mobile-orb hero-mobile-orb--2" />
+          <div className="hero-mobile-orb hero-mobile-orb--3" />
+          <div className="hero-mobile-grid" />
+          <div className="hero-mobile-ring hero-mobile-ring--1" />
+          <div className="hero-mobile-ring hero-mobile-ring--2" />
+          <div className="hero-mobile-ring hero-mobile-ring--3" />
+          <div className="hero-mobile-glow" />
+          {MOBILE_PARTICLES.map((p, i) => (
+            <div
+              key={i}
+              className="hero-mobile-particle"
+              style={{
+                left: p.left,
+                animationDelay: p.delay,
+                animationDuration: p.duration,
+                width: p.size,
+                height: p.size,
+              }}
+            />
+          ))}
+          <div className="hero-mobile-scanline" />
+          <div className="hero-mobile-vignette" />
+        </div>
+      )}
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-white/6 via-white/2 to-white/30 dark:from-slate-950/10 dark:via-transparent dark:to-background" />
       <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[760px] rounded-full bg-transparent dark:bg-accent/5 blur-[140px]" />
 
