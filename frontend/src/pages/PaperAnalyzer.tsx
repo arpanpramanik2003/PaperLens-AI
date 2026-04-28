@@ -71,7 +71,6 @@ export default function PaperAnalyzer() {
   const { getToken, userId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
-  const analysisRef = useRef<HTMLDivElement>(null);
 
   const [file, setFile] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -130,6 +129,7 @@ export default function PaperAnalyzer() {
         setDocId("demo_doc_id");
         setPageCount(15);
         setAnalyzed(true);
+        scrollToResults();
         setAnalyzing(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
       }, 2000);
@@ -156,6 +156,7 @@ export default function PaperAnalyzer() {
       setDocId(data.doc_id);
       setPageCount(typeof data.page_count === "number" ? data.page_count : null);
       setAnalyzed(true);
+      scrollToResults();
     } catch (error: unknown) {
       console.error(error);
       const err = error as { status?: number; payload?: AnalyzeErrorPayload };
@@ -262,10 +263,12 @@ export default function PaperAnalyzer() {
     }
   }, [chatMessages, aiGenerating, analyzed]);
 
-  useEffect(() => {
-    if (!analyzed) return;
-    scrollToResult(analysisRef.current);
-  }, [analyzed]);
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const el = document.getElementById("analysis-results");
+      if (el) scrollToResult(el, { retries: 3, retryDelay: 250 });
+    }, 250);
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-6">
@@ -450,9 +453,9 @@ export default function PaperAnalyzer() {
             </div>
 
             <motion.div
-              ref={analysisRef}
+              id="analysis-results"
               className="rounded-2xl border border-border/60 bg-card/90 p-5 overflow-auto premium-shadow"
-              style={{ maxHeight: "calc(100vh - 250px)" }}
+              style={{ maxHeight: "calc(100vh - 250px)", scrollMarginTop: "5rem" }}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease }}

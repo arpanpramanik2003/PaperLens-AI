@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
 import { FlaskConical, BookmarkPlus } from "lucide-react";
@@ -133,7 +133,6 @@ const parseStructuredDetails = (details: string): StructuredDetailSections | nul
 
 export default function ExperimentPlanner() {
   const { getToken, userId } = useAuth();
-  const resultsRef = useRef<HTMLElement | null>(null);
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("intermediate");
   const [steps, setSteps] = useState<PlanStep[]>([]);
@@ -143,10 +142,12 @@ export default function ExperimentPlanner() {
   const [visibleSteps, setVisibleSteps] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!generated || steps.length === 0) return;
-    scrollToResult(resultsRef.current);
-  }, [generated, steps.length]);
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const el = document.getElementById("experiment-results");
+      if (el) scrollToResult(el, { retries: 3, retryDelay: 250 });
+    }, 250);
+  };
 
   const handleSavePlan = async () => {
     if (!generated || steps.length === 0) return;
@@ -207,6 +208,7 @@ export default function ExperimentPlanner() {
         ]);
         setLoading(false);
         setGenerated(true);
+        scrollToResults();
         [0,1,2,3,4,5].forEach((i) => {
           setTimeout(() => setVisibleSteps(i + 1), (i + 1) * 300);
         });
@@ -231,6 +233,7 @@ export default function ExperimentPlanner() {
       const normalizedSteps = sanitizePlanSteps(data.steps || []);
       setSteps(normalizedSteps);
       setGenerated(true);
+      scrollToResults();
 
       normalizedSteps.forEach((_: PlanStep, i: number) => {
         setTimeout(() => setVisibleSteps(i + 1), (i + 1) * 300);
@@ -355,9 +358,8 @@ export default function ExperimentPlanner() {
       </section>
 
       {/* Steps */}
-      <AnimatePresence>
-        {generated && (
-          <section ref={resultsRef} className="rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow">
+      {generated && (
+          <section id="experiment-results" className="rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow" style={{ scrollMarginTop: "5rem" }}>
             <div className="flex items-center justify-between gap-3 mb-5">
               <h3 className="text-sm font-semibold tracking-wide text-foreground">Execution Timeline</h3>
               <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{steps.length} Steps</span>
@@ -456,7 +458,6 @@ export default function ExperimentPlanner() {
             </div>
           </section>
         )}
-      </AnimatePresence>
 
       {!generated && (
         <div className="text-center py-12 sm:py-16">

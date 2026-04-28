@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Database, Trophy, Wrench, Sparkles, ArrowRight, X, Info, BookmarkPlus, Compass, SearchCheck, ListChecks, BadgeCheck } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
@@ -48,7 +48,6 @@ const workflowGuide = [
 
 export default function DatasetBenchmarkFinder() {
   const { userId, getToken } = useAuth();
-  const resultsRef = useRef<HTMLDivElement | null>(null);
 
   const [projectTitle, setProjectTitle] = useState("");
   const [projectPlan, setProjectPlan] = useState("");
@@ -64,10 +63,12 @@ export default function DatasetBenchmarkFinder() {
   const [activeType, setActiveType] = useState<"dataset" | "benchmark" | null>(null);
   const [activeItem, setActiveItem] = useState<FinderItem | null>(null);
 
-  useEffect(() => {
-    if (!generated) return;
-    scrollToResult(resultsRef.current);
-  }, [generated]);
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const el = document.getElementById("finder-results");
+      if (el) scrollToResult(el, { retries: 3, retryDelay: 250 });
+    }, 250);
+  };
 
   const openDetails = (type: "dataset" | "benchmark", item: FinderItem) => {
     setActiveType(type);
@@ -166,6 +167,7 @@ export default function DatasetBenchmarkFinder() {
         setBenchmarks(data.benchmarks || []);
         setTechnologies(data.technologies || []);
         setGenerated(true);
+        scrollToResults();
         setLoading(false);
       }, 1200);
       return;
@@ -195,6 +197,7 @@ export default function DatasetBenchmarkFinder() {
       setBenchmarks(data.benchmarks || []);
       setTechnologies(data.technologies || []);
       setGenerated(true);
+      scrollToResults();
     } catch (error) {
       console.error(error);
       showSaveErrorToast("Dataset and benchmark recommendations");
@@ -350,7 +353,7 @@ export default function DatasetBenchmarkFinder() {
       </section>
 
       {generated && (
-        <div ref={resultsRef} className="space-y-8">
+        <div id="finder-results" className="space-y-8" style={{ scrollMarginTop: "5rem" }}>
           {domainSummary && (
             <motion.div
               className="rounded-2xl border border-border/60 bg-secondary/30 p-4 sm:p-5 premium-shadow"

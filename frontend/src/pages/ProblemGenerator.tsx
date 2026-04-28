@@ -98,13 +98,10 @@ export default function ProblemGenerator() {
   const selectedIdeaDetails = expandedIdeaIndex !== null ? ideaDetails[expandedIdeaIndex] : null;
 
   // Scroll to the generated ideas section after results appear.
-  // Uses scrollIntoView which auto-detects the actual scrollable
-  // ancestor (the window — not <main>, which has no overflow).
   const scrollToResults = () => {
     setTimeout(() => {
       const el = document.getElementById("generated-ideas");
-      if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el) scrollToResult(el, { retries: 3, retryDelay: 250 });
     }, 250);
   };
 
@@ -784,9 +781,9 @@ export default function ProblemGenerator() {
                     Close
                   </Button>
 
-                  <div className="w-full sm:flex-1" ref={exportMenuRef}>
+                  <div className="w-full sm:flex-1 relative" ref={exportMenuRef}>
                     <ShinyButton
-                      className="w-full rounded-xl"
+                      className="w-full rounded-xl flex items-center justify-center gap-2"
                       onClick={() => setExportMenuOpen((prev) => !prev)}
                     >
                       <span className="inline-flex items-center gap-2">
@@ -799,22 +796,24 @@ export default function ProblemGenerator() {
                     <AnimatePresence>
                       {exportMenuOpen && (
                         <motion.div
-                          initial={{ opacity: 0, y: -4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.18, ease }}
-                          className="mt-2 rounded-lg border border-border/40 bg-secondary/30 p-2 grid grid-cols-1 sm:grid-cols-2 gap-2"
+                          initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                          transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
+                          className="absolute bottom-full right-0 mb-2 w-full sm:w-[220px] rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-2 flex flex-col gap-1.5 shadow-2xl z-50 premium-shadow"
+                          style={{ transformOrigin: "bottom center" }}
                         >
+                          <p className="px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Select Format</p>
                           <Button
-                            variant="outline"
-                            className="w-full"
+                            variant="secondary"
+                            className="w-full justify-start text-xs h-9 bg-background/50 hover:bg-accent/10 hover:text-accent border border-border/40"
                             onClick={handleDownloadWord}
                           >
                             Download Word (.docx)
                           </Button>
                           <Button
-                            variant="outline"
-                            className="w-full"
+                            variant="secondary"
+                            className="w-full justify-start text-xs h-9 bg-background/50 hover:bg-accent/10 hover:text-accent border border-border/40"
                             onClick={handleDownloadPdf}
                           >
                             Download PDF (.pdf)

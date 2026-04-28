@@ -1,9 +1,7 @@
 type ScrollOptions = {
   /**
-   * Extra pixels above the target element.
-   * If omitted, auto-calculated based on viewport:
-   *  - Desktop (≥ 1024 px): 24 px (sticky header is outside `<main>`)
-   *  - Mobile: 72 px (fixed header overlaps `<main>`)
+   * Extra pixels above the target element reserved for the fixed header.
+   * Defaults to 80 px (desktop) / 72 px (mobile).
    */
   offset?: number;
 
@@ -15,36 +13,23 @@ type ScrollOptions = {
 };
 
 /**
- * Get the dashboard's primary scroll container marked with
- * `data-scroll-container` in DashboardLayout.
- */
-const getDashboardContainer = (): HTMLElement | null =>
-  document.querySelector<HTMLElement>("[data-scroll-container]");
-
-/**
- * Compute a sensible, header-aware offset when the caller doesn't
- * supply one explicitly.
- *
- * The fixed header overlaps `<main>` on every breakpoint:
- *  - Desktop (lg ≥ 1024 px): h-16 (64 px) + 12 px breathing = 76 px
- *  - Mobile: h-14 (56 px) + 12 px breathing = 68 px
+ * Resolve header offset: the fixed navbar is h-14 (56 px) on mobile
+ * and h-16 (64 px) on desktop. Adding 16 px breathing room.
  */
 const resolveOffset = (explicit?: number): number => {
   if (typeof explicit === "number") return explicit;
-  return window.innerWidth >= 1024 ? 76 : 68;
+  return window.innerWidth >= 1024 ? 80 : 72;
 };
 
 /**
- * Scroll the dashboard main container so that `element` is visible
- * near the top of the viewport with a comfortable offset.
+ * Scroll so that `element` is visible near the top of the viewport,
+ * offset below the fixed dashboard header.
  *
- * Handles AnimatePresence / Framer Motion layout shifts via an
- * automatic retry mechanism: after the initial scroll, the function
- * retries `retries` times at `retryDelay` intervals to compensate
- * for content that paints after the first attempt.
+ * Uses `scrollIntoView` which auto-detects whichever ancestor is
+ * actually scrollable (window, body, or a container). The offset
+ * is applied via an inline `scrollMarginTop` style on the element.
  *
- * Works on both desktop (sticky header, `<main>` scroll) and mobile
- * (fixed header, `<main>` scroll).
+ * Works on both desktop and mobile layout.
  */
 export function scrollToResult(
   element: Element | null | undefined,
@@ -61,35 +46,12 @@ export function scrollToResult(
   const doScroll = () => {
     try {
       const target = element as HTMLElement;
-
-      // Bail out if the element was removed from the DOM (e.g. unmount)
       if (!target.isConnected) return;
 
-      // 1. Prefer the explicitly-marked dashboard scroll container
-      const container = getDashboardContainer();
+      // Apply scroll-margin-top dynamically to offset past the fixed header
+      target.style.scrollMarginTop = `${offset}px`;
 
-      if (container) {
-        const containerRect = container.getBoundingClientRect();
-        const targetRect = target.getBoundingClientRect();
-        const scrollTop =
-          container.scrollTop +
-          (targetRect.top - containerRect.top) -
-          offset;
-
-        container.scrollTo({
-          top: Math.max(scrollTop, 0),
-          behavior: "smooth",
-        });
-        return;
-      }
-
-      // 2. Fallback: use window scroll (non-dashboard contexts)
-      const rect = target.getBoundingClientRect();
-      const absoluteTop = rect.top + window.scrollY;
-      window.scrollTo({
-        top: Math.max(absoluteTop - offset, 0),
-        behavior: "smooth",
-      });
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch {
       // Ultimate fallback
       (element as HTMLElement).scrollIntoView({
@@ -105,8 +67,8 @@ export function scrollToResult(
     window.requestAnimationFrame(doScroll);
   });
 
-  // Retry to correct for AnimatePresence / Framer-Motion layout
-  // shifts that change heights **after** the initial scroll fires.
+  // Retry to correct for Framer-Motion layout shifts that change
+  // heights **after** the initial scroll fires.
   for (let i = 1; i <= retries; i++) {
     window.setTimeout(() => {
       window.requestAnimationFrame(doScroll);

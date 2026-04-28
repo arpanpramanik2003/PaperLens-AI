@@ -136,7 +136,6 @@ export default function CitationIntelligence() {
   // SSE real-time progress
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const resultsRef = useRef<HTMLElement | null>(null);
 
   const processStepsByMode = {
     upload: [
@@ -157,10 +156,12 @@ export default function CitationIntelligence() {
 
   const processSteps = processStepsByMode[mode];
 
-  useEffect(() => {
-    if (!report) return;
-    scrollToResult(resultsRef.current);
-  }, [report]);
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const el = document.getElementById("citation-results");
+      if (el) scrollToResult(el, { retries: 3, retryDelay: 250 });
+    }, 250);
+  };
 
   const inferredTopicPreset = useMemo<TopicPreset | null>(() => {
     if (mode !== "discover") return null;
@@ -400,6 +401,7 @@ export default function CitationIntelligence() {
             setResultMode("upload");
             setProgress(null);
             setLoading(false);
+            scrollToResults();
             await fetchRecommendations(parsedReport, "upload");
           } else if (evt.type === "error") {
             throw new Error(evt.message || "Server error during citation analysis.");
@@ -449,6 +451,7 @@ export default function CitationIntelligence() {
       const parsedReport = data as CitationReport;
       setReport(parsedReport);
       setResultMode("discover");
+      scrollToResults();
       await fetchRecommendations(parsedReport, "discover");
     } catch (err: any) {
       setError(err?.message || "Failed to discover citations for this project.");
@@ -923,7 +926,7 @@ export default function CitationIntelligence() {
       )}
 
       {report && (
-        <div ref={resultsRef} className="space-y-6 overflow-hidden">
+        <div id="citation-results" className="space-y-6 overflow-hidden" style={{ scrollMarginTop: "5rem" }}>
           <div className="flex justify-end">
             <Button size="sm" variant="outline" className="gap-2 rounded-xl" onClick={handleSaveCitationResult} disabled={saving}>
               <BookmarkPlus className="w-4 h-4" />

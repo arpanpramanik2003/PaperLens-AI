@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScanSearch, Info, Sparkles, FileText, Upload, Copy, Check, BookmarkPlus, Compass, ShieldAlert, SearchCheck, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,6 @@ const workflowGuide = [
 
 export default function GapDetection() {
   const { getToken, userId } = useAuth();
-  const resultsRef = useRef<HTMLElement | null>(null);
   const [activeTab, setActiveTab] = useState<"text" | "file">("text");
   const [inputText, setInputText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -52,10 +51,12 @@ export default function GapDetection() {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!detected) return;
-    scrollToResult(resultsRef.current);
-  }, [detected]);
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const el = document.getElementById("gap-results");
+      if (el) scrollToResult(el, { retries: 3, retryDelay: 250 });
+    }, 250);
+  };
 
   const handleDetect = async () => {
     if (activeTab === "text" && !inputText.trim()) return;
@@ -73,6 +74,7 @@ export default function GapDetection() {
         ]);
         setLoading(false);
         setDetected(true);
+        scrollToResults();
       }, 1500);
       return;
     }
@@ -96,6 +98,7 @@ export default function GapDetection() {
       const data = await res.json();
       setGaps(data.gaps || []);
       setDetected(true);
+      scrollToResults();
     } catch (err) {
       console.error(err);
       showSaveErrorToast("Gap analysis");
@@ -277,9 +280,8 @@ export default function GapDetection() {
         </motion.aside>
       </section>
 
-      <AnimatePresence>
-        {detected && (
-          <section ref={resultsRef} className="space-y-4">
+      {detected && (
+          <section id="gap-results" className="space-y-4" style={{ scrollMarginTop: "5rem" }}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
               <p className="text-sm text-muted-foreground font-medium font-mono">{gaps.length} gaps identified</p>
               <div className="flex items-center gap-2">
@@ -323,7 +325,6 @@ export default function GapDetection() {
             </div>
           </section>
         )}
-      </AnimatePresence>
 
       {!detected && !loading && (
         <div className="text-center py-12 sm:py-16">
