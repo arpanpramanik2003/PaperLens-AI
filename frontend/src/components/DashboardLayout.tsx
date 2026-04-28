@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 const navItems = [
   { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { title: "Paper Analyzer", path: "/dashboard/analyzer", icon: FileText },
-  { title: "Experiment Planner", path: "/dashboard/planner", icon: FlaskConical },
-  { title: "Problem Generator", path: "/dashboard/generator", icon: Lightbulb },
+    { title: "Problem Generator", path: "/dashboard/generator", icon: Lightbulb },
+    { title: "Experiment Planner", path: "/dashboard/planner", icon: FlaskConical },
   { title: "Gap Detection", path: "/dashboard/gaps", icon: ScanSearch },
   { title: "Dataset & Benchmark Finder", path: "/dashboard/dataset-benchmarks", icon: Database },
   { title: "Citation Intelligence", path: "/dashboard/citation-intelligence", icon: BarChart3 },
