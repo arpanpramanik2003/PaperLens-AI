@@ -81,7 +81,6 @@ const workflowGuide = [
 
 export default function ProblemGenerator() {
   const { getToken, userId } = useAuth();
-  const resultsRef = useRef<HTMLElement | null>(null);
   const [domain, setDomain] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [complexity, setComplexity] = useState("medium");
@@ -98,10 +97,16 @@ export default function ProblemGenerator() {
   const selectedIdea = expandedIdeaIndex !== null ? ideas[expandedIdeaIndex] : null;
   const selectedIdeaDetails = expandedIdeaIndex !== null ? ideaDetails[expandedIdeaIndex] : null;
 
-  useEffect(() => {
-    if (!generated) return;
-    scrollToResult(resultsRef.current);
-  }, [generated]);
+  // Scroll to the generated ideas section after results appear.
+  // Uses scrollIntoView which auto-detects the actual scrollable
+  // ancestor (the window — not <main>, which has no overflow).
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const el = document.getElementById("generated-ideas");
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
+  };
 
   useEffect(() => {
     if (!exportMenuOpen) return;
@@ -321,6 +326,7 @@ export default function ProblemGenerator() {
         ]);
         setLoading(false);
         setGenerated(true);
+        scrollToResults();
       }, 1500);
       return;
     }
@@ -353,6 +359,7 @@ export default function ProblemGenerator() {
 
       setIdeas(parsedIdeas);
       setGenerated(true);
+      scrollToResults();
     } catch (err) {
       console.error(err);
       showSaveErrorToast("Research problem ideas");
@@ -556,9 +563,8 @@ export default function ProblemGenerator() {
         </motion.aside>
       </section>
 
-      <AnimatePresence>
-        {generated && (
-          <section ref={resultsRef} className="space-y-4">
+      {generated && (
+          <section id="generated-ideas" className="space-y-4" style={{ scrollMarginTop: "5rem" }}>
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold tracking-wide text-foreground">Generated Idea Cards</h2>
               <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{ideas.length} Candidates</span>
@@ -605,7 +611,6 @@ export default function ProblemGenerator() {
             </div>
           </section>
         )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {selectedIdea && selectedIdeaDetails && (
