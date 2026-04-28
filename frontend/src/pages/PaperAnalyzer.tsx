@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
 import ReactMarkdown from "react-markdown";
 import { apiClient } from "@/lib/api-client";
+import { scrollToResult } from "@/lib/scroll-to-result";
 import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
@@ -70,6 +71,7 @@ export default function PaperAnalyzer() {
   const { getToken, userId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const analysisRef = useRef<HTMLDivElement>(null);
 
   const [file, setFile] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -248,17 +250,22 @@ export default function PaperAnalyzer() {
     if (!analyzed) return;
 
     const scrollContainer = chatScrollRef.current;
-    if (!scrollContainer) return;
-
-    const rafId = window.requestAnimationFrame(() => {
-      scrollContainer.scrollTo({
-        top: scrollContainer.scrollHeight,
-        behavior: "smooth",
+    if (scrollContainer) {
+      const rafId = window.requestAnimationFrame(() => {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: "smooth",
+        });
       });
-    });
 
-    return () => window.cancelAnimationFrame(rafId);
+      return () => window.cancelAnimationFrame(rafId);
+    }
   }, [chatMessages, aiGenerating, analyzed]);
+
+  useEffect(() => {
+    if (!analyzed) return;
+    scrollToResult(analysisRef.current);
+  }, [analyzed]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-6">
@@ -443,6 +450,7 @@ export default function PaperAnalyzer() {
             </div>
 
             <motion.div
+              ref={analysisRef}
               className="rounded-2xl border border-border/60 bg-card/90 p-5 overflow-auto premium-shadow"
               style={{ maxHeight: "calc(100vh - 250px)" }}
               initial={{ opacity: 0, y: 8 }}

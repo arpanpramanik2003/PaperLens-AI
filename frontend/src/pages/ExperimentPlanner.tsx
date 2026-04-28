@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
 import { FlaskConical, BookmarkPlus } from "lucide-react";
@@ -7,6 +7,7 @@ import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
+import { scrollToResult } from "@/lib/scroll-to-result";
 import { apiClient } from "@/lib/api-client";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
@@ -132,6 +133,7 @@ const parseStructuredDetails = (details: string): StructuredDetailSections | nul
 
 export default function ExperimentPlanner() {
   const { getToken, userId } = useAuth();
+  const resultsRef = useRef<HTMLElement | null>(null);
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("intermediate");
   const [steps, setSteps] = useState<PlanStep[]>([]);
@@ -140,6 +142,11 @@ export default function ExperimentPlanner() {
   const [expandedStep, setExpandedStep] = useState<number | null>(0);
   const [visibleSteps, setVisibleSteps] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!generated || steps.length === 0) return;
+    scrollToResult(resultsRef.current);
+  }, [generated, steps.length]);
 
   const handleSavePlan = async () => {
     if (!generated || steps.length === 0) return;
@@ -350,7 +357,7 @@ export default function ExperimentPlanner() {
       {/* Steps */}
       <AnimatePresence>
         {generated && (
-          <section className="rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow">
+          <section ref={resultsRef} className="rounded-3xl border border-border/60 bg-card/90 p-5 sm:p-6 premium-shadow">
             <div className="flex items-center justify-between gap-3 mb-5">
               <h3 className="text-sm font-semibold tracking-wide text-foreground">Execution Timeline</h3>
               <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{steps.length} Steps</span>

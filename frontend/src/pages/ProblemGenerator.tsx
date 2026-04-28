@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { scrollToResult } from "@/lib/scroll-to-result";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
@@ -80,6 +81,7 @@ const workflowGuide = [
 
 export default function ProblemGenerator() {
   const { getToken, userId } = useAuth();
+  const resultsRef = useRef<HTMLElement | null>(null);
   const [domain, setDomain] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [complexity, setComplexity] = useState("medium");
@@ -95,6 +97,11 @@ export default function ProblemGenerator() {
 
   const selectedIdea = expandedIdeaIndex !== null ? ideas[expandedIdeaIndex] : null;
   const selectedIdeaDetails = expandedIdeaIndex !== null ? ideaDetails[expandedIdeaIndex] : null;
+
+  useEffect(() => {
+    if (!generated) return;
+    scrollToResult(resultsRef.current);
+  }, [generated]);
 
   useEffect(() => {
     if (!exportMenuOpen) return;
@@ -551,7 +558,7 @@ export default function ProblemGenerator() {
 
       <AnimatePresence>
         {generated && (
-          <section className="space-y-4">
+          <section ref={resultsRef} className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold tracking-wide text-foreground">Generated Idea Cards</h2>
               <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{ideas.length} Candidates</span>

@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { apiClient } from "@/lib/api-client";
+import { scrollToResult } from "@/lib/scroll-to-result";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
@@ -135,6 +136,7 @@ export default function CitationIntelligence() {
   // SSE real-time progress
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const resultsRef = useRef<HTMLElement | null>(null);
 
   const processStepsByMode = {
     upload: [
@@ -154,6 +156,11 @@ export default function CitationIntelligence() {
   } as const;
 
   const processSteps = processStepsByMode[mode];
+
+  useEffect(() => {
+    if (!report) return;
+    scrollToResult(resultsRef.current);
+  }, [report]);
 
   const inferredTopicPreset = useMemo<TopicPreset | null>(() => {
     if (mode !== "discover") return null;
@@ -916,7 +923,7 @@ export default function CitationIntelligence() {
       )}
 
       {report && (
-        <div className="space-y-6 overflow-hidden">
+        <div ref={resultsRef} className="space-y-6 overflow-hidden">
           <div className="flex justify-end">
             <Button size="sm" variant="outline" className="gap-2 rounded-xl" onClick={handleSaveCitationResult} disabled={saving}>
               <BookmarkPlus className="w-4 h-4" />
@@ -1170,6 +1177,7 @@ export default function CitationIntelligence() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

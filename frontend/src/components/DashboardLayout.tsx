@@ -257,8 +257,12 @@ export default function DashboardLayout() {
         }`}
         style={{ ["--dashboard-sidebar-offset" as string]: sidebarOpen ? "16rem" : "4rem" }}
       >
-        {/* Top Navbar */}
-        <header className="fixed top-0 left-0 right-0 h-14 flex items-center justify-between px-4 border-b border-border/60 z-30 flex-shrink-0 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72 bg-background/72 lg:sticky lg:top-0 lg:h-16 lg:px-6 lg:z-20 lg:glass-surface lg:supports-[backdrop-filter]:bg-background/70">
+        {/* Top Navbar — fixed on all breakpoints, left edge tracks sidebar */}
+        <header
+          className={`fixed top-0 right-0 h-14 flex items-center justify-between px-4 border-b border-border/60 z-30 flex-shrink-0 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72 bg-background/72 lg:h-16 lg:px-6 lg:glass-surface lg:supports-[backdrop-filter]:bg-background/70 transition-[left] duration-300 left-0 ${
+            sidebarOpen ? "lg:left-64" : "lg:left-16"
+          }`}
+        >
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -325,8 +329,8 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 p-4 pt-16 lg:p-7 overflow-auto">
+        {/* Content — pt compensates for the fixed header on both breakpoints */}
+        <main data-scroll-container className="flex-1 px-4 pb-4 pt-16 lg:px-7 lg:pb-7 lg:pt-[5.5rem] overflow-auto">
           <Outlet />
         </main>
       </div>

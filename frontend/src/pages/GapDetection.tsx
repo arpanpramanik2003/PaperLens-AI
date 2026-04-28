@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScanSearch, Info, Sparkles, FileText, Upload, Copy, Check, BookmarkPlus, Compass, ShieldAlert, SearchCheck, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
+import { scrollToResult } from "@/lib/scroll-to-result";
 import { apiClient } from "@/lib/api-client";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
@@ -41,6 +42,7 @@ const workflowGuide = [
 
 export default function GapDetection() {
   const { getToken, userId } = useAuth();
+  const resultsRef = useRef<HTMLElement | null>(null);
   const [activeTab, setActiveTab] = useState<"text" | "file">("text");
   const [inputText, setInputText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -49,6 +51,11 @@ export default function GapDetection() {
   const [detected, setDetected] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!detected) return;
+    scrollToResult(resultsRef.current);
+  }, [detected]);
 
   const handleDetect = async () => {
     if (activeTab === "text" && !inputText.trim()) return;
@@ -272,7 +279,7 @@ export default function GapDetection() {
 
       <AnimatePresence>
         {detected && (
-          <section className="space-y-4">
+          <section ref={resultsRef} className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
               <p className="text-sm text-muted-foreground font-medium font-mono">{gaps.length} gaps identified</p>
               <div className="flex items-center gap-2">

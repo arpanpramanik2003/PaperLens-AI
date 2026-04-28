@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Database, Trophy, Wrench, Sparkles, ArrowRight, X, Info, BookmarkPlus, Compass, SearchCheck, ListChecks, BadgeCheck } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
@@ -7,6 +7,7 @@ import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api-client";
+import { scrollToResult } from "@/lib/scroll-to-result";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
 
 const ease = [0.2, 0, 0, 1] as const;
@@ -47,6 +48,7 @@ const workflowGuide = [
 
 export default function DatasetBenchmarkFinder() {
   const { userId, getToken } = useAuth();
+  const resultsRef = useRef<HTMLDivElement | null>(null);
 
   const [projectTitle, setProjectTitle] = useState("");
   const [projectPlan, setProjectPlan] = useState("");
@@ -61,6 +63,11 @@ export default function DatasetBenchmarkFinder() {
 
   const [activeType, setActiveType] = useState<"dataset" | "benchmark" | null>(null);
   const [activeItem, setActiveItem] = useState<FinderItem | null>(null);
+
+  useEffect(() => {
+    if (!generated) return;
+    scrollToResult(resultsRef.current);
+  }, [generated]);
 
   const openDetails = (type: "dataset" | "benchmark", item: FinderItem) => {
     setActiveType(type);
@@ -343,7 +350,7 @@ export default function DatasetBenchmarkFinder() {
       </section>
 
       {generated && (
-        <div className="space-y-8">
+        <div ref={resultsRef} className="space-y-8">
           {domainSummary && (
             <motion.div
               className="rounded-2xl border border-border/60 bg-secondary/30 p-4 sm:p-5 premium-shadow"
