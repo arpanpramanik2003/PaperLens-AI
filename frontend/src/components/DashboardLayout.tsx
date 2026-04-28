@@ -4,6 +4,7 @@ import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch,
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
   { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -159,7 +160,8 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden flex">
+    <TooltipProvider delayDuration={150}>
+      <div className="min-h-screen bg-background relative overflow-x-hidden flex">
       <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(circle_at_8%_12%,hsl(var(--accent)/0.14),transparent_34%),radial-gradient(circle_at_92%_88%,hsl(var(--accent)/0.1),transparent_32%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(to_right,hsl(var(--border)/0.18)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.18)_1px,transparent_1px)] [background-size:38px_38px]" />
 
@@ -191,35 +193,36 @@ export default function DashboardLayout() {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 p-3.5 space-y-1.5 overflow-y-auto">
+          <nav className="flex-1 p-3.5 space-y-1.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => {
-                    if (window.innerWidth < 1024) setSidebarOpen(false);
-                  }}
-                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 relative whitespace-nowrap ${
-                    isActive
-                      ? "bg-gradient-to-r from-accent/15 to-accent/5 text-accent border border-accent/20 shadow-[0_8px_22px_-16px_hsl(var(--accent))]"
-                      : "text-muted-foreground border border-transparent hover:text-foreground hover:bg-secondary/40 hover:border-border/50"
-                  }`}
-                  title={!sidebarOpen ? item.title : undefined}
-                >
-                  {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-accent rounded-r-full" />
-                  )}
-                  <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? "text-accent" : "text-muted-foreground group-hover:text-foreground"}`} strokeWidth={1.6} />
+                <Tooltip key={item.path}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={item.path}
+                      onClick={() => {
+                        if (window.innerWidth < 1024) setSidebarOpen(false);
+                      }}
+                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 relative whitespace-nowrap ${
+                        isActive
+                          ? "bg-gradient-to-r from-accent/15 to-accent/5 text-accent border border-accent/20 shadow-[0_8px_22px_-16px_hsl(var(--accent))]"
+                          : "text-muted-foreground border border-transparent hover:text-foreground hover:bg-secondary/40 hover:border-border/50"
+                      }`}
+                    >
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-accent rounded-r-full" />
+                      )}
+                      <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? "text-accent" : "text-muted-foreground group-hover:text-foreground"}`} strokeWidth={1.6} />
+                      {sidebarOpen && <span className="font-medium tracking-wide text-[13px]">{item.title}</span>}
+                    </Link>
+                  </TooltipTrigger>
                   {!sidebarOpen && (
-                    <span className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-50 hidden -translate-y-1/2 rounded-lg border border-border/70 bg-card/95 px-2.5 py-1.5 text-xs font-medium text-foreground shadow-xl opacity-0 translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 lg:block">
-                      <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border-l border-t border-border/70 bg-card/95" />
+                    <TooltipContent side="right" sideOffset={14} className="rounded-lg font-medium text-xs border-border/70 bg-card/95 backdrop-blur-sm z-50">
                       {item.title}
-                    </span>
+                    </TooltipContent>
                   )}
-                  {sidebarOpen && <span className="font-medium tracking-wide text-[13px]">{item.title}</span>}
-                </Link>
+                </Tooltip>
               );
             })}
           </nav>
@@ -228,22 +231,44 @@ export default function DashboardLayout() {
           <div className="p-3 border-t border-border/60">
             <SignedIn>
               <SignOutButton>
-                <button
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent hover:border-border/50 transition-all whitespace-nowrap"
-                >
-                  <LogOut className="w-4 h-4 flex-shrink-0" strokeWidth={1.6} />
-                  {sidebarOpen && <span className="font-medium">Logout</span>}
-                </button>
+                <div className="w-full relative">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent hover:border-border/50 transition-all whitespace-nowrap"
+                      >
+                        <LogOut className="w-4 h-4 flex-shrink-0" strokeWidth={1.6} />
+                        {sidebarOpen && <span className="font-medium">Logout</span>}
+                      </button>
+                    </TooltipTrigger>
+                    {!sidebarOpen && (
+                      <TooltipContent side="right" sideOffset={14} className="rounded-lg font-medium text-xs border-border/70 bg-card/95 backdrop-blur-sm z-50">
+                        Logout
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
               </SignOutButton>
             </SignedIn>
             <SignedOut>
               <SignInButton mode="modal">
-                <button
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-accent bg-accent/10 hover:bg-accent/20 border border-accent/20 transition-colors whitespace-nowrap"
-                >
-                  <User className="w-4 h-4 flex-shrink-0" strokeWidth={1.6} />
-                  {sidebarOpen && <span className="font-medium">Sign In</span>}
-                </button>
+                <div className="w-full relative">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-accent bg-accent/10 hover:bg-accent/20 border border-accent/20 transition-colors whitespace-nowrap"
+                      >
+                        <User className="w-4 h-4 flex-shrink-0" strokeWidth={1.6} />
+                        {sidebarOpen && <span className="font-medium">Sign In</span>}
+                      </button>
+                    </TooltipTrigger>
+                    {!sidebarOpen && (
+                      <TooltipContent side="right" sideOffset={14} className="rounded-lg font-medium text-xs border-border/70 bg-card/95 backdrop-blur-sm z-50">
+                        Sign In
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
               </SignInButton>
             </SignedOut>
           </div>
@@ -335,5 +360,6 @@ export default function DashboardLayout() {
         </main>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
