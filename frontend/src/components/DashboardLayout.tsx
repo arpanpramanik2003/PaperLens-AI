@@ -140,6 +140,12 @@ export default function DashboardLayout() {
     return results.slice(0, 6); // Limit to 6 results
   };
 
+  // Theme sync - must be before early return
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("paperlens-theme", isDark ? "dark" : "light");
+  }, [isDark]);
+
   const searchResults = getSearchResults();
 
   // Close search results when clicking outside
@@ -157,11 +163,6 @@ export default function DashboardLayout() {
   if (!isLoaded || !userId) {
     return null;
   }
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("paperlens-theme", isDark ? "dark" : "light");
-  }, [isDark]);
 
   const toggleTheme = () => {
     setIsDark((prev) => !prev);

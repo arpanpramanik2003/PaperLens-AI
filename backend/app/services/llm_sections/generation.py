@@ -83,80 +83,67 @@ def _infer_step_risk(title: str, details: str) -> str:
 
 def _coerce_structured_details(title: str, topic: str, details: str) -> str:
     compact = re.sub(r"\s+", " ", (details or "")).strip()
-    markers = ["objective:", "execution:", "validation:", "deliverable:"]
-
-    if len(compact.split()) >= 28 and all(marker in compact.lower() for marker in markers):
+    
+    if len(compact.split()) >= 20:
         return compact
 
-    return (
-        f"Objective: Deliver a robust implementation of {title.lower()} for {topic}. "
-        "Execution: Define concrete tasks, sequencing, ownership, and required artifacts for this stage. "
-        "Validation: Specify measurable checks against baselines, acceptance thresholds, and failure criteria. "
-        "Deliverable: Produce reproducible outputs (configs, logs, reports, and versioned artifacts) required by the next stage."
-    )
+    return f"Execute {title.lower()} with measurable validation. Focus on concrete implementation specifics, key assumptions, dependencies, and success criteria relevant to {topic}."
 
 
 def _coerce_structured_params(params: str) -> str:
     compact = re.sub(r"\s+", " ", (params or "")).strip()
-    required_terms = ["dataset", "metric", "hyper", "threshold"]
-
-    if len(compact.split()) >= 16 and any(term in compact.lower() for term in required_terms):
+    
+    if len(compact.split()) >= 12:
         return compact
 
-    return (
-        "Datasets: named data sources + split policy | "
-        "Metrics: primary and secondary metrics with targets | "
-        "Hyperparameters: optimizer, learning rate, batch size, regularization | "
-        "Compute/Budget: hardware profile and runtime budget | "
-        "Exit Criteria: quantitative threshold that gates progression"
-    )
+    return "Specify quantifiable configuration: datasets, metrics with targets, hyperparameters, and gating thresholds."
 
 
 def _coerce_structured_risk(title: str, details: str, risks: str) -> str:
     compact = re.sub(r"\s+", " ", (risks or "")).strip()
-    if len(compact.split()) >= 14 and "mitigation" in compact.lower() and "trigger" in compact.lower():
+    if len(compact.split()) >= 12:
         return compact
 
     inferred = _infer_step_risk(title, details)
-    return f"Trigger: Data, model, or optimization assumptions fail in this stage. Impact: {inferred} Mitigation: Add diagnostics, fallback baselines, and stage-level rollback criteria."
+    return inferred
 
 
 def _supplemental_step_templates(topic: str) -> list[dict]:
     return [
         {
-            "title": "Problem Formalization & Constraints",
+            "title": "Problem Formalization",
             "iconName": "List",
-            "details": f"Formalize task assumptions, constraints, and success criteria for {topic}. Define data scope, operational limits, and failure modes.",
-            "params": "Target objective, acceptance thresholds, constraint checklist, baseline assumptions",
-            "risks": "Ambiguous objectives can create metric inflation and poor transfer to real deployment conditions.",
+            "details": f"Define precise task objectives, constraints, and success criteria for {topic}.",
+            "params": "Baseline metrics, success thresholds, operational constraints",
+            "risks": "Vague objectives lead to metric gaming and poor real-world performance.",
         },
         {
-            "title": "Data Governance & Quality Audits",
+            "title": "Data Quality & Validation",
             "iconName": "Shield",
-            "details": "Run data audits for completeness, distribution drift, and annotation quality before large-scale training.",
-            "params": "Missing-value rate, inter-annotator agreement, per-class sample counts, split strategy",
-            "risks": "Undetected label noise and split leakage can inflate offline metrics and fail in real use.",
+            "details": "Audit data for completeness, distribution shifts, and annotation consistency.",
+            "params": "Missing rate, class distribution, inter-annotator agreement",
+            "risks": "Undetected data issues cause silent model failures in deployment.",
         },
         {
-            "title": "Hyperparameter Search Strategy",
+            "title": "Systematic Search & Tuning",
             "iconName": "Zap",
-            "details": "Define systematic tuning across optimizer, LR schedule, regularization, and augmentation policies.",
-            "params": "Search budget, optimizer grid, scheduler policy, regularization range, augmentation intensity",
-            "risks": "Sparse or biased search spaces can lock the pipeline into suboptimal local minima.",
+            "details": "Conduct structured hyperparameter optimization with clear search policy.",
+            "params": "Search space, budget allocation, sampling strategy",
+            "risks": "Inefficient search wastes compute and can get stuck in local minima.",
         },
         {
-            "title": "Error Analysis & Failure Taxonomy",
+            "title": "Failure Analysis",
             "iconName": "BarChart3",
-            "details": "Build class-wise and scenario-wise failure buckets and connect them to corrective actions.",
-            "params": "Confusion matrix slices, hard-case buckets, severity labels, corrective action backlog",
-            "risks": "Without targeted failure taxonomy, improvements remain random and hard to reproduce.",
+            "details": "Identify and categorize failure modes with actionable insights.",
+            "params": "Error buckets, severity classification, root cause taxonomy",
+            "risks": "Without systematic error analysis, improvements remain ad-hoc.",
         },
         {
-            "title": "Reproducibility & Packaging",
+            "title": "Reproducibility",
             "iconName": "CheckCircle",
-            "details": "Freeze environment, seed strategy, artifact tracking, and deterministic evaluation scripts.",
-            "params": "Seed policy, environment lockfile, artifact registry, experiment tracking schema",
-            "risks": "Inconsistent environments and random seeds can make claimed gains non-reproducible.",
+            "details": "Ensure full reproducibility through environment control and artifact tracking.",
+            "params": "Seed policy, environment spec, tracking schema",
+            "risks": "Non-reproducible experiments make results unreliable and hard to debug.",
         },
     ]
 
@@ -228,45 +215,28 @@ def generate_experiment_plan(topic: str, difficulty: str) -> dict:
     min_steps, max_steps = _estimate_experiment_step_bounds(topic, difficulty)
 
     prompt = f"""
-You are an expert AI researcher. Generate a highly constructive, rich, and technical AI/ML experiment execution plan for the topic: "{topic}" at a {difficulty} difficulty level.
+You are a visionary AI researcher designing an end-to-end execution strategy. Create a comprehensive, technical experiment plan for: "{topic}" ({difficulty} difficulty).
 
-You MUST respond strictly in JSON format matching the following structure exactly. Do not include any other text.
+Generate {min_steps}-{max_steps} interdependent stages that form a coherent research pipeline. Each stage should naturally lead into the next.
+
+For each stage, provide:
+- title: Concise stage name
+- iconName: One of: Database, Cog, Cpu, Play, BarChart3, Eye, Cloud, PenTool, Shield, CheckCircle, Activity, Globe, Zap, List, FlaskConical
+- details: Implementation strategy specific to this stage (no forced templates; adapt to what the stage actually needs)
+- params: Concrete, measurable parameters unique to this step
+- risks: Technical risks and failure modes specific to this exact step
+
+Key principles:
+- Be deeply technical and implementation-focused
+- Include domain-specific insights and advanced techniques
+- For complex topics, include ablation studies, interpretability analysis, stress testing, and production hardening
+- Each step must have concrete, falsifiable success criteria
+- Risks should be specific, not generic
+
+Respond as JSON:
 {{
-  "steps": [
-    {{
-      "num": 1,
-      "title": "Stage Title",
-      "iconName": "IconName",
-      "details": "Deeply technical strategy description with enough implementation detail.",
-      "params": "Specific metrics, hyperparams, dataset identifiers, and acceptance thresholds.",
-      "risks": "Concrete technical risks and failure modes for this stage."
-    }}
-  ]
+  "steps": [{{ "num": 1, "title": "...", "iconName": "...", "details": "...", "params": "...", "risks": "..." }}]
 }}
-
-Step-count requirement:
-- Generate between {min_steps} and {max_steps} steps.
-- For technically complex topics, include additional stages for error analysis, ablation, reproducibility, and deployment hardening.
-
-Mandatory quality rules for EACH step:
-- "details" must be implementation-grade and include all four components in one field:
-    Objective, Execution, Validation, Deliverable.
-- "params" must include concrete measurable or identifiable items (named datasets/tools, metrics with targets, hyperparameters, and gating thresholds).
-- "risks" must never be empty and must include Trigger + Impact + Mitigation.
-- Avoid generic wording such as "improve performance" without defining how it will be measured.
-
-Encouraged Modules (especially for advanced/hard topics):
-- Dataset Selection & Curation (Icon: "Database")
-- Advanced Preprocessing / Feature Engineering (Icon: "Cog")
-- Custom Model Architecture Design (Icon: "Cpu" or "PenTool")
-- Training Logic & Optimization (Icon: "Play")
-- Explainable AI (XAI) / Interpretability (Icon: "Eye")
-- Robust Evaluation & Ablation (Icon: "BarChart3")
-- Deployment, Scaling & Monitoring (Icon: "Cloud")
-- Ethical Review / Bias Mitigation (Icon: "Shield")
-- Reproducibility & Packaging (Icon: "CheckCircle")
-
-Valid iconNames (Lucide React): Database, Cog, Cpu, Play, BarChart3, FlaskConical, List, Eye, Cloud, PenTool, Shield, CheckCircle, Activity, Globe, Zap.
 """
 
     response = create_completion_with_fallback(
@@ -275,7 +245,7 @@ Valid iconNames (Lucide React): Database, Cog, Cpu, Play, BarChart3, FlaskConica
         primary_model=HEAVY_PRIMARY_MODEL,
         fallback_models=HEAVY_FALLBACK_MODELS,
         messages=[
-            {"role": "system", "content": "You are a senior AI researcher designed to return perfect JSON structures."},
+            {"role": "system", "content": "You are a world-class AI researcher creating detailed, production-grade experiment plans. Return only valid JSON."},
             {"role": "user", "content": prompt}
         ],
         response_format={"type": "json_object"},
