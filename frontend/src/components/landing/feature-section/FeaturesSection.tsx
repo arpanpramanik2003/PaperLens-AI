@@ -58,7 +58,7 @@ export default function FeaturesSection() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br ${feature.color} p-2`}>
-                      <feature.icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+                      <feature.icon className="w-6 h-6 text-accent-foreground" strokeWidth={1.5} />
                     </div>
                     <h3 className="text-2xl sm:text-3xl font-semibold text-foreground">{feature.title}</h3>
                   </div>

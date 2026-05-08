@@ -325,7 +325,7 @@ export default function WhyPaperLensSection() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <Button className="bg-cyan-500 text-white hover:bg-cyan-600 gap-2 shadow-lg shadow-cyan-500/30">
+                <Button className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 shadow-lg shadow-accent/30">
                   Start with PaperLens AI <ArrowRight className="w-4 h-4" />
                 </Button>
               </motion.div>

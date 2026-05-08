@@ -11,14 +11,12 @@ import LandingFooter from "../components/landing/LandingFooter";
 import AboutModal from "../components/landing/AboutModal";
 
 export default function LandingPage() {
-  const [isDark, setIsDark] = useState(true);
-  const [showAbout, setShowAbout] = useState(false);
-
-  useEffect(() => {
+  const [isDark, setIsDark] = useState(() => {
     const savedTheme = localStorage.getItem("paperlens-theme");
-    const initialDarkMode = savedTheme ? savedTheme === "dark" : true;
-    setIsDark(initialDarkMode);
-  }, []);
+    if (savedTheme) return savedTheme === "dark";
+    return document.documentElement.classList.contains("dark");
+  });
+  const [showAbout, setShowAbout] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);

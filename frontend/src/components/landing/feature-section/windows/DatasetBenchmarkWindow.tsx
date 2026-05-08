@@ -88,7 +88,7 @@ export default function DatasetBenchmarkWindow() {
               </div>
 
               <motion.button
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >

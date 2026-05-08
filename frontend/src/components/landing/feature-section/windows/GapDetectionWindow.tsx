@@ -71,7 +71,7 @@ export default function GapDetectionWindow() {
               onClick={() => setActiveTab("project")}
               className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
                 activeTab === "project"
-                  ? "bg-blue-500/30 border border-blue-500/50 text-blue-300"
+                  ? "bg-accent/20 border border-accent/50 text-accent"
                   : "bg-secondary/30 border border-border/30 text-muted-foreground hover:bg-secondary/50"
               }`}
               whileHover={{ scale: 1.05 }}
@@ -84,7 +84,7 @@ export default function GapDetectionWindow() {
               onClick={() => setActiveTab("paper")}
               className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
                 activeTab === "paper"
-                  ? "bg-blue-500/30 border border-blue-500/50 text-blue-300"
+                  ? "bg-accent/20 border border-accent/50 text-accent"
                   : "bg-secondary/30 border border-border/30 text-muted-foreground hover:bg-secondary/50"
               }`}
               whileHover={{ scale: 1.05 }}
@@ -108,7 +108,7 @@ export default function GapDetectionWindow() {
           </motion.div>
 
           <motion.button
-            className="mb-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full"
+            className="mb-4 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

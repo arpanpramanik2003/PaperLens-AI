@@ -71,7 +71,7 @@ export default function ExperimentPlannerWindow() {
               </div>
 
               <motion.button
-                className="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto"
+                className="mt-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >

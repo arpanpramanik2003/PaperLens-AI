@@ -12,14 +12,14 @@ export default function SocialProofSection() {
   return (
     <section className="relative py-8 sm:py-12 bg-transparent">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        <p className="text-center text-xs font-medium text-slate-500 dark:text-white/50 uppercase tracking-[0.2em] mb-6">
+        <p className="text-center text-xs font-medium text-muted-foreground/80 uppercase tracking-[0.2em] mb-6">
           Trusted by researchers at
         </p>
         <div className="flex items-center justify-center flex-wrap gap-5 sm:gap-10">
           {institutions.map((inst, i) => (
             <motion.span
               key={inst.name}
-              className="font-mono text-sm sm:text-base font-semibold text-slate-400 dark:text-white/60 cursor-default select-none transition-all duration-300 hover:text-cyan-600 dark:hover:text-cyan-400"
+              className="font-mono text-sm sm:text-base font-semibold text-muted-foreground/80 cursor-default select-none transition-all duration-300 hover:text-accent"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.08 }}

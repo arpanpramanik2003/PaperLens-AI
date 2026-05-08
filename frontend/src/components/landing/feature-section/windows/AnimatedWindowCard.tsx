@@ -46,7 +46,7 @@ export default function AnimatedWindowCard({ feature }: AnimatedWindowCardProps)
             animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
             transition={{ duration: 3, repeat: Infinity }}
           >
-            <feature.icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+            <feature.icon className="w-6 h-6 text-accent-foreground" strokeWidth={1.5} />
           </motion.div>
 
           <div className="space-y-3 mt-4">

@@ -141,7 +141,7 @@ export default function HowItWorksSection() {
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                       >
-                        <s.icon className={`w-6 h-6 ${hoveredStep === s.num ? "text-white" : "text-accent"}`} />
+                        <s.icon className={`w-6 h-6 ${hoveredStep === s.num ? "text-accent-foreground" : "text-accent"}`} />
                       </motion.div>
 
                       {/* Content */}

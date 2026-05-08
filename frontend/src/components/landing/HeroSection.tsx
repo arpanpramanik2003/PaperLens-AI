@@ -108,12 +108,12 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
           transition={{ duration: 0.6, delay: 0.1, ease }}
         >
           <span className="text-shimmer">Understand Research Papers</span>
-          <span className="block text-slate-900 dark:text-foreground mt-0">in Minutes, Not Hours</span>
+          <span className="block text-foreground mt-0">in Minutes, Not Hours</span>
         </motion.h1>
 
         {/* ─── Description ─── */}
         <motion.p
-          className="text-[0.82rem] sm:text-base lg:text-lg text-slate-700 dark:text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed"
+          className="text-[0.82rem] sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease }}

@@ -174,7 +174,7 @@
   .shiny-cta {
     --shiny-cta-bg: hsl(var(--card));
     --shiny-cta-bg-subtle: hsl(var(--border) / 0.75);
-    --shiny-cta-fg: hsl(var(--accent-foreground));
+    --shiny-cta-fg: hsl(var(--foreground));
     --shiny-cta-highlight: hsl(var(--accent));
     --shiny-cta-highlight-subtle: hsl(var(--accent) / 0.72);
     --shiny-duration: 3s;

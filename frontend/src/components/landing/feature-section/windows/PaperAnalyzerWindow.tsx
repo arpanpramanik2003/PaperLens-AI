@@ -141,7 +141,7 @@ export default function PaperAnalyzerWindow() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.3, delay: 0.5 }}
               >
-                <div className="bg-blue-500/30 rounded-lg px-3 py-2 max-w-[85%] sm:max-w-[70%]">
+                <div className="bg-accent/20 rounded-lg px-3 py-2 max-w-[85%] sm:max-w-[70%]">
                   <p className="text-xs text-foreground">{question.q}</p>
                 </div>
               </motion.div>
@@ -166,11 +166,11 @@ export default function PaperAnalyzerWindow() {
               <input
                 type="text"
                 placeholder="Ask about this paper..."
-                className="flex-1 bg-secondary/50 border border-border/30 rounded px-2 py-1.5 text-xs text-muted-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-blue-500/50"
+                className="flex-1 bg-secondary/50 border border-border/30 rounded px-2 py-1.5 text-xs text-muted-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent/50"
                 disabled
               />
               <motion.button
-                className="bg-blue-500/80 hover:bg-blue-500 text-white rounded p-1.5 transition-colors"
+                className="bg-accent/90 hover:bg-accent text-accent-foreground rounded p-1.5 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >

@@ -22,7 +22,11 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const { isLoaded, userId } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    const savedTheme = localStorage.getItem("paperlens-theme");
+    if (savedTheme) return savedTheme === "dark";
+    return document.documentElement.classList.contains("dark");
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchInputRef = useRef(null);
@@ -154,9 +158,13 @@ export default function DashboardLayout() {
     return null;
   }
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("paperlens-theme", isDark ? "dark" : "light");
+  }, [isDark]);
+
   const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle("dark");
+    setIsDark((prev) => !prev);
   };
 
   return (
