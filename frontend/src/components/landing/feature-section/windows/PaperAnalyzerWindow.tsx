@@ -62,8 +62,8 @@ export default function PaperAnalyzerWindow() {
               <motion.div
                 className={`p-3 rounded-lg transition-all duration-200 cursor-pointer ${
                   hoveredSection === "summary"
-                    ? "bg-blue-500/20 border border-blue-500/50"
-                    : "hover:bg-blue-500/10 border border-transparent"
+                    ? "bg-accent/20 border border-accent/50"
+                    : "hover:bg-accent/10 border border-transparent"
                 }`}
                 onMouseEnter={() => setHoveredSection("summary")}
                 onMouseLeave={() => setHoveredSection(null)}
@@ -72,7 +72,7 @@ export default function PaperAnalyzerWindow() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.4 }}
               >
-                <h3 className={`text-xs sm:text-sm font-semibold mb-2 transition-colors ${hoveredSection === "summary" ? "text-blue-300" : "text-blue-400"}`}>
+                <h3 className={`text-xs sm:text-sm font-semibold mb-2 transition-colors ${hoveredSection === "summary" ? "text-accent" : "text-accent/80"}`}>
                   Summary
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">{project.summary}</p>
@@ -81,8 +81,8 @@ export default function PaperAnalyzerWindow() {
               <motion.div
                 className={`p-3 rounded-lg transition-all duration-200 cursor-pointer ${
                   hoveredSection === "problem"
-                    ? "bg-blue-500/20 border border-blue-500/50"
-                    : "hover:bg-blue-500/10 border border-transparent"
+                    ? "bg-accent/20 border border-accent/50"
+                    : "hover:bg-accent/10 border border-transparent"
                 }`}
                 onMouseEnter={() => setHoveredSection("problem")}
                 onMouseLeave={() => setHoveredSection(null)}
@@ -91,7 +91,7 @@ export default function PaperAnalyzerWindow() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.5 }}
               >
-                <h3 className={`text-xs sm:text-sm font-semibold mb-2 transition-colors ${hoveredSection === "problem" ? "text-blue-300" : "text-blue-400"}`}>
+                <h3 className={`text-xs sm:text-sm font-semibold mb-2 transition-colors ${hoveredSection === "problem" ? "text-accent" : "text-accent/80"}`}>
                   Problem Statement
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">{project.problem}</p>
@@ -100,8 +100,8 @@ export default function PaperAnalyzerWindow() {
               <motion.div
                 className={`p-3 rounded-lg transition-all duration-200 cursor-pointer ${
                   hoveredSection === "methodology"
-                    ? "bg-blue-500/20 border border-blue-500/50"
-                    : "hover:bg-blue-500/10 border border-transparent"
+                    ? "bg-accent/20 border border-accent/50"
+                    : "hover:bg-accent/10 border border-transparent"
                 }`}
                 onMouseEnter={() => setHoveredSection("methodology")}
                 onMouseLeave={() => setHoveredSection(null)}
@@ -110,7 +110,7 @@ export default function PaperAnalyzerWindow() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.6 }}
               >
-                <h3 className={`text-xs sm:text-sm font-semibold mb-2 transition-colors ${hoveredSection === "methodology" ? "text-blue-300" : "text-blue-400"}`}>
+                <h3 className={`text-xs sm:text-sm font-semibold mb-2 transition-colors ${hoveredSection === "methodology" ? "text-accent" : "text-accent/80"}`}>
                   Methodology
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">{project.methodology}</p>
@@ -127,7 +127,7 @@ export default function PaperAnalyzerWindow() {
           >
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                <Zap className="w-3 h-3 text-blue-400" />
+                <Zap className="w-3 h-3 text-accent" />
                 Chat with Paper
               </h4>
               <span className="text-xs text-muted-foreground">This Document</span>

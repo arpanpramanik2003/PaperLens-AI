@@ -70,7 +70,7 @@ export default function DatasetBenchmarkWindow() {
                   placeholder="Brain tumor"
                   value={projectTitle}
                   onChange={(e) => setProjectTitle(e.target.value)}
-                  className="w-full bg-secondary/50 border border-border/30 rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-secondary/50 border border-border/30 rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent/50"
                 />
               </div>
 
@@ -80,7 +80,7 @@ export default function DatasetBenchmarkWindow() {
                   placeholder="Paste your full project plan, methodology, objectives, and expected outcomes..."
                   value={projectPlan}
                   onChange={(e) => setProjectPlan(e.target.value)}
-                  className="w-full bg-secondary/50 border border-border/30 rounded px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-blue-500/50 h-20 resize-none"
+                  className="w-full bg-secondary/50 border border-border/30 rounded px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent/50 h-20 resize-none"
                 />
                 <div className="mt-2 flex justify-end">
                   <div className="w-3 h-3 rounded-full bg-green-500/60" />
@@ -105,7 +105,7 @@ export default function DatasetBenchmarkWindow() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.3 }}
               >
-                <p className="text-xs text-blue-400 font-semibold mb-1">DOMAIN UNDERSTANDING</p>
+                <p className="text-xs text-accent font-semibold mb-1">DOMAIN UNDERSTANDING</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">{domainDesc}</p>
               </motion.div>
 
@@ -123,7 +123,7 @@ export default function DatasetBenchmarkWindow() {
                   {datasets.map((dataset, idx) => (
                     <motion.div
                       key={idx}
-                      className="bg-secondary/30 border border-border/20 rounded p-2 hover:border-blue-500/30 transition-colors"
+                      className="bg-secondary/30 border border-border/20 rounded p-2 hover:border-accent/30 transition-colors"
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3, delay: 0.5 + idx * 0.05 }}
@@ -145,7 +145,7 @@ export default function DatasetBenchmarkWindow() {
                           </span>
                         ))}
                       </div>
-                      <motion.button className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1" whileHover={{ x: 2 }}>
+                      <motion.button className="text-xs text-accent hover:text-accent/80 flex items-center gap-1" whileHover={{ x: 2 }}>
                         View details →
                       </motion.button>
                     </motion.div>
@@ -162,7 +162,7 @@ export default function DatasetBenchmarkWindow() {
                   {benchmarks.map((benchmark, idx) => (
                     <motion.div
                       key={idx}
-                      className="bg-secondary/30 border border-border/20 rounded p-2 hover:border-blue-500/30 transition-colors"
+                      className="bg-secondary/30 border border-border/20 rounded p-2 hover:border-accent/30 transition-colors"
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3, delay: 0.6 + idx * 0.05 }}
@@ -177,7 +177,7 @@ export default function DatasetBenchmarkWindow() {
                       </div>
                       <h4 className="text-xs font-semibold text-foreground mb-1 line-clamp-2">{benchmark.name}</h4>
                       <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{benchmark.desc}</p>
-                      <motion.button className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1" whileHover={{ x: 2 }}>
+                      <motion.button className="text-xs text-accent hover:text-accent/80 flex items-center gap-1" whileHover={{ x: 2 }}>
                         View benchmark details →
                       </motion.button>
                     </motion.div>

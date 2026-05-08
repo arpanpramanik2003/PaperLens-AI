@@ -21,7 +21,7 @@ export default function GapDetectionWindow() {
       case "High":
         return "text-yellow-400";
       case "Medium":
-        return "text-blue-400";
+        return "text-accent";
       default:
         return "text-green-400";
     }
@@ -146,7 +146,7 @@ export default function GapDetectionWindow() {
                     </div>
 
                     <p className="text-xs text-muted-foreground leading-relaxed mb-2">{gap.desc}</p>
-                    <p className="text-xs text-blue-300 italic leading-relaxed pl-3 border-l-2 border-blue-500/50">{gap.action}</p>
+                    <p className="text-xs text-accent/90 italic leading-relaxed pl-3 border-l-2 border-accent/50">{gap.action}</p>
                   </motion.div>
                 ))}
               </div>
