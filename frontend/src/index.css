@@ -104,7 +104,11 @@
   html {
     scroll-behavior: smooth;
   }
+  body, #root {
+    height: 100%;
+  }
   body {
+    overflow: hidden;
     @apply bg-background text-foreground font-sans antialiased;
   }
 }

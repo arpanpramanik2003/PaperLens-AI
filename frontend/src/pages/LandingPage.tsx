@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import LandingNavbar from "../components/landing/LandingNavbar";
 import HeroSection from "../components/landing/HeroSection";
 import SocialProofSection from "../components/landing/SocialProofSection";
@@ -9,14 +9,18 @@ import TestimonialsSection from "../components/landing/TestimonialsSection";
 import CTASection from "../components/landing/CTASection";
 import LandingFooter from "../components/landing/LandingFooter";
 import AboutModal from "../components/landing/AboutModal";
+import useSmoothScrollbar from "../hooks/useSmoothScrollbar";
 
 export default function LandingPage() {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [isDark, setIsDark] = useState(() => {
     const savedTheme = localStorage.getItem("paperlens-theme");
     if (savedTheme) return savedTheme === "dark";
     return document.documentElement.classList.contains("dark");
   });
   const [showAbout, setShowAbout] = useState(false);
+  // Initialize smooth-scrollbar on the landing page (desktop only)
+  useSmoothScrollbar(scrollContainerRef, { damping: 0.08 });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -24,7 +28,8 @@ export default function LandingPage() {
   }, [isDark]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div ref={scrollContainerRef} className="h-screen overflow-hidden bg-background">
+      <div className="min-h-full bg-background">
       <LandingNavbar isDark={isDark} onToggleTheme={() => setIsDark((prev) => !prev)} />
       <div className="relative overflow-hidden bg-white dark:bg-black">
         <div className="pointer-events-none absolute inset-0">
@@ -48,6 +53,7 @@ export default function LandingPage() {
       <CTASection />
       <LandingFooter onOpenAbout={() => setShowAbout(true)} />
       <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
+      </div>
     </div>
   );
 }
