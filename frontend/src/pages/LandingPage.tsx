@@ -13,6 +13,7 @@ import useSmoothScrollbar from "../hooks/useSmoothScrollbar";
 
 export default function LandingPage() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
   const [isDark, setIsDark] = useState(() => {
     const savedTheme = localStorage.getItem("paperlens-theme");
     if (savedTheme) return savedTheme === "dark";
@@ -28,9 +29,12 @@ export default function LandingPage() {
   }, [isDark]);
 
   return (
-    <div ref={scrollContainerRef} className="h-screen overflow-hidden bg-background">
-      <div className="min-h-full bg-background">
-      <LandingNavbar isDark={isDark} onToggleTheme={() => setIsDark((prev) => !prev)} />
+    <div
+      ref={scrollContainerRef}
+      className={isTouchDevice ? "min-h-screen overflow-x-hidden bg-background" : "h-screen overflow-hidden bg-background"}
+    >
+      <div className={isTouchDevice ? "min-h-screen bg-background" : "min-h-full bg-background"}>
+        <LandingNavbar isDark={isDark} onToggleTheme={() => setIsDark((prev) => !prev)} />
       <div className="relative overflow-hidden bg-white dark:bg-black">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(78%_60%_at_50%_36%,rgba(114,66,195,0.12),transparent_70%)] dark:bg-[radial-gradient(78%_60%_at_50%_36%,rgba(114,66,195,0.25),transparent_70%)]" />
