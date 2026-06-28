@@ -94,7 +94,7 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease }}
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border/50 bg-secondary/50 text-xs sm:text-sm text-muted-foreground mb-6 sm:mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border/50 bg-background/85 text-xs sm:text-sm text-foreground/85 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.45)] backdrop-blur-md mb-6 sm:mb-8">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             AI-Powered Research Assistant
           </div>
@@ -113,7 +113,7 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
 
         {/* ─── Description ─── */}
         <motion.p
-          className="text-[0.82rem] sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed"
+          className="text-[0.82rem] sm:text-base lg:text-lg text-foreground/80 dark:text-white/80 max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease }}
