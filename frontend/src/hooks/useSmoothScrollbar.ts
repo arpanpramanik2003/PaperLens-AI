@@ -4,8 +4,17 @@ type Options = {
   damping?: number;
 };
 
+type SmoothScrollbarInstance = {
+  scrollTo: (x: number, y: number, duration?: number) => void;
+  destroy: () => void;
+};
+
+type SmoothScrollbarModule = {
+  init: (container: HTMLElement, options: { damping: number; thumbMinSize: number }) => SmoothScrollbarInstance;
+};
+
 export default function useSmoothScrollbar(containerRef: React.RefObject<HTMLElement | null>, options?: Options) {
-  const scrollbarRef = useRef<any | null>(null);
+  const scrollbarRef = useRef<SmoothScrollbarInstance | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -21,8 +30,8 @@ export default function useSmoothScrollbar(containerRef: React.RefObject<HTMLEle
     (async () => {
       try {
         const mod = await import("smooth-scrollbar");
-        const Scrollbar = (mod && (mod.default ?? mod)) as any;
-        if (!mounted || !Scrollbar) return;
+        const Scrollbar = ((mod as { default?: SmoothScrollbarModule }).default ?? (mod as unknown as SmoothScrollbarModule));
+        if (!mounted || typeof Scrollbar.init !== "function") return;
 
         const instance = Scrollbar.init(container as HTMLElement, {
           damping: options?.damping ?? 0.08,
@@ -31,7 +40,6 @@ export default function useSmoothScrollbar(containerRef: React.RefObject<HTMLEle
 
         scrollbarRef.current = instance;
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.warn("smooth-scrollbar not available", err);
       }
     })();
@@ -42,10 +50,12 @@ export default function useSmoothScrollbar(containerRef: React.RefObject<HTMLEle
         if (scrollbarRef.current && typeof scrollbarRef.current.destroy === "function") {
           scrollbarRef.current.destroy();
         }
-      } catch (e) {}
+      } catch (error) {
+        void error;
+      }
       scrollbarRef.current = null;
     };
   }, [containerRef, options?.damping]);
 
-  return scrollbarRef.current;
+  return scrollbarRef;
 }

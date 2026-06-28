@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 type LandingNavbarProps = {
   isDark: boolean;
   onToggleTheme: () => void;
+  onNavigate: (href: string) => void;
 };
 
 const navLinks = [
@@ -15,7 +16,7 @@ const navLinks = [
   { label: "About", href: "#about" },
 ];
 
-export default function LandingNavbar({ isDark, onToggleTheme }: LandingNavbarProps) {
+export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: LandingNavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeHref, setActiveHref] = useState("#home");
@@ -104,12 +105,8 @@ export default function LandingNavbar({ isDark, onToggleTheme }: LandingNavbarPr
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
   const handleNavClick = (href: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    const target = document.getElementById(href.replace("#", ""));
-    if (!target) {
-      return;
-    }
     setActiveHref(href);
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    onNavigate(href);
     closeMobileMenu();
   };
 
