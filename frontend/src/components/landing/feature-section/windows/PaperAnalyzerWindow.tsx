@@ -170,7 +170,7 @@ export default function PaperAnalyzerWindow() {
                 disabled
               />
               <motion.button
-                className="bg-accent/90 hover:bg-accent text-accent-foreground rounded p-1.5 transition-colors"
+                className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded p-1.5 transition-colors shadow-lg shadow-cyan-500/20"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >

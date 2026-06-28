@@ -71,7 +71,7 @@ export default function ExperimentPlannerWindow() {
               </div>
 
               <motion.button
-                className="mt-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto"
+                className="mt-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto shadow-lg shadow-purple-500/20"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -85,7 +85,7 @@ export default function ExperimentPlannerWindow() {
             {steps.map((step, idx) => (
               <motion.div
                 key={step.num}
-                className="border border-border/20 rounded-lg overflow-hidden bg-secondary/20 hover:border-purple-500/30 transition-colors"
+                className="border border-border/20 rounded-lg overflow-hidden bg-secondary/20 hover:border-accent/30 transition-colors"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -94,9 +94,9 @@ export default function ExperimentPlannerWindow() {
                 <motion.button
                   onClick={() => setExpandedStep(expandedStep === step.num ? null : step.num)}
                   className="w-full flex items-start gap-3 p-3 hover:bg-secondary/40 transition-colors text-left"
-                  whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.08)" }}
+                  whileHover={{ backgroundColor: "hsl(var(--accent) / 0.08)" }}
                 >
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500/30 border border-purple-500/50 flex-shrink-0 mt-0.5 text-xs font-semibold text-purple-300">
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-accent/15 border border-accent/30 flex-shrink-0 mt-0.5 text-xs font-semibold text-accent">
                     {step.num}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -116,7 +116,7 @@ export default function ExperimentPlannerWindow() {
                   <div className="p-3 pt-0 space-y-2 bg-secondary/10 border-t border-border/10">
                     <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
 
-                    {step.code && <div className="bg-secondary/50 rounded px-2.5 py-1.5 font-mono text-xs text-purple-300">{step.code}</div>}
+                    {step.code && <div className="bg-secondary/50 rounded px-2.5 py-1.5 font-mono text-xs text-accent/90">{step.code}</div>}
 
                     {step.risk && (
                       <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded px-2.5 py-1.5">

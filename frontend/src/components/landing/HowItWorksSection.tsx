@@ -91,7 +91,7 @@ export default function HowItWorksSection() {
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                 
                 <h3 className="text-lg font-semibold mb-8 text-foreground flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-cyan-400" />
+                  <Zap className="w-5 h-5 text-accent" />
                   Process Steps
                 </h3>
 
@@ -133,15 +133,15 @@ export default function HowItWorksSection() {
                     >
                       {/* Animated circle */}
                       <motion.div
-                        className={`relative z-10 flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 ${
+                        className={`relative z-10 flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 bg-gradient-to-br ${s.color} ${
                           hoveredStep === s.num
-                            ? "bg-gradient-to-br from-cyan-500 to-violet-500 shadow-lg shadow-cyan-500/50"
-                            : "bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/30"
+                            ? "shadow-lg shadow-black/20 scale-105"
+                            : "border border-white/10"
                         }`}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                       >
-                        <s.icon className={`w-6 h-6 ${hoveredStep === s.num ? "text-accent-foreground" : "text-accent"}`} />
+                        <s.icon className="w-6 h-6 text-white drop-shadow-sm" />
                       </motion.div>
 
                       {/* Content */}
@@ -154,7 +154,7 @@ export default function HowItWorksSection() {
                       >
                         <div className="text-xs font-semibold text-accent/60 mb-1 tracking-wider">STEP {s.num}</div>
                         <h4 className={`font-semibold text-foreground mb-2 transition-colors ${
-                          hoveredStep === s.num ? "text-cyan-400" : ""
+                          hoveredStep === s.num ? "text-accent" : ""
                         }`}>
                           {s.title}
                         </h4>

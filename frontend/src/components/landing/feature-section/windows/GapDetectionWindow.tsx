@@ -108,7 +108,7 @@ export default function GapDetectionWindow() {
           </motion.div>
 
           <motion.button
-            className="mb-4 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full"
+            className="mb-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full shadow-lg shadow-green-500/20"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -135,7 +135,7 @@ export default function GapDetectionWindow() {
                 {gapsDetected.map((gap, idx) => (
                   <motion.div
                     key={idx}
-                    className="bg-secondary/30 border border-border/20 rounded-lg p-3 hover:border-green-500/30 transition-colors"
+                    className="bg-secondary/30 border border-border/20 rounded-lg p-3 hover:border-accent/30 transition-colors"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: idx * 0.05 }}

@@ -80,7 +80,7 @@ export default function ProblemGeneratorWindow() {
               </div>
 
               <motion.button
-                className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+                className="mt-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full sm:w-auto shadow-lg shadow-amber-500/20"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -94,7 +94,7 @@ export default function ProblemGeneratorWindow() {
             {ideas.map((idea, idx) => (
               <motion.div
                 key={idx}
-                className="bg-secondary/30 border border-border/20 rounded-lg p-3 hover:border-amber-500/50 hover:bg-secondary/50 transition-all duration-200"
+                className="bg-secondary/30 border border-border/20 rounded-lg p-3 hover:border-accent/30 hover:bg-secondary/50 transition-all duration-200"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -120,7 +120,7 @@ export default function ProblemGeneratorWindow() {
                 </div>
 
                 <motion.button
-                  className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors"
+                  className="text-xs text-accent hover:text-accent/80 flex items-center gap-1 transition-colors"
                   whileHover={{ x: 3 }}
                 >
                   Use this idea →
