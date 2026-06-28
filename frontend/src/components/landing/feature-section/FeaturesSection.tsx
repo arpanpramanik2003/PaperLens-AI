@@ -105,7 +105,7 @@ export default function FeaturesSection() {
         </div>
 
         <motion.div
-          className="mt-20 text-center"
+          className="mt-12 text-center"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

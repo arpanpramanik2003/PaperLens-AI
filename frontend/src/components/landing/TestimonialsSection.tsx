@@ -11,7 +11,7 @@ const testimonials = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-16 sm:py-24">
+    <section className="pt-10 pb-16 sm:pt-14 sm:pb-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
           className="text-center mb-12 sm:mb-16"

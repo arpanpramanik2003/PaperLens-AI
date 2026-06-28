@@ -45,7 +45,7 @@ export default function HowItWorksSection() {
   const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
 
   return (
-    <section id="how-it-works" className="relative py-20 sm:py-32 scroll-mt-20">
+    <section id="how-it-works" className="relative pt-10 pb-20 sm:pt-14 sm:pb-32 scroll-mt-20">
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         {/* Header */}
