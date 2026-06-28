@@ -21,11 +21,6 @@ export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: Lan
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeHref, setActiveHref] = useState("#home");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [desktopIndicatorStyle, setDesktopIndicatorStyle] = useState({
-    left: 0,
-    width: 0,
-    opacity: 0,
-  });
   const desktopNavRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -74,34 +69,6 @@ export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: Lan
     }
   }, [isScrolled]);
 
-  useEffect(() => {
-    const updateDesktopIndicator = () => {
-      const navEl = desktopNavRef.current;
-      if (!navEl) {
-        return;
-      }
-
-      const activeEl = navEl.querySelector<HTMLAnchorElement>(`a[data-href="${activeHref}"]`);
-      if (!activeEl) {
-        setDesktopIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
-        return;
-      }
-
-      setDesktopIndicatorStyle({
-        left: activeEl.offsetLeft,
-        width: activeEl.offsetWidth,
-        opacity: 1,
-      });
-    };
-
-    updateDesktopIndicator();
-    window.addEventListener("resize", updateDesktopIndicator);
-
-    return () => {
-      window.removeEventListener("resize", updateDesktopIndicator);
-    };
-  }, [activeHref, scrollProgress]);
-
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
   const handleNavClick = (href: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
@@ -145,15 +112,6 @@ export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: Lan
           ref={desktopNavRef}
           className="hidden md:flex relative items-center gap-2 rounded-full px-2 py-1 bg-background/70 border border-border/55 shadow-sm"
         >
-          <div
-            aria-hidden="true"
-            className="absolute top-1 bottom-1 rounded-full bg-background shadow-sm border border-border/60 transition-all duration-300 ease-out"
-            style={{
-              left: `${desktopIndicatorStyle.left}px`,
-              width: `${desktopIndicatorStyle.width}px`,
-              opacity: desktopIndicatorStyle.opacity,
-            }}
-          />
           {navLinks.map((item) => (
             <a
               key={item.label}
