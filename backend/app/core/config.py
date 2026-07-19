@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 backend_root = Path(__file__).resolve().parents[2]
@@ -28,7 +29,7 @@ class Settings:
     # --- LLM ---
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")
-    MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
     # --- Embeddings & Retrieval ---
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")

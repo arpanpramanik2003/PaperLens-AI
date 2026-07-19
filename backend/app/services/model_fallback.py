@@ -9,8 +9,8 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_PRIMARY_MODEL = "openai/gpt-oss-120b"
-DEFAULT_FALLBACK_MODELS = "llama-3.3-70b-versatile"
+DEFAULT_PRIMARY_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_FALLBACK_MODELS = "openai/gpt-oss-120b,llama-3.1-8b-instant"
 
 
 def _split_model_list(raw: str | None) -> list[str]:
