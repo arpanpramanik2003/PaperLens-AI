@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2, RefreshCw, Compass, ShieldCheck, MessageSquareText, ScanText, ArrowRight } from "lucide-react";
+import { Upload, FileText, Sparkles, Send, Bot, Loader2, CheckCircle2, RefreshCw, Compass, ShieldCheck, MessageSquareText, ScanText, ArrowRight, Maximize2, Minimize2, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { ImperativePanelHandle } from "react-resizable-panels";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +88,36 @@ export default function PaperAnalyzer() {
   const [chatMessages, setChatMessages] = useState<{role: "user" | "ai", text: string}[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
+
+  const analysisPanelRef = useRef<ImperativePanelHandle>(null);
+  const chatPanelRef = useRef<ImperativePanelHandle>(null);
+  const [isAnalysisCollapsed, setIsAnalysisCollapsed] = useState(false);
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+
+  const handleMaximizeAnalysis = () => {
+    if (isChatCollapsed) {
+      handleResetSplit();
+    } else {
+      chatPanelRef.current?.collapse();
+      analysisPanelRef.current?.expand();
+    }
+  };
+
+  const handleMaximizeChat = () => {
+    if (isAnalysisCollapsed) {
+      handleResetSplit();
+    } else {
+      analysisPanelRef.current?.collapse();
+      chatPanelRef.current?.expand();
+    }
+  };
+
+  const handleResetSplit = () => {
+    analysisPanelRef.current?.resize(65);
+    chatPanelRef.current?.resize(35);
+    analysisPanelRef.current?.expand();
+    chatPanelRef.current?.expand();
+  };
 
   const analysisSteps = [
     "Uploading file",
@@ -233,6 +265,15 @@ export default function PaperAnalyzer() {
       setAiGenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTo({
+        top: chatScrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [chatMessages, aiGenerating]);
 
   const handleResetAnalyzer = () => {
     setFile(null);
@@ -443,60 +484,193 @@ export default function PaperAnalyzer() {
       )}
 
       {analyzed && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Analysis */}
-          <div className="lg:col-span-8 space-y-4">
-            <div className="flex items-center gap-3 p-4 rounded-2xl border border-border/60 bg-card/90 premium-shadow">
-              <div className="w-9 h-9 rounded-xl border border-border/60 bg-background/70 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-accent" />
-              </div>
-              <span className="text-sm text-foreground font-medium truncate max-w-[200px] sm:max-w-xs">{file}</span>
-              <span className="text-[11px] font-mono uppercase tracking-widest px-2 py-1 rounded-md bg-accent/10 text-accent ml-auto">Analyzed</span>
+        <div className="space-y-4 relative">
+          {/* File Header Bar */}
+          <div className="flex items-center gap-3 p-4 rounded-2xl border border-border/60 bg-card/90 premium-shadow">
+            <div className="w-9 h-9 rounded-xl border border-border/60 bg-background/70 flex items-center justify-center">
+              <FileText className="w-4 h-4 text-accent" />
             </div>
-
-            <motion.div
-              id="analysis-results"
-              className="rounded-2xl border border-border/60 bg-card/90 p-5 overflow-auto premium-shadow"
-              style={{ maxHeight: "calc(100vh - 250px)", scrollMarginTop: "5rem" }}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease }}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground capitalize tracking-wide">Analysis Result</h3>
-                </div>
-                {typeof pageCount === "number" && pageCount > 0 && (
-                  <div className="text-xs font-mono px-2 py-1 rounded-md bg-secondary text-foreground border border-border/60 whitespace-nowrap uppercase tracking-wider">
-                    {pageCount} {pageCount === 1 ? "page" : "pages"}
-                  </div>
-                )}
-              </div>
-              <div className="text-sm [&_p]:text-justify sm:[&_p]:text-left">
-                {analysisResult ? (
-                  <ReactMarkdown components={MarkdownComponents}>
-                    {normalizeMarkdown(analysisResult)}
-                  </ReactMarkdown>
-                ) : (
-                  <span className="text-muted-foreground whitespace-pre-wrap">No analysis generated.</span>
-                )}
-              </div>
-            </motion.div>
+            <span className="text-sm text-foreground font-medium truncate max-w-[250px] sm:max-w-md">{file}</span>
+            <span className="text-[11px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-md bg-accent/10 text-accent ml-auto">Analyzed</span>
           </div>
 
-          {/* Chat */}
-          <div className="lg:col-span-4 space-y-4">
-            <div className="rounded-2xl border border-border/60 bg-card/90 flex flex-col lg:h-[560px] lg:sticky lg:top-20 premium-shadow">
-              <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-accent" />
-                <span className="text-sm font-medium text-foreground">Chat with Paper</span>
-                <span className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider ml-auto">Context: This Document</span>
-              </div>
+          {/* Quick Restore Floating Trigger when Chatbot is collapsed */}
+          {isChatCollapsed && (
+            <motion.button
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              onClick={() => {
+                chatPanelRef.current?.expand();
+                setIsChatCollapsed(false);
+              }}
+              className="fixed right-6 bottom-8 z-40 flex items-center gap-2 rounded-2xl border border-border/80 bg-card/95 px-4 py-3 shadow-xl backdrop-blur-md hover:border-accent/60 hover:bg-accent/10 transition-all cursor-pointer text-xs font-semibold text-foreground group"
+            >
+              <Sparkles className="w-4 h-4 text-accent animate-pulse" />
+              <span>Chatbot (Collapsed)</span>
+              <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+            </motion.button>
+          )}
 
-              <div ref={chatScrollRef} className="overflow-y-auto p-4 max-h-[38vh] sm:max-h-[42vh] lg:flex-1 lg:max-h-none">
-                <div className="flex flex-col gap-4 lg:min-h-full lg:justify-end">
+          {/* Quick Restore Floating Trigger when Analysis is collapsed */}
+          {isAnalysisCollapsed && (
+            <motion.button
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              onClick={() => {
+                analysisPanelRef.current?.expand();
+                setIsAnalysisCollapsed(false);
+              }}
+              className="fixed left-6 bottom-8 z-40 flex items-center gap-2 rounded-2xl border border-border/80 bg-card/95 px-4 py-3 shadow-xl backdrop-blur-md hover:border-accent/60 hover:bg-accent/10 transition-all cursor-pointer text-xs font-semibold text-foreground group"
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+              <FileText className="w-4 h-4 text-accent" />
+              <span>Analysis Result (Collapsed)</span>
+            </motion.button>
+          )}
+
+          {/* Resizable Panel Group */}
+          <ResizablePanelGroup
+            direction="horizontal"
+            className="w-full gap-0 flex-col lg:flex-row items-stretch"
+          >
+            {/* Left Panel: Analysis Result Card */}
+            <ResizablePanel
+              ref={analysisPanelRef}
+              defaultSize={65}
+              minSize={25}
+              collapsible={true}
+              onCollapse={() => setIsAnalysisCollapsed(true)}
+              onExpand={() => setIsAnalysisCollapsed(false)}
+              className={`transition-all duration-200 ${isAnalysisCollapsed ? "hidden lg:hidden" : ""}`}
+            >
+              <motion.div
+                id="analysis-results"
+                className="w-full rounded-2xl border border-border/60 bg-card/90 p-5 flex flex-col min-h-0 overflow-hidden premium-shadow"
+                style={{ height: "calc(100vh - 250px)", minHeight: "560px" }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease }}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3 border-b border-border/40 pb-3 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-foreground capitalize tracking-wide">Analysis Result</h3>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {typeof pageCount === "number" && pageCount > 0 && (
+                      <div className="text-xs font-mono px-2 py-1 rounded-md bg-secondary text-foreground border border-border/60 whitespace-nowrap uppercase tracking-wider">
+                        {pageCount} {pageCount === 1 ? "page" : "pages"}
+                      </div>
+                    )}
+
+                    {/* Layout Control Buttons */}
+                    <div className="flex items-center gap-1 bg-secondary/50 border border-border/60 rounded-lg p-0.5 ml-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        title={isChatCollapsed ? "Restore 65/35 split view" : "Maximize analysis panel"}
+                        onClick={handleMaximizeAnalysis}
+                      >
+                        {isChatCollapsed ? <Minimize2 className="w-3.5 h-3.5 text-accent" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        title="Reset split view (65% / 35%)"
+                        onClick={handleResetSplit}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto min-h-0 text-sm [&_p]:text-justify sm:[&_p]:text-left pr-1">
+                  {analysisResult ? (
+                    <ReactMarkdown components={MarkdownComponents}>
+                      {normalizeMarkdown(analysisResult)}
+                    </ReactMarkdown>
+                  ) : (
+                    <span className="text-muted-foreground whitespace-pre-wrap">No analysis generated.</span>
+                  )}
+                </div>
+              </motion.div>
+            </ResizablePanel>
+
+            {/* Drag Handle with col-resize & visual grip */}
+            <ResizableHandle
+              withHandle
+              className={`hidden lg:flex mx-2 my-auto h-28 opacity-75 hover:opacity-100 transition-opacity ${isAnalysisCollapsed || isChatCollapsed ? "hidden" : ""}`}
+              title="Drag to resize panels • Double-click to reset layout"
+              onDoubleClick={handleResetSplit}
+            />
+
+            {/* Right Panel: Chatbot Card */}
+            <ResizablePanel
+              ref={chatPanelRef}
+              defaultSize={35}
+              minSize={22}
+              collapsible={true}
+              onCollapse={() => setIsChatCollapsed(true)}
+              onExpand={() => setIsChatCollapsed(false)}
+              className={`transition-all duration-200 ${isChatCollapsed ? "hidden lg:hidden" : ""}`}
+            >
+              <div
+                className="w-full rounded-2xl border border-border/60 bg-card/90 flex flex-col min-h-0 overflow-hidden premium-shadow"
+                style={{ height: "calc(100vh - 250px)", minHeight: "560px" }}
+              >
+                <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between gap-2 flex-shrink-0 bg-card/95 backdrop-blur-sm z-10">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-accent" />
+                    <span className="text-sm font-medium text-foreground">Chat with Paper</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider hidden xl:inline">Context: Document</span>
+
+                    {/* Chat Header Layout Controls */}
+                    <div className="flex items-center gap-1 bg-secondary/50 border border-border/60 rounded-lg p-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        title={isAnalysisCollapsed ? "Restore 65/35 split view" : "Maximize chat panel"}
+                        onClick={handleMaximizeChat}
+                      >
+                        {isAnalysisCollapsed ? <Minimize2 className="w-3.5 h-3.5 text-accent" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        title="Collapse chatbot panel"
+                        onClick={() => {
+                          chatPanelRef.current?.collapse();
+                          setIsChatCollapsed(true);
+                        }}
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        title="Reset split view (65% / 35%)"
+                        onClick={handleResetSplit}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Internal Scrollable Chat Messages Area */}
+                <div ref={chatScrollRef} className="overflow-y-auto p-4 flex-1 min-h-0 space-y-4">
                   {chatMessages.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center">Ask a question about the document.</p>
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-sm text-muted-foreground text-center">Ask a question about the document.</p>
+                    </div>
                   )}
                   {chatMessages.map((msg, i) => (
                     <motion.div
@@ -504,7 +678,7 @@ export default function PaperAnalyzer() {
                       className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
+                      transition={{ duration: 0.25 }}
                     >
                       {msg.role === "ai" && (
                         <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -546,35 +720,41 @@ export default function PaperAnalyzer() {
                     </motion.div>
                   )}
                 </div>
-              </div>
 
-              <form onSubmit={handleChat} className="p-3 border-t border-border/50 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <div className="flex gap-2">
-                  <Input
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Ask about this paper..."
-                    className="text-sm bg-secondary/50 border-border/50 rounded-xl"
-                  />
-                  <ShinyButton type="submit" variant="inline" className="h-9 w-9 p-0 flex-shrink-0 rounded-xl">
-                    <Send className="w-4 h-4" />
-                  </ShinyButton>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {quickPromptSuggestions.map((prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      onClick={() => setChatInput(prompt)}
-                      className="text-[11px] px-2 py-1 rounded-full border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:border-accent/30 transition-colors"
+                <form onSubmit={handleChat} className="p-3 border-t border-border/50 flex-shrink-0 bg-card/95 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Ask about this paper..."
+                      className="text-sm bg-secondary/50 border-border/50 rounded-xl h-10 flex-1"
+                    />
+                    <Button
+                      type="submit"
+                      size="icon"
+                      disabled={!chatInput.trim() || aiGenerating}
+                      className="h-10 w-10 flex-shrink-0 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 shadow-md transition-all active:scale-95 disabled:opacity-40"
+                      title="Send message"
                     >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              </form>
-            </div>
-          </div>
+                      <Send className="w-5 h-5 stroke-[2.2]" />
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {quickPromptSuggestions.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => setChatInput(prompt)}
+                        className="text-[11px] px-2 py-1 rounded-full border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:border-accent/30 transition-colors"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </form>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       )}
     </div>
