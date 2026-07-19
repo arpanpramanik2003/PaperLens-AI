@@ -1,5 +1,10 @@
-from fastapi import FastAPI, Depends
+import logging
+# pyrefly: ignore [missing-import]
+from fastapi import FastAPI, Depends, Request
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -8,10 +13,28 @@ from app.core.security import get_current_user
 from app.core.database import engine, Base, get_db
 from app.models.domain import Document, Activity
 
+# Setup logger for terminal logs
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("paper_explainer")
+
 # Push schema directly to Supabase
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Paper Explainer API")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error("Unhandled Exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "An unexpected error occurred while processing your request. Please try again later.",
+            "code": "INTERNAL_SERVER_ERROR"
+        }
+    )
 
 app.add_middleware(
     CORSMiddleware,

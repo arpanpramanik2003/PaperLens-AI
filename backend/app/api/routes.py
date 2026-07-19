@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -22,7 +23,19 @@ from app.services.parsing import extract_docx_pages, extract_pdf_pages, ParsingF
 from app.services.retrieval import build_vector_store
 from app.services.citation_intelligence import run_citation_intelligence, discover_citations_by_topic
 
+logger = logging.getLogger("paper_explainer.routes")
 router = APIRouter()
+
+
+def _internal_error_response(exc: Exception, context: str = "endpoint"):
+    logger.error("Internal error in %s: %s", context, exc, exc_info=True)
+    return JSONResponse(
+        {
+            "error": "An unexpected error occurred while processing your request. Please try again later.",
+            "code": "INTERNAL_SERVER_ERROR"
+        },
+        status_code=500
+    )
 
 
 def _serialize_saved_item(item: SavedItem) -> dict:
@@ -337,7 +350,7 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
 
     except Exception as exc:
 
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "analyze")
 
 
 @router.post("/analyze_stream")
@@ -464,7 +477,7 @@ async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(ge
 
     except Exception as exc:
 
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "analyze_stream")
 
 
 @router.post("/ask")
@@ -486,7 +499,7 @@ async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
             )
             return {"answer": answer}
         except Exception as exc:
-            return JSONResponse({"error": str(exc)}, status_code=500)
+            return _internal_error_response(exc, "ask_pgvector")
 
     # ------------------------------------------------------------------
     # Legacy path: in-memory FAISS/BM25 (used with /analyze flow)
@@ -540,7 +553,7 @@ async def plan_experiment(payload: ExperimentPlanRequest, user_id: str = Depends
 
         return JSONResponse(plan)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "plan-experiment")
 
 
 @router.post("/generate-problems")
@@ -555,7 +568,7 @@ async def generate_problems(payload: ProblemGeneratorRequest, user_id: str = Dep
 
         return JSONResponse(ideas)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "generate-problems")
 
 
 @router.post("/expand-problem")
@@ -584,7 +597,7 @@ async def expand_problem(payload: ProblemDetailRequest, user_id: str = Depends(g
 
         return JSONResponse(details)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "expand-problem")
 
 
 @router.get("/documents")
@@ -652,7 +665,7 @@ async def detect_gaps(
     except ParsingLimitError as exc:
         return _lengthy_response(exc.detail)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "detect-gaps")
 
 
 @router.post("/find-datasets-benchmarks")
@@ -688,7 +701,7 @@ async def find_datasets_benchmarks(
 
         return JSONResponse(recommendations)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "find-datasets-benchmarks")
 
 
 @router.post("/citation-intelligence")
@@ -773,7 +786,7 @@ async def citation_intelligence(
     except ParsingLimitError as exc:
         return _lengthy_response(exc.detail)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "citation-intelligence")
 
 
 @router.post("/citation-intelligence/stream")
@@ -870,7 +883,8 @@ async def citation_intelligence_stream(
                 try:
                     paper = client.search_paper(ref_text)
                 except RuntimeError as exc:
-                    yield f'data: {_json.dumps({"type":"error","message":str(exc)})}\n\n'
+                    logger.error("Runtime error in citation stream: %s", exc, exc_info=True)
+                    yield f'data: {_json.dumps({"type":"error","message":"A server error occurred during citation analysis."})}\n\n'
                     return
                 except Exception:
                     paper = None
@@ -964,7 +978,7 @@ async def citation_intelligence_recommendations(
 
         return JSONResponse(recommendations)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "citation-intelligence/recommendations")
 
 
 @router.post("/citation-intelligence/discover")
@@ -1011,7 +1025,7 @@ async def citation_intelligence_discover(
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "citation-intelligence/discover")
 
 
 # ===========================================================================
@@ -1154,7 +1168,7 @@ async def upload_paper(
     except MemoryError:
         return _lengthy_response("Paper is too lengthy for this deployment.")
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "upload-paper")
 
 
 @router.post("/saved-items")
@@ -1197,7 +1211,7 @@ async def create_saved_item(
 
         return JSONResponse(_serialize_saved_item(item))
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "create_saved_item")
 
 
 @router.get("/saved-items")
@@ -1216,7 +1230,7 @@ async def list_saved_items(
         serialized = [_serialize_saved_item(item) for item in items]
         return JSONResponse({"items": serialized})
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "list_saved_items")
 
 
 @router.delete("/saved-items/{item_id}")
@@ -1248,7 +1262,7 @@ async def delete_saved_item(
 
         return JSONResponse({"ok": True})
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "delete_saved_item")
 
 
 @router.get("/summarize/{paper_id}")
@@ -1296,4 +1310,4 @@ async def summarize_paper(
         )
 
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return _internal_error_response(exc, "summarize_paper")

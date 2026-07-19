@@ -7,8 +7,10 @@ import { ShinyButton } from "@/components/ui/shiny-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 import { scrollToResult } from "@/lib/scroll-to-result";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
+import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -189,7 +191,10 @@ export default function DatasetBenchmarkFinder() {
         getToken
       );
 
-      if (!res.ok) throw new Error("Failed to find datasets and benchmarks");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
 
       const data = await res.json();
       setDomainSummary(data.domain_summary || "");
@@ -199,8 +204,8 @@ export default function DatasetBenchmarkFinder() {
       setGenerated(true);
       scrollToResults();
     } catch (error) {
-      console.error(error);
-      showSaveErrorToast("Dataset and benchmark recommendations");
+      const msg = handleApiError(error, "Dataset & Benchmark Finder");
+      toast.error("Could not find datasets and benchmarks", { description: msg });
     } finally {
       setLoading(false);
     }
@@ -237,11 +242,14 @@ export default function DatasetBenchmarkFinder() {
         getToken
       );
 
-      if (!res.ok) throw new Error("Failed to save recommendations.");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       showSaveSuccessToast("Dataset and benchmark recommendations");
     } catch (error) {
-      console.error(error);
-      showSaveErrorToast("Dataset and benchmark recommendations");
+      const msg = handleApiError(error, "Save Recommendations");
+      toast.error("Could not save recommendations", { description: msg });
     } finally {
       setSaving(false);
     }

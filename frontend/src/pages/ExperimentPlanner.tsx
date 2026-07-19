@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@clerk/clerk-react";
 import { scrollToResult } from "@/lib/scroll-to-result";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
+import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -177,11 +179,14 @@ export default function ExperimentPlanner() {
         getToken
       );
 
-      if (!res.ok) throw new Error("Failed to save experiment plan.");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       showSaveSuccessToast("Experiment plan");
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Experiment plan");
+      const msg = handleApiError(err, "Save Experiment Plan");
+      toast.error("Could not save plan", { description: msg });
     } finally {
       setSaving(false);
     }
@@ -227,7 +232,10 @@ export default function ExperimentPlanner() {
         body: JSON.stringify({ topic, difficulty })
       }, getToken);
       
-      if (!res.ok) throw new Error("Failed to generate plan");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       const data = await res.json();
 
       const normalizedSteps = sanitizePlanSteps(data.steps || []);
@@ -239,8 +247,8 @@ export default function ExperimentPlanner() {
         setTimeout(() => setVisibleSteps(i + 1), (i + 1) * 300);
       });
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Experiment planning results");
+      const msg = handleApiError(err, "Experiment Planning");
+      toast.error("Could not generate experiment plan", { description: msg });
     } finally {
       setLoading(false);
     }

@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 import { showSaveErrorToast, showSaveSuccessToast } from "@/lib/save-toast";
+import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -70,12 +72,15 @@ export default function SettingsPage() {
       setSavedLoading(true);
       setSavedError(null);
       const res = await apiClient.fetch("/api/saved-items", { method: "GET" }, getToken);
-      if (!res.ok) throw new Error("Failed to load saved items.");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       const data = await res.json();
       setSavedItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
-      console.error(error);
-      setSavedError("Could not load saved items.");
+      const msg = handleApiError(error, "Load Saved Items");
+      setSavedError(msg);
     } finally {
       setSavedLoading(false);
     }
@@ -96,12 +101,15 @@ export default function SettingsPage() {
         getToken
       );
 
-      if (!res.ok) throw new Error("Failed to delete item.");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       setSavedItems((prev) => prev.filter((item) => item.id !== itemId));
       showSaveSuccessToast("Saved item removed");
     } catch (error) {
-      console.error(error);
-      showSaveErrorToast("Saved item removal");
+      const msg = handleApiError(error, "Delete Saved Item");
+      toast.error("Could not remove saved item", { description: msg });
     } finally {
       setDeletingId(null);
     }

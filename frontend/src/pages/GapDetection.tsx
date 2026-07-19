@@ -7,7 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
 import { scrollToResult } from "@/lib/scroll-to-result";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
+import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -94,14 +96,17 @@ export default function GapDetection() {
         body: formData
       }, getToken);
 
-      if (!res.ok) throw new Error("Failed to detect gaps");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       const data = await res.json();
       setGaps(data.gaps || []);
       setDetected(true);
       scrollToResults();
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Gap analysis");
+      const msg = handleApiError(err, "Gap Analysis");
+      toast.error("Could not complete gap analysis", { description: msg });
     } finally {
       setLoading(false);
     }
@@ -143,11 +148,14 @@ export default function GapDetection() {
         getToken
       );
 
-      if (!res.ok) throw new Error("Failed to save detected gaps.");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       showSaveSuccessToast("Gap report");
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Gap report");
+      const msg = handleApiError(err, "Save Gap Report");
+      toast.error("Could not save gap report", { description: msg });
     } finally {
       setSaving(false);
     }

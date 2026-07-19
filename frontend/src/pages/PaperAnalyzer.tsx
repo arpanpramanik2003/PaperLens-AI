@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
 import ReactMarkdown from "react-markdown";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 import { scrollToResult } from "@/lib/scroll-to-result";
 import { toast } from "@/components/ui/sonner";
 
@@ -158,9 +159,7 @@ export default function PaperAnalyzer() {
       setAnalyzed(true);
       scrollToResults();
     } catch (error: unknown) {
-      console.error(error);
-      const err = error as { status?: number; payload?: AnalyzeErrorPayload };
-      const message = parseAnalyzeError(err?.status ?? 0, err?.payload ?? {});
+      const message = handleApiError(error, "Paper Analysis");
       setWarningMessage(message);
       toast.error("Analysis could not be completed", {
         description: message
@@ -220,13 +219,16 @@ export default function PaperAnalyzer() {
         })
       }, getToken);
       
-      if (!res.ok) throw new Error("Chat failed");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: err };
+      }
       const data = await res.json();
       
       setChatMessages((prev) => [...prev, { role: "ai", text: data.answer }]);
     } catch(error) {
-      console.error(error);
-      setChatMessages((prev) => [...prev, { role: "ai", text: "Sorry, I encountered an error answering that." }]);
+      const message = handleApiError(error, "Paper Question Answering");
+      setChatMessages((prev) => [...prev, { role: "ai", text: message }]);
     } finally {
       setAiGenerating(false);
     }

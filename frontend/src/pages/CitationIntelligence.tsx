@@ -5,8 +5,10 @@ import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 import { scrollToResult } from "@/lib/scroll-to-result";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
+import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -404,13 +406,14 @@ export default function CitationIntelligence() {
             scrollToResults();
             await fetchRecommendations(parsedReport, "upload");
           } else if (evt.type === "error") {
-            throw new Error(evt.message || "Server error during citation analysis.");
+            throw { status: 500, payload: { error: evt.message } };
           }
         }
       }
     } catch (err: any) {
       if (err?.name === "AbortError") return;
-      setError(err?.message || "Failed to run citation intelligence.");
+      const msg = handleApiError(err, "Citation Analysis");
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -443,9 +446,9 @@ export default function CitationIntelligence() {
         getToken
       );
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error || "Failed to discover citations for this project.");
+        throw { status: res.status, payload: data };
       }
 
       const parsedReport = data as CitationReport;
@@ -454,7 +457,8 @@ export default function CitationIntelligence() {
       scrollToResults();
       await fetchRecommendations(parsedReport, "discover");
     } catch (err: any) {
-      setError(err?.message || "Failed to discover citations for this project.");
+      const msg = handleApiError(err, "Citation Discovery");
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -499,11 +503,14 @@ export default function CitationIntelligence() {
         getToken
       );
 
-      if (!res.ok) throw new Error("Failed to save citation results.");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       showSaveSuccessToast("Citation results");
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Citation results");
+      const msg = handleApiError(err, "Save Citation Results");
+      toast.error("Could not save citation results", { description: msg });
     } finally {
       setSaving(false);
     }

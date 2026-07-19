@@ -10,8 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 import { scrollToResult } from "@/lib/scroll-to-result";
 import { showSaveErrorToast, showSaveSignInToast, showSaveSuccessToast } from "@/lib/save-toast";
+import { toast } from "@/components/ui/sonner";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -295,11 +297,14 @@ export default function ProblemGenerator() {
         getToken
       );
 
-      if (!res.ok) throw new Error("Failed to save brief.");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       showSaveSuccessToast("Problem brief");
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Problem brief");
+      const msg = handleApiError(err, "Save Problem Brief");
+      toast.error("Could not save brief", { description: msg });
     } finally {
       setSaving(false);
     }
@@ -339,7 +344,10 @@ export default function ProblemGenerator() {
         body: JSON.stringify({ domain, subdomain, complexity })
       }, getToken);
 
-      if (!res.ok) throw new Error("Failed to generate ideas");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
       const data = await res.json();
       const parsedIdeas: IdeaCard[] = Array.isArray(data.ideas)
         ? data.ideas
@@ -358,8 +366,8 @@ export default function ProblemGenerator() {
       setGenerated(true);
       scrollToResults();
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Research problem ideas");
+      const msg = handleApiError(err, "Problem Generation");
+      toast.error("Could not generate research ideas", { description: msg });
     } finally {
       setLoading(false);
     }
@@ -419,7 +427,10 @@ export default function ProblemGenerator() {
         })
       }, getToken);
 
-      if (!res.ok) throw new Error("Failed to expand problem details");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw { status: res.status, payload: errPayload };
+      }
 
       const data = await res.json();
       const parsed: ProblemBrief = {
@@ -444,8 +455,8 @@ export default function ProblemGenerator() {
       setExpandedIdeaIndex(index);
       setExportMenuOpen(false);
     } catch (err) {
-      console.error(err);
-      showSaveErrorToast("Detailed brief");
+      const msg = handleApiError(err, "Problem Expansion");
+      toast.error("Could not expand research brief", { description: msg });
     } finally {
       setExpandingIdeaIndex(null);
     }

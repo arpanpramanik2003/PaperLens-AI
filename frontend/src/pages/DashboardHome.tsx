@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api-client";
+import { handleApiError } from "@/lib/error-handler";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -93,9 +94,12 @@ export default function DashboardHome() {
             ...data,
             stats: normalizeStats(Array.isArray(data.stats) ? data.stats : defaultStats),
           });
+        } else {
+          const errPayload = await res.json().catch(() => ({}));
+          handleApiError({ status: res.status, payload: errPayload }, "Dashboard Stats");
         }
       } catch (err) {
-        console.error(err);
+        handleApiError(err, "Dashboard Stats");
       } finally {
         setLoading(false);
       }
