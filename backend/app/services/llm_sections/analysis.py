@@ -126,9 +126,12 @@ def get_first_page_chunks(max_chunks=3):
     if not chunks:
         return []
 
-    first_page_chunks = [c for c in chunks if c.get("page") == 1]
+    first_page_chunks = [c for c in chunks if c.get("page") in (0, 1)]
 
-    first_page_chunks = sorted(first_page_chunks, key=lambda c: c.get("chunk_id", 0))
+    if not first_page_chunks:
+        first_page_chunks = chunks[:max_chunks]
+    else:
+        first_page_chunks = sorted(first_page_chunks, key=lambda c: c.get("chunk_id", 0))
 
     return first_page_chunks[:max_chunks]
 

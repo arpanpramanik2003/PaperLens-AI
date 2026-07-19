@@ -144,6 +144,27 @@ def _is_follow_up_question(question):
     return any(phrase in q for phrase in follow_up_phrases)
 
 
+def _is_metadata_question(question: str) -> bool:
+    q = question.lower().strip()
+    metadata_terms = [
+        "title",
+        "paper name",
+        "name of paper",
+        "name of the paper",
+        "name of this paper",
+        "what is the paper",
+        "what paper is this",
+        "author",
+        "authors",
+        "who wrote",
+        "who are the authors",
+        "affiliation",
+        "affiliations",
+        "header",
+    ]
+    return any(term in q for term in metadata_terms)
+
+
 def _build_retrieval_query(question, history):
 
     if not history:
@@ -226,19 +247,20 @@ def answer_question(question, history=None):
             return f"The document has {total_pages} pages based on the extracted file."
         return "Page count not available from the extracted file."
 
-    if "author" in q_lower or "authors" in q_lower:
-        first_page = get_first_page_chunks()
-        if first_page:
-            snippets = []
-            for c in first_page:
-                snippet = c["text"][:220].strip()
-                snippets.append(f"[Page {c['page']}] {snippet}")
-            return "Possible author lines from the first page:\n" + "\n".join(snippets)
-        else:
-            return "Author names not found in the extracted first page."
-
     retrieval_query = _build_retrieval_query(question, history_turns)
-    relevant_chunks = search_chunks(retrieval_query)
+    
+    if _is_metadata_question(question):
+        first_page = get_first_page_chunks(max_chunks=4)
+        search_results = search_chunks(retrieval_query)
+        seen = set()
+        relevant_chunks = []
+        for c in first_page + search_results:
+            key = c.get("text", "").strip()[:120]
+            if key not in seen:
+                seen.add(key)
+                relevant_chunks.append(c)
+    else:
+        relevant_chunks = search_chunks(retrieval_query)
 
     if "limitation" in question.lower() or "limitations" in question.lower():
         if not any("limitation" in c["text"].lower() for c in relevant_chunks):
@@ -248,7 +270,6 @@ def answer_question(question, history=None):
         return "Not mentioned in the paper."
 
     context = ""
-
     for c in relevant_chunks:
         context += f"[Page {c['page']}]\n{c['text']}\n\n"
 
@@ -263,19 +284,18 @@ Follow-up reference:
 """
 
     prompt = f"""
-You are a research assistant.
+You are an expert research assistant.
 
-Answer the latest user question using both conversation history and research paper context.
+Answer the user's question using the provided conversation history and research paper context.
 
 Rules:
-- If the answer is not present, provide a brief inferred answer and label it as "Inferred:".
-- Cite page numbers like [Page 5] for any explicit claims.
+- When asked for the paper title, paper name, authors, or affiliations, analyze the Page 1 context carefully, extract the exact Title and Author names (including affiliations if present), and state them clearly in well-structured markdown.
+- Do NOT say "Inferred:" or claim context is missing if the title or author details appear anywhere in the provided context.
+- Cite page numbers like [Page 1] for explicit claims.
 - Be concise, academic, and conversationally aware.
 - Strictly DO NOT use markdown tables or ASCII tables.
 - Present comparisons as bullet points or numbered lists only.
-- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve what "that" refers to.
-- Do NOT say that prior context is missing when conversation history exists.
-- For confirmations like "are you sure?", explicitly confirm or correct the previous answer using the document context.
+- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve references.
 
 Conversation history:
 {conversation_history or "(No prior turns)"}
@@ -293,7 +313,7 @@ Latest question:
         [
             {
                 "role": "system",
-                "content": "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present.",
+                "content": "You are a contextual research assistant. Extract exact paper metadata and resolve follow-up questions from context accurately.",
             },
             {"role": "user", "content": prompt},
         ]
@@ -334,20 +354,20 @@ def stream_answer(question, history=None):
             yield "Page count not available from the extracted file."
         return
 
-    if "author" in q_lower or "authors" in q_lower:
-        first_page = get_first_page_chunks()
-        if first_page:
-            snippets = []
-            for c in first_page:
-                snippet = c["text"][:220].strip()
-                snippets.append(f"[Page {c['page']}] {snippet}")
-            yield "Possible author lines from the first page:\n" + "\n".join(snippets)
-        else:
-            yield "Author names not found in the extracted first page."
-        return
-
     retrieval_query = _build_retrieval_query(question, history_turns)
-    relevant_chunks = search_chunks(retrieval_query)
+    
+    if _is_metadata_question(question):
+        first_page = get_first_page_chunks(max_chunks=4)
+        search_results = search_chunks(retrieval_query)
+        seen = set()
+        relevant_chunks = []
+        for c in first_page + search_results:
+            key = c.get("text", "").strip()[:120]
+            if key not in seen:
+                seen.add(key)
+                relevant_chunks.append(c)
+    else:
+        relevant_chunks = search_chunks(retrieval_query)
 
     if "limitation" in question.lower() or "limitations" in question.lower():
         if not any("limitation" in c["text"].lower() for c in relevant_chunks):
@@ -359,7 +379,6 @@ def stream_answer(question, history=None):
         return
 
     context = ""
-
     for c in relevant_chunks:
         context += f"[Page {c['page']}]\n{c['text']}\n\n"
 
@@ -374,19 +393,18 @@ Follow-up reference:
 """
 
     prompt = f"""
-You are a research assistant.
+You are an expert research assistant.
 
-Answer the latest user question using both conversation history and research paper context.
+Answer the user's question using the provided conversation history and research paper context.
 
 Rules:
-- If the answer is not present, provide a brief inferred answer and label it as "Inferred:".
-- Cite page numbers like [Page 5] for any explicit claims.
+- When asked for the paper title, paper name, authors, or affiliations, analyze the Page 1 context carefully, extract the exact Title and Author names (including affiliations if present), and state them clearly in well-structured markdown.
+- Do NOT say "Inferred:" or claim context is missing if the title or author details appear anywhere in the provided context.
+- Cite page numbers like [Page 1] for explicit claims.
 - Be concise, academic, and conversationally aware.
 - Strictly DO NOT use markdown tables or ASCII tables.
 - Present comparisons as bullet points or numbered lists only.
-- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve what "that" refers to.
-- Do NOT say that prior context is missing when conversation history exists.
-- For confirmations like "are you sure?", explicitly confirm or correct the previous answer using the document context.
+- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve references.
 
 Conversation history:
 {conversation_history or "(No prior turns)"}
@@ -403,7 +421,7 @@ Latest question:
     stream_messages = [
         {
             "role": "system",
-            "content": "You are a contextual research assistant. Resolve follow-up questions from prior turns, do not ask for clarification when enough history is present.",
+            "content": "You are a contextual research assistant. Extract exact paper metadata and resolve follow-up questions from context accurately.",
         },
         {"role": "user", "content": prompt},
     ]
@@ -425,8 +443,6 @@ def answer_question_with_pgvector(
     RAG-based question answering using Supabase pgvector for chunk retrieval.
     Retrieves top-k semantically similar chunks for the given paper_id,
     then passes them as context to Groq LLaMA 3.
-
-    Reuses all existing conversation history helpers from answer_question().
     """
     from app.services.retrieval import search_pgvector_chunks
 
@@ -435,7 +451,6 @@ def answer_question_with_pgvector(
     prev_user_q, prev_assistant_a = _get_last_qa_pair(history_turns)
     q_lower = question.lower()
 
-    # Handle acknowledgements
     acknowledgement_phrases = {
         "ok", "okay", "ok good", "great", "nice", "cool", "got it", "understood",
         "thanks", "thank you", "perfect", "alright", "all right"
@@ -443,16 +458,26 @@ def answer_question_with_pgvector(
     if q_lower.strip().rstrip(".! ") in acknowledgement_phrases:
         return "Great - let me know if you have any questions about the paper."
 
-    # Build retrieval query (handles follow-up questions context)
     retrieval_query = _build_retrieval_query(question, history_turns)
 
-    # Retrieve top-k chunks from pgvector
-    relevant_chunks = search_pgvector_chunks(paper_id, retrieval_query, top_k=5)
+    if _is_metadata_question(question):
+        from app.services.embedding import fetch_all_chunks_from_pgvector
+        all_chunks = fetch_all_chunks_from_pgvector(paper_id)
+        first_page = [c for c in all_chunks if c.get("page") in (0, 1)] or all_chunks[:3]
+        search_results = search_pgvector_chunks(paper_id, retrieval_query, top_k=5)
+        seen = set()
+        relevant_chunks = []
+        for c in first_page + search_results:
+            key = c.get("text", "").strip()[:120]
+            if key not in seen:
+                seen.add(key)
+                relevant_chunks.append(c)
+    else:
+        relevant_chunks = search_pgvector_chunks(paper_id, retrieval_query, top_k=5)
 
     if not relevant_chunks:
         return "The relevant content was not found in this paper."
 
-    # Format context
     context = "\n\n".join(
         [f"[Page {c['page']}]\n{c['text']}" for c in relevant_chunks]
     )
@@ -467,13 +492,14 @@ Follow-up reference:
 - Previous assistant answer: {prev_assistant_a or "(not available)"}
 """
 
-    prompt = f"""You are a research assistant.
+    prompt = f"""You are an expert research assistant.
 
-Answer the latest question strictly using the provided research paper context.
+Answer the user's question strictly using the provided research paper context.
 
 Rules:
-- If the answer is not explicitly in the context, say "Not explicitly mentioned in this paper."
-- Cite page numbers like [Page 5] for any explicit claims.
+- When asked for the paper title, paper name, authors, or affiliations, analyze the Page 1 context carefully, extract the exact Title and Author names (including affiliations if present), and state them clearly in well-structured markdown.
+- Do NOT say "Inferred:" or claim context is missing if the title or author details appear anywhere in the provided context.
+- Cite page numbers like [Page 1] for explicit claims.
 - Be concise, academic, and conversationally aware.
 - Strictly DO NOT use markdown tables or ASCII tables.
 - Present comparisons as bullet points or numbered lists only.
@@ -495,10 +521,11 @@ Latest question:
         [
             {
                 "role": "system",
-                "content": "You are a precise research assistant that answers questions strictly based on provided paper context.",
+                "content": "You are a precise research assistant that extracts metadata and answers questions strictly based on provided paper context.",
             },
             {"role": "user", "content": prompt},
         ]
     )
 
     return _sanitize_no_table_output(response.choices[0].message.content)
+
