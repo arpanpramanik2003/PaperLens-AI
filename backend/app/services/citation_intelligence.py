@@ -6,7 +6,9 @@ import time
 from datetime import datetime
 from typing import Any
 
+# pyrefly: ignore [missing-import]
 import httpx
+# pyrefly: ignore [missing-import]
 from groq import Groq
 
 from app.core.config import settings
@@ -14,6 +16,9 @@ from app.services.model_fallback import create_completion_with_fallback
 
 
 logger = logging.getLogger(__name__)
+
+HEAVY_PRIMARY_MODEL = "openai/gpt-oss-120b"
+HEAVY_FALLBACK_MODELS = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 
 REFERENCE_SECTION_HEADERS = [
@@ -625,15 +630,6 @@ def _build_heuristic_discovery_plan(
         "topic_preset": topic_preset,
     }
 
-    HEAVY_PRIMARY_MODEL = "openai/gpt-oss-120b"
-    HEAVY_FALLBACK_MODELS = "llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct"
-
-    logger.info(
-        "Model routing: citation intelligence primary='%s', fallbacks='%s'",
-        HEAVY_PRIMARY_MODEL,
-        HEAVY_FALLBACK_MODELS,
-    )
-
 
 def _build_discovery_query_plan(
     project_title: str,
@@ -646,6 +642,11 @@ def _build_discovery_query_plan(
         return base_plan
 
     try:
+        logger.info(
+            "Model routing: citation intelligence primary='%s', fallbacks='%s'",
+            HEAVY_PRIMARY_MODEL,
+            HEAVY_FALLBACK_MODELS,
+        )
         llm_client = Groq(api_key=settings.GROQ_API_KEY)
         response = create_completion_with_fallback(
             llm_client=llm_client,
@@ -836,12 +837,16 @@ class SemanticScholarClient:
         )
         self._last_request_time = time.monotonic()
 
+        if response.status_code in {401, 403}:
+            if self.api_key:
+                logger.warning("Semantic Scholar API authentication failed. Deactivating invalid key and retrying anonymously...")
+                self.api_key = None
+                return self._search_by_query(query, fields)
+            return None
+
         if response.status_code in {429, 503}:
             time.sleep(3.0)
             return None
-
-        if response.status_code in {401, 403}:
-            raise RuntimeError("Semantic Scholar API authentication failed.")
 
         if response.status_code in {400, 404}:
             return None
@@ -872,12 +877,16 @@ class SemanticScholarClient:
         )
         self._last_request_time = time.monotonic()
 
+        if response.status_code in {401, 403}:
+            if self.api_key:
+                logger.warning("Semantic Scholar API authentication failed. Deactivating invalid key and retrying anonymously...")
+                self.api_key = None
+                return self._search_results_by_query(query, limit, fields)
+            return []
+
         if response.status_code in {429, 503}:
             time.sleep(2.0)
             return []
-
-        if response.status_code in {401, 403}:
-            raise RuntimeError("Semantic Scholar API authentication failed.")
 
         if response.status_code in {400, 404}:
             return []
@@ -901,12 +910,17 @@ class SemanticScholarClient:
         )
         self._last_request_time = time.monotonic()
 
+        if response.status_code in {401, 403}:
+            if self.api_key:
+                logger.warning("Semantic Scholar API authentication failed. Deactivating invalid key and retrying anonymously...")
+                self.api_key = None
+                return self._fetch_by_doi(doi)
+            return None
+
         if response.status_code in {404, 400}:
             return None
         if response.status_code in {429, 503}:
             return None
-        if response.status_code in {401, 403}:
-            raise RuntimeError("Semantic Scholar API authentication failed.")
 
         try:
             response.raise_for_status()
