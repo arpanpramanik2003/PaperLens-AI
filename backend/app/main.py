@@ -12,6 +12,8 @@ from app.api.routes import router
 from app.core.security import get_current_user
 from app.core.database import engine, Base, get_db
 from app.models.domain import Document, Activity
+from app.models.agent_task import AgentTask, AgentStep
+from app.routers.agent import router as agent_router
 
 # Setup logger for terminal logs
 logging.basicConfig(
@@ -45,6 +47,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(agent_router, prefix="/api")
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():

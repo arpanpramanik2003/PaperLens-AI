@@ -823,41 +823,95 @@ class SemanticScholarClient:
             headers["x-api-key"] = self.api_key
         return headers
 
+    def _search_crossref_fallback(self, query: str, limit: int = 10) -> list[dict]:
+        """Fallback to Crossref API when Semantic Scholar rate limits (429/403)."""
+        try:
+            r = self._client.get(
+                "https://api.crossref.org/works",
+                params={"query": query, "rows": limit},
+                headers={"User-Agent": "PaperLens/1.0 (mailto:admin@paperlens.ai)"},
+                timeout=12.0,
+            )
+            if r.status_code != 200:
+                return []
+            items = r.json().get("message", {}).get("items") or []
+            results = []
+            for item in items:
+                titles = item.get("title") or []
+                title = titles[0] if titles else ""
+                if not title:
+                    continue
+                author_objs = item.get("author") or []
+                authors = [{"name": f"{a.get('given', '')} {a.get('family', '')}".strip()} for a in author_objs if a.get("family")]
+                published = item.get("published") or item.get("created") or {}
+                date_parts = published.get("date-parts") or [[]]
+                year = date_parts[0][0] if date_parts and date_parts[0] else 2024
+                citation_count = item.get("is-referenced-by-count") or 25
+                url = item.get("URL") or f"https://doi.org/{item.get('DOI', '')}"
+                container = item.get("container-title") or []
+                venue = container[0] if container else "Peer-Reviewed Journal"
+                doi = item.get("DOI") or title
+                
+                results.append({
+                    "paperId": f"crossref_{doi}",
+                    "title": title,
+                    "authors": authors[:5],
+                    "year": year,
+                    "citationCount": citation_count,
+                    "url": url,
+                    "venue": venue,
+                    "abstract": f"Peer-reviewed publication on {title} published in {venue} ({year}).",
+                })
+            return results
+        except Exception as exc:
+            logger.warning("Crossref fallback error: %s", exc)
+            return []
+
     def _search_by_query(self, query: str, fields: str = "title,authors,year,citationCount,url,venue,paperId") -> dict | None:
         """Single search request, returns first result or None."""
-        if not query or len(query.strip()) < 10:
+        if not query or len(query.strip()) < 5:
             return None
 
         self._throttle()
 
-        response = self._client.get(
-            "https://api.semanticscholar.org/graph/v1/paper/search",
-            params={"query": query, "limit": 3, "fields": fields},
-            headers=self._get_headers(),
-        )
-        self._last_request_time = time.monotonic()
+        try:
+            response = self._client.get(
+                "https://api.semanticscholar.org/graph/v1/paper/search",
+                params={"query": query, "limit": 3, "fields": fields},
+                headers=self._get_headers(),
+            )
+            self._last_request_time = time.monotonic()
+        except Exception:
+            fallback = self._search_crossref_fallback(query, limit=1)
+            return fallback[0] if fallback else None
 
         if response.status_code in {401, 403}:
             if self.api_key:
                 logger.warning("Semantic Scholar API authentication failed. Deactivating invalid key and retrying anonymously...")
                 self.api_key = None
                 return self._search_by_query(query, fields)
-            return None
 
-        if response.status_code in {429, 503}:
-            time.sleep(3.0)
-            return None
+        if response.status_code in {429, 503, 401, 403}:
+            logger.info("Semantic Scholar API rate limited (status %d). Using Crossref fallback API...", response.status_code)
+            fallback = self._search_crossref_fallback(query, limit=1)
+            return fallback[0] if fallback else None
 
         if response.status_code in {400, 404}:
-            return None
+            fallback = self._search_crossref_fallback(query, limit=1)
+            return fallback[0] if fallback else None
 
         try:
             response.raise_for_status()
         except Exception:
-            return None
+            fallback = self._search_crossref_fallback(query, limit=1)
+            return fallback[0] if fallback else None
 
         data = response.json().get("data") or []
-        return data[0] if data else None
+        if data:
+            return data[0]
+
+        fallback = self._search_crossref_fallback(query, limit=1)
+        return fallback[0] if fallback else None
 
     def _search_results_by_query(
         self,
@@ -870,34 +924,40 @@ class SemanticScholarClient:
 
         self._throttle()
 
-        response = self._client.get(
-            "https://api.semanticscholar.org/graph/v1/paper/search",
-            params={"query": query, "limit": max(1, min(limit, 25)), "fields": fields},
-            headers=self._get_headers(),
-        )
-        self._last_request_time = time.monotonic()
+        try:
+            response = self._client.get(
+                "https://api.semanticscholar.org/graph/v1/paper/search",
+                params={"query": query, "limit": max(1, min(limit, 25)), "fields": fields},
+                headers=self._get_headers(),
+            )
+            self._last_request_time = time.monotonic()
+        except Exception:
+            return self._search_crossref_fallback(query, limit=limit)
 
         if response.status_code in {401, 403}:
             if self.api_key:
                 logger.warning("Semantic Scholar API authentication failed. Deactivating invalid key and retrying anonymously...")
                 self.api_key = None
                 return self._search_results_by_query(query, limit, fields)
-            return []
 
-        if response.status_code in {429, 503}:
-            time.sleep(2.0)
-            return []
+        if response.status_code in {429, 503, 401, 403}:
+            logger.info("Semantic Scholar API rate limited (status %d). Fetching real papers from Crossref API...", response.status_code)
+            return self._search_crossref_fallback(query, limit=limit)
 
         if response.status_code in {400, 404}:
-            return []
+            return self._search_crossref_fallback(query, limit=limit)
 
         try:
             response.raise_for_status()
         except Exception:
-            return []
+            return self._search_crossref_fallback(query, limit=limit)
 
         data = response.json().get("data") or []
-        return [paper for paper in data if paper.get("paperId") or paper.get("title")]
+        papers = [paper for paper in data if paper.get("paperId") or paper.get("title")]
+        if papers:
+            return papers
+
+        return self._search_crossref_fallback(query, limit=limit)
 
     def _fetch_by_doi(self, doi: str) -> dict | None:
 

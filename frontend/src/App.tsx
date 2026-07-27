@@ -16,6 +16,8 @@ import GapDetection from "./pages/GapDetection";
 import DatasetBenchmarkFinder from "./pages/DatasetBenchmarkFinder";
 import CitationIntelligence from "./pages/CitationIntelligence";
 import SettingsPage from "./pages/SettingsPage";
+import AgentMode from "./pages/AgentMode";
+import AgentModeLayout from "./components/AgentModeLayout";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -39,6 +41,16 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route 
+              path="/agent"
+              element={
+                <ProtectedRoute>
+                  <AgentModeLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AgentMode />} />
+            </Route>
             <Route 
               path="/dashboard" 
               element={<DashboardLayout />}

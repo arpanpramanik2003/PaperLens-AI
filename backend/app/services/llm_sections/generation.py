@@ -63,49 +63,61 @@ def _estimate_experiment_step_bounds(topic: str, difficulty: str) -> tuple[int, 
 def _infer_step_risk(title: str, details: str) -> str:
     combined = f"{title} {details}".lower()
 
-    if any(keyword in combined for keyword in ["dataset", "curation", "collection"]):
-        return "Dataset shift, annotation inconsistency, and class imbalance can degrade generalization."
-    if any(keyword in combined for keyword in ["preprocess", "registration", "normalization", "feature"]):
-        return "Preprocessing artifacts and information leakage can distort downstream model behavior."
-    if any(keyword in combined for keyword in ["model", "architecture", "u-net", "vgg", "transformer"]):
-        return "Architecture mismatch and over-parameterization may overfit or underutilize domain priors."
+    if any(keyword in combined for keyword in ["dataset", "curation", "collection", "data"]):
+        return "Scaffold leakage across splits or annotation imbalance can artificially inflate validation scores."
+    if any(keyword in combined for keyword in ["preprocess", "registration", "normalization", "feature", "conformation"]):
+        return "Preprocessing artifacts or feature distortion can silently degrade downstream generalization."
+    if any(keyword in combined for keyword in ["model", "architecture", "u-net", "vgg", "transformer", "gnn", "encoder"]):
+        return "Over-parameterization or structural representation mismatch can cause overfitting on training splits."
     if any(keyword in combined for keyword in ["train", "optimization", "scheduler", "loss"]):
-        return "Optimization instability, gradient issues, or poor hyperparameter search can stall convergence."
-    if any(keyword in combined for keyword in ["evaluation", "ablation", "metric"]):
-        return "Weak baselines or metric mismatch may produce misleading performance claims."
-    if any(keyword in combined for keyword in ["deploy", "monitor", "serving", "edge"]):
-        return "Latency drift, resource constraints, and data-distribution drift can hurt production reliability."
-    if any(keyword in combined for keyword in ["ethic", "bias", "fairness", "privacy"]):
-        return "Bias amplification and privacy leakage can violate compliance and reduce trust in deployment."
+        return "Gradient instability or uncalibrated hyperparameter search can stall convergence."
+    if any(keyword in combined for keyword in ["evaluation", "ablation", "metric", "benchmark"]):
+        return "Weak baseline selections or metric misalignment may produce ungrounded performance claims."
+    if any(keyword in combined for keyword in ["deploy", "monitor", "serving", "edge", "scaling"]):
+        return "Inference latency drift and hardware distribution shift can degrade real-world deployment performance."
 
-    return "Integration and reproducibility risks may appear if assumptions are not validated at this stage."
+    return "Domain distribution shift or insufficient validation gating may affect reproducibility."
 
 
 def _coerce_structured_details(title: str, topic: str, details: str) -> str:
     compact = re.sub(r"\s+", " ", (details or "")).strip()
     
-    if len(compact.split()) >= 20:
+    if len(compact.split()) >= 15:
         return compact
 
-    return f"Execute {title.lower()} with measurable validation. Focus on concrete implementation specifics, key assumptions, dependencies, and success criteria relevant to {topic}."
+    return f"Execute {title.lower()} with quantitative validation. Focus on concrete implementation specifics, key assumptions, and success criteria for {topic}."
 
 
-def _coerce_structured_params(params: str) -> str:
+def _coerce_structured_params(title: str, topic: str, params: str) -> str:
     compact = re.sub(r"\s+", " ", (params or "")).strip()
     
-    if len(compact.split()) >= 12:
+    if len(compact.split()) >= 6 and "specify quantifiable" not in compact.lower():
         return compact
 
-    return "Specify quantifiable configuration: datasets, metrics with targets, hyperparameters, and gating thresholds."
+    t_lower = title.lower()
+
+    if any(k in t_lower for k in ["dataset", "data", "collection"]):
+        return f"Target split: 80% train / 10% val / 10% test; Stratified sampling for {topic}."
+    if any(k in t_lower for k in ["preprocess", "feature", "conformation", "node"]):
+        return f"Normalization: Min-Max / Z-score; Feature dimension: 256; Scaling on {topic} data."
+    if any(k in t_lower for k in ["model", "architecture", "encoder", "gnn", "network"]):
+        return f"Architecture: Deep multi-layer network with self-attention; Hidden size: 512; Dropout: 0.15."
+    if any(k in t_lower for k in ["train", "optimization", "loss", "tuning"]):
+        return f"Optimizer: AdamW (lr=3e-4, weight_decay=1e-2); Batch size: 64; Max epochs: 150."
+    if any(k in t_lower for k in ["evaluation", "benchmark", "metric", "ablation"]):
+        return f"Primary metrics: Task accuracy, ROC-AUC / RMSE; Baseline comparison against SOTA benchmarks."
+    if any(k in t_lower for k in ["deploy", "scaling", "export"]):
+        return f"Target latency: <50ms per inference; Quantization: INT8 / FP16; Serving platform: Docker ONNX."
+
+    return f"Configuration parameters for {title}: Controlled hyperparameters, target metrics, and threshold constraints for {topic}."
 
 
 def _coerce_structured_risk(title: str, details: str, risks: str) -> str:
     compact = re.sub(r"\s+", " ", (risks or "")).strip()
-    if len(compact.split()) >= 12:
+    if len(compact.split()) >= 6 and "missing recent preprints" not in compact.lower() and "specify quantifiable" not in compact.lower():
         return compact
 
-    inferred = _infer_step_risk(title, details)
-    return inferred
+    return _infer_step_risk(title, details)
 
 
 def _supplemental_step_templates(topic: str) -> list[dict]:
@@ -169,7 +181,7 @@ def _normalize_experiment_plan(topic: str, plan_payload: dict, min_steps: int, m
 
         details = _coerce_structured_details(title, topic, details)
 
-        params = _coerce_structured_params(params)
+        params = _coerce_structured_params(title, topic, params)
 
         risks = _coerce_structured_risk(title, details, risks)
 
@@ -265,6 +277,8 @@ You MUST respond strictly in JSON format matching the following structure exactl
   "ideas": [
     {{
       "title": "Title of the research problem",
+      "problem_statement": "Specific, technical description of the research gap and bottleneck.",
+      "objective": "Specific, actionable solution and proposed mathematical/methodological objective tailored to solve this exact problem.",
       "desc": "A deep, constructive, and technical description of the research gap and proposed solution.",
       "tags": ["Tag1", "Tag2"],
       "rating": 5

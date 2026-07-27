@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
-import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 const navItems = [
   { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { title: "Agent Mode", path: "/agent", icon: Sparkles },
   { title: "Paper Analyzer", path: "/dashboard/analyzer", icon: FileText },
-    { title: "Problem Generator", path: "/dashboard/generator", icon: Lightbulb },
-    { title: "Experiment Planner", path: "/dashboard/planner", icon: FlaskConical },
+  { title: "Problem Generator", path: "/dashboard/generator", icon: Lightbulb },
+  { title: "Experiment Planner", path: "/dashboard/planner", icon: FlaskConical },
   { title: "Gap Detection", path: "/dashboard/gaps", icon: ScanSearch },
   { title: "Dataset & Benchmark Finder", path: "/dashboard/dataset-benchmarks", icon: Database },
   { title: "Citation Intelligence", path: "/dashboard/citation-intelligence", icon: BarChart3 },
@@ -325,6 +326,16 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link to="/agent">
+              <Button
+                size="sm"
+                className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-medium text-xs shadow-md shadow-purple-500/20 border border-purple-400/30 flex items-center gap-1.5 transition-all hover:scale-105"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-200 animate-pulse" />
+                <span>Agent Mode</span>
+              </Button>
+            </Link>
+
             <div className="relative hidden md:block" ref={searchContainerRef}>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
               <Input

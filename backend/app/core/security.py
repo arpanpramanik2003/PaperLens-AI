@@ -69,3 +69,19 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
     token = credentials.credentials
     payload = verify_token(token)
     return payload.get("sub")
+
+async def get_current_user_from_token(
+    token: str = None,
+    credentials: HTTPAuthorizationCredentials = Security(HTTPBearer(auto_error=False))
+):
+    raw_token = None
+    if credentials:
+        raw_token = credentials.credentials
+    elif token:
+        raw_token = token
+
+    if not raw_token:
+        raise HTTPException(status_code=401, detail="Authentication token missing")
+
+    payload = verify_token(raw_token)
+    return payload.get("sub")
