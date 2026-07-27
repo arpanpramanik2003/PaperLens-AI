@@ -581,3 +581,51 @@ Citation Intelligence additionally requires:
 - SEMANTIC_SCHOLAR_API_KEY
 
 When parsing/size limits are exceeded, endpoints may return 413 with descriptive error text (and PAPER_TOO_LENGTHY code for analyzer paths).
+
+---
+
+## 14) Agent Mode (Autonomous Multi-Agent Workflow)
+
+### POST /api/agent/task
+- Auth: Yes
+- Request body:
+```json
+{
+  "goal": "Do a literature review on graph neural networks for drug discovery and find 3 unexplored directions."
+}
+```
+- Response:
+```json
+{
+  "task_id": "8f3b2a1c-...",
+  "status": "started"
+}
+```
+
+---
+
+### GET /api/agent/task/{task_id}
+- Auth: Yes
+- Response:
+```json
+{
+  "task_id": "8f3b2a1c-...",
+  "status": "done",
+  "goal": "...",
+  "live_history": [ ... ]
+}
+```
+
+---
+
+### GET /api/agent/task/{task_id}/stream
+- Auth: Yes (via query parameter: `?token=<Clerk JWT>`)
+- Content-Type: `text/event-stream`
+- Description: Streams live SSE events (`tool_call`, `tool_result`, `critique`, `synthesis_start`, `final`, `error`) as the agent executes tool calls autonomously.
+
+---
+
+## 15) MCP Server Protocol Integration
+
+### Stdio MCP Protocol (`backend/app/mcp_server.py`)
+- Standard input/output Model Context Protocol JSON-RPC server exposing all agent tools (`search_papers`, `search_workspace_vector_db`, `analyze_paper`, `generate_problem`, `find_datasets`, `validate_citations`, `plan_experiment`).

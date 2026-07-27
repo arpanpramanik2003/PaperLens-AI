@@ -27,6 +27,14 @@ Instead of just chatting with a PDF, PaperLens AI provides structured workflows:
 
 ## 🚀 Core Features & Workflows
 
+### 0) 🤖 Agent Mode: Autonomous Research Orchestrator (New)
+- **Autonomous Multi-Agent Workflow:** Input open-ended, free-text research goals (*"Do a literature review on graph neural networks for drug discovery and find 3 unexplored directions"*) to automatically trigger literature discovery, methodology analysis, problem ideation, dataset recommendation, peer-review critique, and experiment planning.
+- **Multi-Provider Literature Fallbacks:** Multi-stage literature search across Semantic Scholar, Crossref API (handles HTTP 429 rate limits), and arXiv API (up to 40 papers).
+- **Interactive Experiment Planner Integration:** Includes a CTA button (**"Plan Roadmap in Experiment Planner"**) on every research direction card that dynamically invokes `/api/plan-experiment` to render an inline 6-stage execution roadmap.
+- **Supabase pgvector Search**: Integrates `@tool("search_workspace_vector_db")` to query uploaded document embeddings directly.
+- **MCP Protocol Server**: Tools exposed over a standard Model Context Protocol server (`backend/app/mcp_server.py`).
+- **Detailed Guide**: See [docs/7_AGENT_MODE.md](docs/7_AGENT_MODE.md).
+
 ### 1) 📄 RAG-Powered Paper Chat & Summarizer
 - **Memory-Safe Extraction:** Uses `PyMuPDF` with generator-based extraction to parse massive PDFs without memory spikes.
 - **Persistent Memory:** Chunks and embeddings are securely stored in **Supabase pgvector**, persisting beyond server reloads.
@@ -148,6 +156,22 @@ VITE_API_URL=http://localhost:8000
 ```
 
 Run client: `npm run dev`
+
+---
+
+## 📚 Documentation
+
+Detailed documentation for each workflow and component is available in the `docs/` folder:
+
+- [🤖 7. Agent Mode — Autonomous Orchestrator](docs/7_AGENT_MODE.md)
+- [📄 1. Paper Analyzer](docs/1_PAPER_ANALYZER.md)
+- [🧪 2. Experiment Planner](docs/2_EXPERIMENT_PLANNER.md)
+- [💡 3. Problem Generator](docs/3_PROBLEM_GENERATOR.md)
+- [🔍 4. Gap Detection](docs/4_GAP_DETECTION.md)
+- [📊 5. Dataset & Benchmark Finder](docs/5_DATASET_BENCHMARK_FINDER.md)
+- [🗂 6. Citation Intelligence](docs/6_CITATION_INTELLIGENCE.md)
+- [📖 Full API Reference](docs/API_REFERENCE.md)
+- [🏗 System & Project Analysis](docs/PROJECT_ANALYSIS.md)
 
 ---
 
