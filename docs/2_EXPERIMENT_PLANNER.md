@@ -1,452 +1,248 @@
-# Experiment Planner: Complete Workflow Documentation
+# 🧪 Experiment Planner — Complete Architecture & Execution Roadmap Documentation
 
-**Purpose:** Generate step-by-step AI/ML experiment execution plans based on research topic and difficulty level.
-
----
-
-## Architecture Overview
-
-```
-User Input (Frontend)
-    ├─ Topic (e.g., "Neural Architecture Search")
-    └─ Difficulty: Beginner / Intermediate / Advanced
-    
-Backend LLM Generation
-    ├─ JSON Schema Enforcement
-    ├─ Structured Step Generation
-    └─ Icon/Module Mapping
-    
-Output Visualization
-    ├─ Card-based Step Layout
-    ├─ Icon + Title + Details
-    ├─ Risk Assessment
-    └─ Hyperparameter Guidance
-```
+<p align="center">
+  <img src="https://img.shields.io/badge/Workflow-Experiment%20Planner-indigo?style=for-the-badge&logo=probot&logoColor=white" alt="Experiment Planner Workflow" />
+  <img src="https://img.shields.io/badge/Model-GPT--OSS--120B%20%2B%20Llama%203.3%2070B-F55036?style=for-the-badge&logo=openai&logoColor=white" alt="Groq Model Fallback" />
+  <img src="https://img.shields.io/badge/UI_Icons-Lucide%20React-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Lucide React Icons" />
+  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React TypeScript" />
+</p>
 
 ---
 
-## 1. Frontend Request Flow
+> [!IMPORTANT]
+> **Staged Methodological Roadmaps**
+> The **Experiment Planner** translates abstract research concepts or domain problem statements into concrete, multi-stage experimental execution roadmaps. Each generated plan provides a sequential step timeline complete with stage titles, Lucide icon taxonomy, detailed implementation guidance, quantifiable parameter configurations, and technical risk checkpoints.
 
-**File:** `frontend/src/pages/ExperimentPlanner.tsx`
+---
 
-### 1.1 Input Collection
-- User enters research topic (text input)
-- User selects difficulty level (dropdown):
-  - Beginner: 5-6 steps, foundational concepts
-  - Intermediate: 6-8 steps, advanced techniques
-  - Advanced: 8-10 steps, state-of-the-art methods
-- Click "Generate Plan" button
+## 🏗️ 1. Complete Architecture & System Data Flow
 
-### 1.2 Request Dispatch
-```javascript
-POST /api/plan-experiment
-{
-  "topic": "Efficient Vision Transformers",
-  "difficulty": "Advanced"
+```mermaid
+flowchart TD
+    subgraph FrontendSurface ["💻 Frontend Surfaces"]
+        UI1["🧪 Standalone Experiment Planner Page (ExperimentPlanner.tsx)"]
+        UI2["🤖 Agent Mode CTA Button (AgentMode.tsx /api/plan-experiment)"]
+    end
+
+    subgraph FastAPIGateway ["⚡ FastAPI Endpoint Gateway (routes.py)"]
+        EP["POST /api/plan-experiment"]
+        LOG["DB Activity Logger (Activity Table)"]
+    end
+
+    subgraph LLMOrchestration ["🧠 LLM Model Fallback & Coercion Engine (generation.py)"]
+        M1["Primary Model: openai/gpt-oss-120b"]
+        M2["Fallback Model 1: llama-3.3-70b-versatile"]
+        M3["Fallback Model 2: meta-llama/llama-4-scout-17b"]
+        NORM1["_coerce_structured_params()"]
+        NORM2["_coerce_structured_risk()"]
+        NORM3["_infer_step_risk()"]
+    end
+
+    subgraph OutputRendering ["🎨 Render & Export Layers"]
+        CARD["StepCard Component Timeline"]
+        ICONS["Lucide Icon Taxonomy Engine"]
+        EXPORT["Markdown & Clipboard Export"]
+    end
+
+    UI1 -->|JSON Payload: topic + difficulty| EP
+    UI2 -->|JSON Payload: direction title| EP
+    EP --> LOG
+    EP --> M1
+    M1 -->|Rate Limit / 429| M2
+    M2 -->|Error Failover| M3
+    M1 & M2 & M3 --> NORM1 & NORM2 & NORM3
+    NORM1 & NORM2 & NORM3 --> CARD
+    CARD --> ICONS & EXPORT
+```
+
+---
+
+## 🔄 2. End-to-End Request & Execution Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as ExperimentPlanner.tsx / AgentMode.tsx
+    participant Route as routes.py (/api/plan-experiment)
+    participant DB as PostgreSQL (Activity Log)
+    participant Engine as generation.py (generate_experiment_plan)
+    participant LLM as Groq Inference Engine
+
+    User->>UI: Input Research Topic & Select Difficulty
+    UI->>Route: POST /api/plan-experiment { topic, difficulty }
+    Route->>DB: Record Activity (action_type: "plan_experiment")
+    Route->>Engine: Call generate_experiment_plan(topic, difficulty)
+    Engine->>LLM: Request JSON Completion (primary: gpt-oss-120b)
+    alt Primary Success
+        LLM-->>Engine: Raw Plan JSON Payload
+    else Primary Rate Limit (429)
+        Engine->>LLM: Fallback Request (llama-3.3-70b-versatile)
+        LLM-->>Engine: Raw Plan JSON Payload
+    end
+    Engine->>Engine: Coerce & Normalize Params & Risk Checkpoints
+    Engine-->>Route: Normalized Plan Object { steps: [...] }
+    Route-->>UI: Return JSON Steps Response
+    UI->>User: Render Visual Stage Timeline & Execution Cards
+```
+
+---
+
+## 🎯 3. Difficulty-Driven Stage Scaffolding
+
+The planner dynamically adjusts step count, depth, and operational complexity based on the requested difficulty tier:
+
+| Difficulty Level | Step Count | Target Audience | Technical Depth & Included Modules |
+|---|---|---|---|
+| **Beginner** | 5 – 6 Steps | Students / Novice Researchers | Foundational data split, basic model baseline, standard loss metrics, and documentation. |
+| **Intermediate** | 6 – 8 Steps | Applied ML Engineers | Advanced feature engineering, hyperparameter search, cross-validation, and ablation studies. |
+| **Advanced** | 8 – 10 Steps | Senior AI Researchers | Custom architecture design, explainability (XAI), out-of-distribution robustness, deployment optimization, and ethical risk audits. |
+
+---
+
+## 🛠️ 4. Icon Taxonomy & Module Mapping
+
+Every stage is tagged with a Lucide React icon name corresponding to standard ML operational modules:
+
+```mermaid
+mindmap
+  root((Lucide Icon Taxonomy))
+    Database["Database: Data Curation & Dataset Selection"]
+    Cog["Cog: Feature Engineering & Preprocessing"]
+    Cpu["Cpu / PenTool: Custom Architecture Design"]
+    Play["Play: Model Training & Optimization"]
+    Eye["Eye: Explainability (XAI) & Interpretability"]
+    BarChart3["BarChart3: Evaluation & Ablation Studies"]
+    Cloud["Cloud: Deployment, Quantization & Serving"]
+    Shield["Shield: Ethical Audit & Risk Checkpoints"]
+```
+
+---
+
+## 🧠 5. Dynamic Normalization & Coercion Engine (`generation.py`)
+
+> [!TIP]
+> **Eliminating Generic Prompt Fallbacks**
+> To prevent generic text strings (such as *"Specify quantifiable configuration..."* or *"Missing recent preprints..."*), `generation.py` uses dynamic normalization functions that inspect stage titles and topics to generate concrete, stage-specific configurations:
+
+```python
+# Stage Parameter Coercion Engine
+def _coerce_structured_params(title: str, topic: str, params: str) -> str:
+    compact = re.sub(r"\s+", " ", (params or "")).strip()
+    if len(compact.split()) >= 6 and "specify quantifiable" not in compact.lower():
+        return compact
+
+    t_lower = title.lower()
+    if any(k in t_lower for k in ["dataset", "data", "collection"]):
+        return f"Target split: 80% train / 10% val / 10% test; Stratified sampling for {topic}."
+    if any(k in t_lower for k in ["preprocess", "feature", "conformation"]):
+        return f"Normalization: Min-Max / Z-score; Feature dimension: 256; Scaling on {topic} data."
+    if any(k in t_lower for k in ["model", "architecture", "encoder"]):
+        return f"Architecture: Multi-layer network with self-attention; Hidden size: 512; Dropout: 0.15."
+    if any(k in t_lower for k in ["train", "optimization", "loss"]):
+        return f"Optimizer: AdamW (lr=3e-4, weight_decay=1e-2); Batch size: 64; Max epochs: 150."
+    if any(k in t_lower for k in ["evaluation", "benchmark", "metric"]):
+        return f"Primary metrics: Task accuracy, ROC-AUC / RMSE; Comparison against SOTA baselines."
+    if any(k in t_lower for k in ["deploy", "scaling", "export"]):
+        return f"Target latency: <50ms per inference; Quantization: INT8 / FP16; Platform: Docker ONNX."
+
+    return f"Configuration for {title}: Hyperparameters, metrics, and threshold constraints for {topic}."
+```
+
+---
+
+## 🎨 6. UI Render Engine & Card Component (`ExperimentPlanner.tsx`)
+
+The frontend renders steps as an interactive visual timeline using Framer Motion animations:
+
+### Step Card Render Schema
+```typescript
+interface PlanStep {
+  num: number;
+  title: string;
+  iconName: string;
+  details: string;
+  params: string;
+  risks: string;
 }
 ```
 
-### 1.3 Response Reception
-```javascript
-{
-  "steps": [
-    {
-      "num": 1,
-      "title": "Dataset Selection & Curation",
-      "iconName": "Database",
-      "details": "Select benchmark vision datasets (ImageNet-1K, COCO, or custom)...",
-      "params": "Batch size: 128-256, Resolution: 224x224",
-      "risks": "Insufficient diversity may limit model generalization"
-    },
-    // ... more steps
-  ]
-}
-```
-
-### 1.4 Rendering
-- Each step rendered as an expandable card
-- Icon loaded from Lucide React library
-- Timeline visualization (step 1 → 2 → ... → N)
-- Optional: Copy plan to clipboard, save as PDF
-
----
-
-## 2. Data Retrieval & LLM Request
-
-### 2.1 API Endpoint
-**File:** `backend/app/api/routes.py` → `POST /plan-experiment`
-
-```python
-@router.post("/plan-experiment")
-async def plan_experiment(payload: ExperimentPlanRequest, ...):
-    topic = payload.topic
-    difficulty = payload.difficulty
-    plan = generate_experiment_plan(topic, difficulty)
-    
-    db_activity = Activity(
-        user_id=user_id,
-        action_type="plan_experiment",
-        metadata_json={"topic": topic, "difficulty": difficulty}
-    )
-    db.add(db_activity)
-    db.commit()
-    
-    return JSONResponse(plan)
-```
-
-### 2.2 LLM Call Architecture
-**File:** `backend/app/services/llm_sections/generation.py` → `generate_experiment_plan()`
-
-**LLM Provider:** Groq  
-**Model Routing (April 2026):**
-- Primary: `openai/gpt-oss-120b`
-- Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
-- Fallback logic: tries next model if primary is unavailable/rate-limited
-**Response Format:** Strict JSON schema
-
-**Prompt Structure:**
-```
-You are an expert AI researcher. Generate a highly constructive, rich, and 
-technical AI/ML experiment execution plan for the topic: "{topic}" at a 
-{difficulty} difficulty level.
-
-JSON Schema:
-{
-  "steps": [
-    {
-      "num": 1,
-      "title": "Stage Title",
-      "iconName": "IconName",  // Must be valid Lucide React icon
-      "details": "Deeply technical strategy description.",
-      "params": "Specific metrics, hyperparams, or dataset identifiers",
-      "risks": "Nuanced technical risks or edge cases"
-    }
-  ]
-}
-
-Step count by difficulty:
-- Beginner: 5-6 steps
-- Intermediate: 6-8 steps  
-- Advanced: 8-10 steps
-
-Encouraged Modules (especially for Advanced):
-- Dataset Selection & Curation → Icon: Database
-- Advanced Preprocessing / Feature Engineering → Icon: Cog
-- Custom Model Architecture Design → Icon: Cpu or PenTool
-- Training Logic & Optimization → Icon: Play
-- Explainable AI (XAI) / Interpretability → Icon: Eye
-- Robust Evaluation & Ablation → Icon: BarChart3
-- Deployment, Scaling & Monitoring → Icon: Cloud
-- Ethical Review / Bias Mitigation → Icon: Shield
-```
-
----
-
-## 3. Data Processing
-
-### 3.1 Prompt Engineering
-**Dynamic Topic Integration:**
-```python
-prompt = f"""
-Generate plan for: "{topic}" at {difficulty} level.
-
-Response MUST be JSON matching exact structure with:
-- num: Sequential step number
-- title: Concise module name
-- iconName: Valid Lucide icon name
-- details: 2-3 paragraphs of technical depth
-- params: Specific values, ranges, or hyperparameters
-- risks: Edge cases, failure modes, mitigation strategies
-"""
-```
-
-### 3.2 JSON Schema Enforcement
-```python
-response = create_completion_with_fallback(
-  llm_client=client,
-  task_name="experiment_planner",
-  primary_model="openai/gpt-oss-120b",
-  fallback_models="llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct",
-    messages=[
-        {
-            "role": "system",
-            "content": "You are a senior AI researcher designed to return perfect JSON structures."
-        },
-        {"role": "user", "content": prompt}
-    ],
-    response_format={"type": "json_object"}  # Enforce JSON output
-)
-
-result = json.loads(response.choices[0].message.content)
-```
-
-**Why JSON Mode?**
-- Eliminates parsing ambiguity
-- Guarantees all steps follow schema
-- Frontend can directly render without post-processing
-- Easier to validate step count matches difficulty
-- Model fallback prints terminal traces (`[MODEL]` / `[MODEL-FALLBACK]`) for observability.
-
-### 3.3 Content Quality Standards
-
-**For Each Step:**
-
-| Field | Requirements | Example |
-|-------|--------------|---------|
-| `num` | 1-N sequential | 3 |
-| `title` | Concise, action-oriented | "Custom Model Architecture Design" |
-| `iconName` | Valid Lucide React icon | "Cpu", "PenTool", "Database" |
-| `details` | 3-5 sentences, domain-specific | "Design CNN backbone with residual blocks..." |
-| `params` | Specific hyperparameters/ranges | "Learning rate: 1e-3, Epochs: 100-200" |
-| `risks` | 2-3 common failure modes | "Overfitting on small datasets..." |
-
-### 3.4 Difficulty-Driven Scaffolding
-
-**Beginner (5-6 steps):**
-- Dataset curation
-- Basic preprocessing
-- Simple model architecture
-- Standard training loop
-- Evaluation metrics
-- Documentation
-
-**Intermediate (6-8 steps):**
-- ^ + Advanced preprocessing
-- ^ + Custom model design
-- ^ + Optimization strategies
-- ^ + Ablation studies
-
-**Advanced (8-10 steps):**
-- ^ + All of intermediate
-- ^ + Explainability/XAI
-- ^ + Deployment & scaling
-- ^ + Ethical review
-- ^ + Hardware considerations
-
----
-
-## 4. Response Handling & Visualization
-
-### 4.1 Frontend Processing
-```javascript
-const data = await res.json();  // Already parsed JSON
-setSteps(data.steps);
-
-return data.steps.map((step) => (
-  <StepCard
-    key={step.num}
-    step={step}
-    icon={getIcon(step.iconName)}  // Lucide React dynamic icon
-  />
-));
-```
-
-### 4.2 StepCard Component
 ```jsx
+// Frontend Step Timeline Item Rendering
 <div className="relative flex items-start gap-4">
-  {/* Timeline connector */}
-  <div className="absolute left-5 top-14 h-24 w-[2px] bg-border" />
-  
-  {/* Step card */}
-  <div className="rounded-lg border p-4">
-    <div className="flex items-start gap-3 mb-3">
-      <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
-        {Icon && <Icon className="w-5 h-5 text-accent" />}
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Step {step.num}</p>
-        <h3 className="font-semibold">{step.title}</h3>
-      </div>
+  <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center font-mono font-bold">
+    <LucideIcon name={step.iconName} className="w-5 h-5 text-accent" />
+  </div>
+
+  <div className="flex-1 rounded-2xl border border-border/60 bg-card p-4 space-y-3">
+    <div className="flex items-center justify-between">
+      <span className="text-[11px] font-mono text-accent uppercase font-bold">Stage #{step.num}</span>
+      <h3 className="font-bold text-sm text-foreground">{step.title}</h3>
     </div>
-    
-    <p className="text-sm prose">{step.details}</p>
-    
-    <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-      <div>
-        <p className="font-mono text-muted-foreground">Params</p>
-        <p>{step.params}</p>
+
+    <p className="text-xs text-muted-foreground leading-relaxed">{step.details}</p>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] pt-2 border-t border-border/40 font-mono">
+      <div className="bg-indigo-500/5 p-2 rounded border border-indigo-500/10 text-indigo-300">
+        <strong>Parameters:</strong> {step.params}
       </div>
-      <div>
-        <p className="font-mono text-muted-foreground">Risks</p>
-        <p>{step.risks}</p>
+      <div className="bg-amber-500/5 p-2 rounded border border-amber-500/10 text-amber-300">
+        <strong>Risk Checkpoint:</strong> {step.risks}
       </div>
     </div>
   </div>
 </div>
 ```
 
-### 4.3 Visual Hierarchy
-- **Timeline:** Vertical line connecting all steps
-- **Icons:** Color-coded, large, easy to scan
-- **Typography:** Title > Details > Metadata (params/risks)
-- **Color Coding:** Each step gets unique icon color
-- **Expandable:** Click to reveal full details or collapse
-
 ---
 
-## 5. Data Storage & Analytics
+## 📊 7. Analytics & Database Logging
 
-### 5.1 Database Logging
+Every plan generation event is stored in PostgreSQL via SQLAlchemy:
+
 ```python
 db_activity = Activity(
     user_id=user_id,
     action_type="plan_experiment",
     metadata_json={
-        "topic": the_topic,
+        "topic": topic,
         "difficulty": difficulty,
         "step_count": len(steps),
-        "generated_at": timestamp
+        "generated_at": datetime.utcnow().isoformat()
     }
 )
 db.add(db_activity)
 db.commit()
 ```
 
-**Analytics Enabled:**
-- Most popular topics
-- Difficulty distribution
-- User engagement patterns
-- Topic trends over time
+---
 
-### 5.2 Caching
-**Currently disabled** - Each request generates new plan  
-**Rationale:** LLM responses vary; re-requesting same topic may yield improved plans
+## ⚠️ 8. Failure Modes & Error Recovery Matrix
 
-**Future Enhancement:** Debate between:
-- Caching for performance (quick future requests)
-- Re-generating for innovation (always fresh ideas)
+| Failure Mode | Root Cause | Handling Strategy | User Feedback |
+|---|---|---|---|
+| **Primary Model Rate Limit (429)** | Groq daily TPM / TPD cap reached | Automatic failover to `llama-3.3-70b-versatile` | Transparent logging (`[MODEL-FALLBACK]`) |
+| **Invalid JSON Output** | LLM prose contamination | Enforce `response_format={"type": "json_object"}` | Automatic json parse retry |
+| **Unknown Icon Name** | LLM hallucinated icon string | Fallback icon resolver returns default `"Cog"` | Clean fallback rendering |
+| **Short Params / Generic Strings** | LLM brevity | Handled by `_coerce_structured_params` | Concrete stage-specific parameters |
 
 ---
 
-## 6. Failure Modes & Error Handling
+## 🔐 9. Safe Environment Setup
 
-| Scenario | Root Cause | Response | Recovery |
-|----------|-----------|----------|----------|
-| Invalid JSON | LLM hallucination | `json.JSONDecodeError` | Retry with stricter prompt |
-| Wrong field types | Schema mismatch | `KeyError` accessing field | Validate against schema |
-| Missing `iconName` | Invalid Lucide icon | Frontend fallback icon | Check valid icon list |
-| Step count mismatch | LLM ignores difficulty | Accept as-is | Log warning in analytics |
-| Empty `details` | Model brevity | Show placeholder | Reprompt for elaboration |
-| Timeout (>10s) | LLM slow | `504 Timeout` → Frontend error | Show "Generation timeout" |
+> [!WARNING]
+> Keep API credentials in deployment environment variables and never commit raw keys to git repositories.
 
----
-
-## 7. Configuration & Customization
-
-**Environment Variables:**
-
-| Config | Default | Usage |
-|--------|---------|-------|
-| `MODEL_NAME` | "llama-3.1-8b-instant" | Groq LLM model to use |
-| `GENERATE_PLAN_TIMEOUT` | 10 | Seconds before timeout |
-| `MAX_RETRIES` | 2 | JSON parse retry attempts |
-| `TEMPERATURE` | 0.7 | LLM creativity (0.0-1.0) |
-
-**Example Advanced Topic:**
-```
-Topic: "Efficient Transformers with Sparse Attention"
-Difficulty: Advanced
-
-Output Steps:
-1. Literature Review & Sparse Attention Mechanisms (Icon: Search)
-2. Dataset Preparation & Tokenization (Icon: Database)
-3. Custom CUDA Kernel Development (Icon: Cpu)
-4. Model Architecture with Attention Patterns (Icon: PenTool)
-5. Training with Gradient Checkpointing (Icon: Play)
-6. Inference Optimization & Quantization (Icon: Zap)
-7. Comparison vs. Dense Attention Baselines (Icon: BarChart3)
-8. Deployment & Production Monitoring (Icon: Cloud)
-9. Ablation Studies on Attention Sparsity (Icon: Activity)
+### Required Backend Environment Variables (`backend/.env`)
+```env
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
+CLERK_SECRET_KEY=sk_test_[CLERK_SECRET_KEY]
+GROQ_API_KEY=gsk_[GROQ_API_KEY]
 ```
 
----
-
-## 8. Performance Characteristics
-
-| Operation | Time | Memory | Notes |
-|-----------|------|--------|-------|
-| LLM Plan Generation | 2-5s | 100MB | Groq API latency |
-| JSON Parsing | <0.1s | 5MB | Python json library |
-| Database Write | <0.5s | 10MB | Activity logging |
-| **Total Latency** | **2-6s** | **115MB** | Dominated by LLM |
-
-**Optimization Opportunities:**
-- Implement response streaming for perceived faster UX
-- Cache plans by topic + difficulty (with refresh option)
-- Pre-generate templates for common topics
-
----
-
-## 9. Integration Examples
-
-### 9.1 Frontend Integration
-```typescript
-const handleGeneratePlan = async (topic: string, difficulty: string) => {
-  setLoading(true);
-  try {
-    const response = await fetch("/api/plan-experiment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic, difficulty })
-    });
-    
-    const data = await response.json();
-    setSteps(data.steps);
-    setShowPlan(true);
-  } catch (error) {
-    toast.error("Failed to generate plan");
-  } finally {
-    setLoading(false);
-  }
-};
+### Frontend Environment Variables (`frontend/.env.local`)
+```env
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_[CLERK_PUB_KEY]
+VITE_API_URL=http://localhost:8000
 ```
-
-### 9.2 Exporting Plan
-```javascript
-// Convert steps to markdown or PDF
-const exportMarkdown = (steps) => {
-  return steps.map(s => `
-## ${s.num}. ${s.title}
-
-${s.details}
-
-**Parameters:** ${s.params}  
-**Risks:** ${s.risks}
-  `).join("\n\n");
-};
-```
-
----
-
-## 10. Future Enhancements
-
-1. **Multi-Domain Support:** Extend beyond AI/ML to other research domains
-2. **Collaborative Planning:** Multiple users contributing to single plan
-3. **Progress Tracking:** UI to mark completed steps, attach results
-4. **Peer Validation:** Community rating/reviewing of plans
-5. **Integration with Paper Analyzer:** Reference analyzed papers in plan steps
-6. **Real Experiment Data:** Link generated plans to actual experiment results
-
----
-
-## 11. Summary
-
-1. **User inputs topic + difficulty** → Frontend sends to `/api/plan-experiment`
-2. **Backend calls Groq LLM** with JSON schema enforcement
-3. **LLM generates N steps** with icons, parameters, and risk assessment
-4. **JSON parsed and validated** → Step count matches difficulty level
-5. **Steps rendered as timeline** → Expandable cards with visual hierarchy
-6. **Activity logged** → For analytics and user history
-7. **User can review/export** → Save as markdown, PDF, or copy
-
-**Key Strengths:**
-- Structured, reproducible plans with consistent formatting
-- Rich technical guidance (params, risks, rationale)
-- Difficulty-driven scaffolding ensures appropriate complexity
-- JSON schema eliminates parsing ambiguity
-
-**Key Constraints:**
-- LLM-generated (can hallucinate hyperparameters)
-- No validation that steps are actually feasible
-- Single plan per request (no iterative refinement UI)
-- No integration with actual experiment tools yet
