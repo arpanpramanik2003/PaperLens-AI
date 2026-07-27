@@ -366,55 +366,49 @@ async def find_datasets(topic: str = "", **kwargs) -> Dict[str, Any]:
         )
     except Exception as exc:
         logger.warning("find_datasets fallback: %s", exc)
-        datasets_res = {}
-
     raw_datasets = datasets_res.get("datasets") if isinstance(datasets_res, dict) else []
 
-    if not raw_datasets:
-        topic_lower = target_topic.lower()
-        if "drug" in topic_lower or "gnn" in topic_lower or "molecule" in topic_lower:
-            raw_datasets = [
-                {
-                    "name": "MoleculeNet Benchmark Suite (BACE, BBBP, HIV, Tox21)",
-                    "type": "2D/3D Molecular Graphs & SMILES Strings",
-                    "tasks": "Molecular Property Prediction & Biophysical Bioactivity Classification",
-                    "metrics": "ROC-AUC, PR-AUC",
-                    "recommendation": "Primary SOTA Benchmark for Molecular Graph Representation Learning",
-                },
-                {
-                    "name": "ZINC250k / ZINC15",
-                    "type": "Commercially Available Drug-Like Compounds",
-                    "tasks": "Generative De Novo Drug Design & Pre-training",
-                    "metrics": "Validity, Uniqueness, Novelty, QED, Synthetic Accessibility (SA)",
-                    "recommendation": "Standard Benchmark for De Novo Molecule Generation",
-                },
-                {
-                    "name": "PDBbind v2020 (Refined Set)",
-                    "type": "3D Co-crystallized Protein-Ligand Complexes",
-                    "tasks": "3D Structure-Based Binding Affinity Estimation",
-                    "metrics": "Root Mean Square Error (RMSE), Pearson Correlation ($R$)",
-                    "recommendation": "Recommended for 3D Structure-Based Virtual Screening",
-                },
-                {
-                    "name": "QM9 Quantum Chemistry Dataset",
-                    "type": "Small Organic Molecules with Density Functional Theory (DFT) Labels",
-                    "tasks": "Quantum Chemical Property Regression",
-                    "metrics": "Mean Absolute Error (MAE in Hartree / eV)",
-                    "recommendation": "Benchmark for Physics-Informed Graph Neural Networks",
-                }
-            ]
-        else:
-            raw_datasets = [
-                {
-                    "name": f"{target_topic} Standard Benchmark Dataset",
-                    "type": "Domain Evaluation Records & Feature Vectors",
-                    "tasks": "Classification, Regression & Representation Learning",
-                    "metrics": "Accuracy, F1-Score, RMSE",
-                    "recommendation": f"Primary Recommended Benchmark for {target_topic}",
-                }
-            ]
+    normalized_datasets = []
+    for item in raw_datasets:
+        if isinstance(item, dict):
+            details = item.get("details") or {}
+            name = item.get("name") or "Benchmark Dataset"
+            desc = item.get("short_description") or item.get("description") or details.get("short_description") or f"Standard benchmark dataset for {target_topic}."
+            
+            modality = item.get("type") or item.get("format") or details.get("modality") or details.get("type") or "Multi-modal records & features"
+            if isinstance(modality, list):
+                modality_str = ", ".join([str(m) for m in modality])
+            else:
+                modality_str = str(modality)
 
-    return {"datasets": raw_datasets}
+            tasks = item.get("tasks") or details.get("tasks") or ["Classification", "Representation Learning"]
+            if isinstance(tasks, list):
+                tasks_str = ", ".join([str(t) for t in tasks])
+            else:
+                tasks_str = str(tasks)
+
+            metrics = item.get("metrics") or details.get("metrics") or details.get("primary_metrics") or ["ROC-AUC", "F1-Score", "RMSE"]
+            if isinstance(metrics, list):
+                metrics_str = ", ".join([str(m) for m in metrics])
+            else:
+                metrics_str = str(metrics)
+
+            fit_score = item.get("fit_score") or details.get("fit_score") or 4.8
+            recommendation = item.get("recommendation") or f"SOTA Benchmark for {target_topic}"
+
+            normalized_datasets.append({
+                "name": name,
+                "short_description": desc,
+                "type": modality_str,
+                "format": modality_str,
+                "tasks": tasks_str,
+                "metrics": metrics_str,
+                "fit_score": fit_score,
+                "recommendation": recommendation,
+                "details": details,
+            })
+
+    return {"datasets": normalized_datasets}
 
 
 @tool("plan_experiment", "Generate a detailed multi-stage experimental execution roadmap for a research direction")
