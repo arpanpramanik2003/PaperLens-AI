@@ -1,114 +1,161 @@
-# Dataset & Benchmark Finder: Complete Workflow Documentation
+# 📊 Dataset & Benchmark Finder — Complete Architecture & Normalization Workflow Guide
 
-**Purpose:** Recommend high-fit datasets, evaluation benchmarks, and commonly used technologies for a given project title and/or project plan.
-
----
-
-## Architecture Overview
-
-```
-User Input (Frontend)
-    ├─ Project Title (optional)
-    └─ Project Plan (optional)
-            ↓
-Backend Validation + LLM Recommendation
-    ├─ Input sanitization (title/plan trim)
-    ├─ JSON-only recommendation generation
-    └─ Activity logging in database
-            ↓
-Output Visualization (Frontend)
-    ├─ Domain summary
-    ├─ Recommended datasets (4-6)
-    ├─ Relevant benchmarks (3-5)
-    ├─ Technologies stack (5-8)
-    └─ Detailed modal per dataset/benchmark
-```
+<p align="center">
+  <img src="https://img.shields.io/badge/Workflow-Dataset%20Finder-indigo?style=for-the-badge&logo=probot&logoColor=white" alt="Dataset Finder Workflow" />
+  <img src="https://img.shields.io/badge/Model-GPT--OSS--120B%20%2B%20Llama%203.3%2070B-F55036?style=for-the-badge&logo=openai&logoColor=white" alt="Groq Model Fallback" />
+  <img src="https://img.shields.io/badge/Data_Layer-Normalized%20Schemas-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Normalized Schemas" />
+  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React TypeScript" />
+</p>
 
 ---
 
-## 1. Frontend Request Lifecycle
-
-**File:** `frontend/src/pages/DatasetBenchmarkFinder.tsx`
-
-### 1.1 Input Collection
-- User can provide either:
-  - `projectTitle` (single-line input), or
-  - `projectPlan` (multi-line textarea), or both.
-- Empty submission is blocked in UI:
-
-```tsx
-if (!projectTitle.trim() && !projectPlan.trim()) return;
-```
-
-### 1.2 Request Dispatch
-When authenticated (`userId` available), frontend sends:
-
-```javascript
-POST /api/find-datasets-benchmarks
-Content-Type: application/json
-
-{
-  "project_title": "Multimodal Brain Tumor Classification with Explainable AI",
-  "project_plan": "...long project plan..."
-}
-```
-
-### 1.3 Fallback Behavior (Unauthenticated)
-If user is not signed in:
-- API call is skipped.
-- Mock data is returned after a short simulated delay (~1200ms).
-- UI still renders full cards + details modal for demonstration.
-
-### 1.4 Response Handling
-Expected response fields:
-- `domain_summary`
-- `datasets`
-- `benchmarks`
-- `technologies`
-
-State updates:
-
-```tsx
-setDomainSummary(data.domain_summary || "");
-setDatasets(data.datasets || []);
-setBenchmarks(data.benchmarks || []);
-setTechnologies(data.technologies || []);
-setGenerated(true);
-```
-
-Error handling:
-- `res.ok === false` triggers throw.
-- Frontend shows alert: `Failed to load dataset and benchmark recommendations.`
-
-### 1.5 Output Rendering
-After generation:
-1. **Domain Understanding** card (short summary)
-2. **Recommended Datasets** grid
-3. **Relevant Benchmarks** grid
-4. **Most Used Technologies in this Domain** grid
-
-Each dataset/benchmark supports **View details** action that opens a modal with structured metadata.
+> [!IMPORTANT]
+> **Intelligent Asset & Benchmark Matching**
+> The **Dataset & Benchmark Finder** evaluates project titles and experimental plans to recommend SOTA datasets, evaluation benchmark suites, primary evaluation metrics, and domain-specific technologies. It features automatic **Data Normalization** that maps nested LLM properties (`details.modality`, `details.tasks`, `details.primary_metrics`) into clean top-level attributes for consistent card and modal rendering across both the main page and Agent Mode.
 
 ---
 
-## 2. Backend Endpoint & Validation
+## 🏗️ 1. Complete Architecture & System Data Flow
 
-**File:** `backend/app/api/routes.py` → `POST /find-datasets-benchmarks`
+```mermaid
+flowchart TD
+    subgraph FrontendSurface ["💻 Frontend Surfaces"]
+        UI1["📊 Standalone Dataset Finder Page (DatasetBenchmarkFinder.tsx)"]
+        UI2["🤖 Agent Mode Tool Call (find_datasets in tools.py)"]
+    end
 
-### 2.1 Request Schema
-**File:** `backend/app/models/schemas.py`
+    subgraph FastAPIGateway ["⚡ FastAPI Endpoint Gateway (routes.py)"]
+        EP["POST /api/find-datasets-benchmarks"]
+        LOG["Database Activity Logger (Activity Table)"]
+    end
 
+    subgraph LLMOrchestration ["🧠 LLM Model Fallback Engine (generation.py)"]
+        M1["Primary Model: openai/gpt-oss-120b"]
+        M2["Fallback Model 1: llama-3.3-70b-versatile"]
+        M3["Fallback Model 2: meta-llama/llama-4-scout-17b"]
+        GEN["generate_dataset_benchmark_finder()"]
+    end
+
+    subgraph NormalizationLayer ["🛠️ Data Normalization Layer (tools.py / AgentMode.tsx)"]
+        NORM1["Extract modality -> type / format"]
+        NORM2["Extract tasks -> tasks string"]
+        NORM3["Extract primary_metrics -> metrics string"]
+        NORM4["Extract fit_score (1.0 - 5.0) & recommendation"]
+    end
+
+    subgraph OutputRendering ["🎨 Render & Modal Layers"]
+        CARD1["Dataset Recommendation Cards Grid"]
+        CARD2["Benchmark Suite Cards Grid"]
+        CARD3["Domain Technology Stack Cards Grid"]
+        MODAL["Interactive Details Modal"]
+    end
+
+    UI1 -->|JSON Payload: project_title + project_plan| EP
+    UI2 -->|Agent Mode tool call| GEN
+    EP --> LOG & GEN
+    GEN --> M1
+    M1 -->|Rate Limit / 429| M2 --> M3
+    M1 & M2 & M3 --> NormalizationLayer
+    NormalizationLayer --> CARD1 & CARD2 & CARD3 --> MODAL
+```
+
+---
+
+## 🔄 2. End-to-End Request & Execution Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as DatasetBenchmarkFinder.tsx / AgentMode.tsx
+    participant Route as routes.py (/api/find-datasets-benchmarks)
+    participant DB as PostgreSQL (Activity Log)
+    participant Engine as generation.py
+    participant Normalizer as tools.py / AgentMode.tsx
+    participant LLM as Groq Inference Engine
+
+    User->>UI: 1. Input Project Title and/or Project Plan
+    UI->>Route: 2. POST /api/find-datasets-benchmarks { project_title, project_plan }
+    Route->>DB: 3. Log activity record (action_type: "find_datasets_benchmarks")
+    Route->>Engine: 4. Call generate_dataset_benchmark_finder()
+    Engine->>LLM: 5. JSON Completion (primary: gpt-oss-120b)
+    alt Primary Success
+        LLM-->>Engine: Raw Finder JSON { domain_summary, datasets, benchmarks, technologies }
+    else Primary Rate Limit 429
+        Engine->>LLM: Fallback Completion (llama-3.3-70b-versatile)
+        LLM-->>Engine: Raw Finder JSON
+    end
+    Engine-->>Route: Return raw JSON recommendations
+    Route-->>Normalizer: 6. Normalize nested details into top-level properties
+    Normalizer-->>UI: 7. Return fully populated payload
+    UI->>User: 8. Render Datasets, Benchmarks, Technologies & Details Modal
+```
+
+---
+
+## 📊 3. Data Normalization Architecture (`tools.py`)
+
+> [!NOTE]
+> **Why Data Normalization is Necessary**
+> The raw LLM generator returns dataset properties inside a nested `details` object (`details.modality`, `details.tasks`, `details.primary_metrics`). To guarantee 100% full content visibility without empty fields on frontend cards, `tools.py` normalizes all dataset items into top-level attributes:
+
+```python
+# Data Normalization Routine in tools.py
+normalized_datasets = []
+for item in raw_datasets:
+    if isinstance(item, dict):
+        details = item.get("details") or {}
+        name = item.get("name") or "Benchmark Dataset"
+        desc = item.get("short_description") or item.get("description") or details.get("short_description") or f"Standard benchmark dataset for {target_topic}."
+        
+        # Normalize modality / format
+        modality = item.get("type") or item.get("format") or details.get("modality") or details.get("type") or "Multi-modal records & features"
+        modality_str = ", ".join([str(m) for m in modality]) if isinstance(modality, list) else str(modality)
+
+        # Normalize tasks
+        tasks = item.get("tasks") or details.get("tasks") or ["Classification", "Representation Learning"]
+        tasks_str = ", ".join([str(t) for t in tasks]) if isinstance(tasks, list) else str(tasks)
+
+        # Normalize primary metrics
+        metrics = item.get("metrics") or details.get("metrics") or details.get("primary_metrics") or ["ROC-AUC", "F1-Score", "RMSE"]
+        metrics_str = ", ".join([str(m) for m in metrics]) if isinstance(metrics, list) else str(metrics)
+
+        fit_score = item.get("fit_score") or details.get("fit_score") or 4.8
+        recommendation = item.get("recommendation") or f"SOTA Benchmark for {target_topic}"
+
+        normalized_datasets.append({
+            "name": name,
+            "short_description": desc,
+            "type": modality_str,
+            "format": modality_str,
+            "tasks": tasks_str,
+            "metrics": metrics_str,
+            "fit_score": fit_score,
+            "recommendation": recommendation,
+            "details": details,
+        })
+```
+
+---
+
+## 💻 4. Backend Endpoint & Validation (`routes.py`)
+
+### 4.1 Request Payload Schema (`schemas.py`)
 ```python
 class DatasetBenchmarkFinderRequest(BaseModel):
     project_title: Optional[str] = None
     project_plan: Optional[str] = None
 ```
 
-### 2.2 Endpoint Flow
-
+### 4.2 API Endpoint Handler
 ```python
 @router.post("/find-datasets-benchmarks")
-async def find_datasets_benchmarks(payload, user_id=Depends(get_current_user), db=Depends(get_db)):
+async def find_datasets_benchmarks(
+    payload: DatasetBenchmarkFinderRequest,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     project_title = (payload.project_title or "").strip()
     project_plan = (payload.project_plan or "").strip()
 
@@ -131,139 +178,71 @@ async def find_datasets_benchmarks(payload, user_id=Depends(get_current_user), d
     return JSONResponse(recommendations)
 ```
 
-### 2.3 Validation Rules
-- At least one input must be present (`project_title` or `project_plan`).
-- Both values are trimmed before validation.
-- On invalid input, API returns HTTP `400` with explicit message.
-
-### 2.4 Persistence / Audit Trail
-- Every successful finder request logs one `Activity` row.
-- `action_type` = `find_datasets_benchmarks`.
-- Metadata stores:
-  - `project_title` (string)
-  - `has_project_plan` (boolean)
-
-This supports dashboard analytics and feature usage tracking.
-
 ---
 
-## 3. LLM Recommendation Engine
+## 🎯 5. LLM Prompt Contract & Response Schema
 
-**File:** `backend/app/services/llm_sections/generation.py` → `generate_dataset_benchmark_finder(project_title, project_plan)`
-
-### 3.1 LLM Invocation
-- Uses heavy-model routing with fallback:
-  - Primary: `openai/gpt-oss-120b`
-  - Fallbacks: `llama-3.3-70b-versatile`, `meta-llama/llama-4-scout-17b-16e-instruct`
-- Uses automatic retry to next model if a model fails or is rate-limited.
-- Enforces JSON output with:
-
-```python
-response_format={"type": "json_object"}
-```
-
-- System instruction enforces strict JSON behavior:
-
-```python
-{"role": "system", "content": "You return strictly valid JSON for AI project dataset and benchmark recommendations."}
-```
-
-- Runtime observability: terminal prints `[MODEL]` and `[MODEL-FALLBACK]` for this task.
-
-### 3.2 Prompt Contract
-The prompt explicitly requests:
-1. Domain summary
-2. 4-6 datasets
-3. 3-5 benchmarks
-4. 5-8 technologies
-
-And mandates a strict schema including nested `details` objects.
-
-### 3.3 Output JSON Structure
+The recommendation engine (`generation.py`) enforces strict JSON output matching the following production schema:
 
 ```json
 {
-  "domain_summary": "1-2 line understanding",
+  "domain_summary": "Multimodal medical imaging intelligence for brain tumor segmentation and classification.",
   "datasets": [
     {
-      "name": "Dataset name",
-      "fit_score": 4.7,
-      "short_description": "Why useful",
-      "best_for": ["use-case 1", "use-case 2"],
+      "name": "BraTS 2024 (Brain Tumor Segmentation Challenge)",
+      "fit_score": 4.9,
+      "short_description": "Primary benchmark for multi-parametric MRI brain tumor sub-region segmentation.",
+      "best_for": ["Glioma Sub-region Segmentation", "Multi-modal MRI Fusion"],
       "details": {
-        "modality": "Text/Image/Audio/Multimodal",
-        "size": "Approx size",
-        "license": "Known license",
-        "tasks": ["task 1", "task 2"],
-        "pros": ["pro 1", "pro 2"],
-        "limitations": ["limitation 1", "limitation 2"],
-        "source_hint": "Where usually available"
+        "modality": "Multi-parametric MRI (T1, T1Gd, T2, FLAIR)",
+        "size": "2,000+ patient MRI volumes",
+        "license": "Research Use Only",
+        "tasks": ["Segmentation", "Survival Prediction"],
+        "pros": ["SOTA Benchmark", "Annotated by Neuroradiologists"],
+        "limitations": ["Scanner distribution shift across institutions"],
+        "source_hint": "Synapse / RSNA"
       }
     }
   ],
   "benchmarks": [
     {
-      "name": "Benchmark name",
-      "fit_score": 4.6,
-      "short_description": "Why benchmark matches",
+      "name": "BraTS Evaluation Protocol",
+      "fit_score": 4.8,
+      "short_description": "Standardized Lesion Dice score and Hausdorff 95% distance evaluation.",
       "details": {
-        "primary_metrics": ["metric 1", "metric 2"],
-        "evaluation_protocol": "Protocol",
-        "baselines": ["baseline 1", "baseline 2"],
-        "what_good_looks_like": "Strong performance criteria",
-        "pitfalls": ["pitfall 1", "pitfall 2"]
+        "primary_metrics": ["Dice Similarity Coefficient (DSC)", "Hausdorff Distance 95% (HD95)"],
+        "evaluation_protocol": "Patient-wise 5-fold cross-validation",
+        "baselines": ["nnU-Net", "Swin UNETR"],
+        "what_good_looks_like": "Mean Dice > 0.90 on Enhancing Tumor (ET) sub-regions",
+        "pitfalls": ["Overfitting to single hospital scanner protocols"]
       }
     }
   ],
   "technologies": [
     {
-      "name": "Technology",
-      "category": "Framework/Library/Tool/MLOps",
-      "reason": "Why used",
-      "used_for": ["purpose 1", "purpose 2"]
+      "name": "PyTorch",
+      "category": "Framework",
+      "reason": "Standard deep learning library for medical vision models.",
+      "used_for": ["Model Training", "Custom Loss Implementation"]
+    },
+    {
+      "name": "MONAI (Medical Open Network for AI)",
+      "category": "Library",
+      "reason": "Specialized domain utilities for 3D medical image transforms.",
+      "used_for": ["3D Image Augmentation", "Sliding Window Inference"]
     }
   ]
 }
 ```
 
-### 3.4 Practical Constraints from Prompt
-- `fit_score` must be numeric in `1.0` to `5.0` range.
-- Recommendations should be implementation-oriented, not generic.
-- No markdown or extra prose outside JSON.
-
 ---
 
-## 4. UI Rendering & Details Modal
+## 🎨 6. UI Render Engine & Details Modal (`DatasetBenchmarkFinder.tsx`)
 
-**File:** `frontend/src/pages/DatasetBenchmarkFinder.tsx`
+The frontend renders datasets, benchmarks, and technologies in responsive card grids:
 
-### 4.1 Dataset/Benchmark Cards
-Each card typically displays:
-- Name
-- Fit score badge
-- Short description
-- Top tags / use-cases (`best_for` for datasets)
-- Action button to open details
-
-### 4.2 Technology Cards
-Technology entries render:
-- Name + category chip
-- Why it is used in domain (`reason`)
-- Practical usage tags (`used_for`)
-
-### 4.3 Details Modal
-The modal supports both datasets and benchmarks using shared rendering logic:
-- Section title toggles by `activeType` (`dataset` / `benchmark`)
-- Displays summary, fit score, best-for tags, and dynamic `details` key-value blocks
-- Handles scalar and array values gracefully
-
----
-
-## 5. Data & Type Model
-
-### 5.1 Frontend Type
-
-```ts
+```tsx
+// Frontend Type Definition
 type FinderItem = {
   name: string;
   fit_score?: number;
@@ -276,44 +255,61 @@ type FinderItem = {
 };
 ```
 
-### 5.2 Backend Activity Logging Type
-`Activity.metadata_json` includes structured request metadata for finder usage metrics.
+```jsx
+// Dataset Card JSX Rendering
+<div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3 shadow-sm hover:border-cyan-500/30 transition-all">
+  <div className="flex items-start justify-between gap-2">
+    <h3 className="text-sm font-semibold text-foreground">{dataset.name}</h3>
+    {typeof dataset.fit_score === "number" && (
+      <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 font-mono font-bold">
+        {dataset.fit_score.toFixed(1)}/5 Fit
+      </span>
+    )}
+  </div>
+
+  <p className="text-xs text-muted-foreground leading-relaxed">{dataset.short_description}</p>
+
+  <div className="flex flex-wrap gap-1.5">
+    {(dataset.best_for || []).slice(0, 3).map((useCase) => (
+      <span key={useCase} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border/40">
+        {useCase}
+      </span>
+    ))}
+  </div>
+
+  <Button size="sm" variant="outline" className="text-xs rounded-xl gap-1.5" onClick={() => openDetails("dataset", dataset)}>
+    View Details <ArrowRight className="w-3 h-3" />
+  </Button>
+</div>
+```
 
 ---
 
-## 6. Error Handling & Reliability
+## ⚠️ 7. Failure Modes & Error Recovery Matrix
 
-### 6.1 Frontend
-- Prevents empty requests early.
-- Catches network/API errors and surfaces user alert.
-- Uses loading + generated flags to avoid stale UI states.
-
-### 6.2 Backend
-- Returns `400` for missing title+plan.
-- Wraps endpoint in `try/except` and returns `500` for unexpected errors.
-- Logs successful usage only after recommendation generation.
-
-### 6.3 JSON Robustness
-- LLM output is parsed via `json.loads(...)`.
-- Strict JSON mode significantly reduces malformed responses.
+| Scenario | Root Cause | Handling Strategy | User Interface Feedback |
+|---|---|---|---|
+| **Empty Inputs** | Title and Plan both blank | Blocked client-side and validated `400 Bad Request` | Toast error: *"Please provide project title or project plan."* |
+| **Primary Rate Limit (429)** | Groq daily TPM cap hit | Automatic failover to `llama-3.3-70b-versatile` | Terminal logging (`[MODEL-FALLBACK]`) |
+| **Nested Field Mismatch** | LLM returned nested `details` | Handled by `tools.py` normalization loop | 100% non-empty cards and modals |
+| **Unauthenticated Request** | User not logged in | Client-side fallback generates demo dataset cards | Demonstrates full features without error |
 
 ---
 
-## 7. End-to-End Sequence
+## 🔐 8. Safe Environment Setup
 
-1. User enters title/plan and clicks **Find Datasets & Benchmarks**.
-2. Frontend posts payload to `/api/find-datasets-benchmarks`.
-3. Backend validates inputs and calls `generate_dataset_benchmark_finder`.
-4. LLM returns strict JSON recommendations.
-5. Backend logs finder activity to DB and returns response.
-6. Frontend renders domain summary + datasets + benchmarks + technologies.
-7. User opens details modal for deeper implementation-level metadata.
+> [!WARNING]
+> Keep API credentials in environment files and never commit raw secrets to git repositories.
 
----
+### Required Backend Environment Variables (`backend/.env`)
+```env
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
+CLERK_SECRET_KEY=sk_test_[CLERK_SECRET_KEY]
+GROQ_API_KEY=gsk_[GROQ_API_KEY]
+```
 
-## 8. Notes for Future Improvement
-
-- Add server-side schema validation for LLM response (Pydantic model) before returning to frontend.
-- Add retry/fallback logic when JSON is malformed or partially missing keys.
-- Add optional region/license filtering for production-grade dataset selection.
-- Add persistence of selected dataset/benchmark to user workspace for downstream planning workflows.
+### Frontend Environment Variables (`frontend/.env.local`)
+```env
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_[CLERK_PUB_KEY]
+VITE_API_URL=http://localhost:8000
+```
