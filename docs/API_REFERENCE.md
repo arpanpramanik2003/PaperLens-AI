@@ -591,7 +591,7 @@ When parsing/size limits are exceeded, endpoints may return 413 with descriptive
 - Request body:
 ```json
 {
-  "goal": "Do a literature review on graph neural networks for drug discovery and find 3 unexplored directions."
+  "goal": "Give me plan for Brain tumor Classification"
 }
 ```
 - Response:
@@ -615,17 +615,28 @@ When parsing/size limits are exceeded, endpoints may return 413 with descriptive
   "live_history": [ ... ]
 }
 ```
+- Note: Includes automatic PostgreSQL reconstruction (`_reconstruct_history_from_db`) if backend restarts mid-task.
 
 ---
 
 ### GET /api/agent/task/{task_id}/stream
-- Auth: Yes (via query parameter: `?token=<Clerk JWT>`)
+- Auth: Yes (via URL query parameter: `?token=<Clerk JWT>`)
 - Content-Type: `text/event-stream`
-- Description: Streams live SSE events (`tool_call`, `tool_result`, `critique`, `synthesis_start`, `final`, `error`) as the agent executes tool calls autonomously.
+- Description: Streams live SSE events (`plan`, `tool_call`, `tool_result`, `critique`, `synthesis_start`, `final`, `error`) as the agent executes tool calls autonomously.
+- **SSE `plan` Event**: Emitted immediately after native LLM Tool Routing (`select_agent_tools`):
+```json
+{
+  "type": "plan",
+  "steps": [
+    { "tool": "plan_experiment", "description": "Generate multi-stage experimental execution roadmap" }
+  ],
+  "reason": "LLM Dynamic Router: User is seeking a plan or experimental roadmap"
+}
+```
 
 ---
 
 ## 15) MCP Server Protocol Integration
 
 ### Stdio MCP Protocol (`backend/app/mcp_server.py`)
-- Standard input/output Model Context Protocol JSON-RPC server exposing all agent tools (`search_papers`, `search_workspace_vector_db`, `analyze_paper`, `generate_problem`, `find_datasets`, `validate_citations`, `plan_experiment`).
+- Standard input/output Model Context Protocol JSON-RPC 2.0 server exposing all decorated agent tools (`search_papers`, `search_workspace_vector_db`, `analyze_paper`, `generate_problem`, `find_datasets`, `validate_citations`, `plan_experiment`).
