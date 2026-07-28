@@ -4,6 +4,8 @@ from typing import Dict, Any, List
 from app.services.llm_sections.client import client
 from app.services.model_fallback import create_completion_with_fallback, DEFAULT_PRIMARY_MODEL, DEFAULT_FALLBACK_MODELS
 
+from app.services.agents.planner import compact_results_for_llm
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +24,8 @@ async def verify(goal: str, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         "}"
     )
 
-    user_prompt = f"Goal: {goal}\nTool Results: {json.dumps(results)[:3000]}"
+    compacted = compact_results_for_llm(results)
+    user_prompt = f"Goal: {goal}\nTool Results:\n{json.dumps(compacted, indent=2)}"
 
     try:
         response = create_completion_with_fallback(

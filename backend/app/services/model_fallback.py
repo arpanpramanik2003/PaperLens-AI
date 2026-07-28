@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_PRIMARY_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_FALLBACK_MODELS = "openai/gpt-oss-120b,llama-3.1-8b-instant"
 
+FAST_ROUTER_MODEL = "llama-3.1-8b-instant"
+HEAVY_ANALYTICAL_MODEL = "llama-3.3-70b-versatile"
+
 
 def _split_model_list(raw: str | None) -> list[str]:
     if not raw:

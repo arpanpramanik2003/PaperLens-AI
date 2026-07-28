@@ -1,42 +1,52 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import {
-  Sparkles,
-  Play,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
   BrainCircuit,
+  FileText,
   Search,
+  BookOpen,
+  Target,
+  Database,
+  ShieldCheck,
   Zap,
+  FlaskConical,
+  Award,
   Copy,
   Check,
-  RefreshCw,
-  FileText,
-  Clock,
-  ExternalLink,
-  ShieldCheck,
-  Database,
-  Layers,
-  BookOpen,
-  Lightbulb,
-  Target,
-  Award,
-  Filter,
-  ArrowUpDown,
-  Info,
-  CheckSquare,
-  ArrowRight,
-  FlaskConical,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+
+import ReactMarkdown from "react-markdown";
+
+import { AgentHeaderBanner } from "@/components/agent/AgentHeaderBanner";
+import { AgentGoalInput } from "@/components/agent/AgentGoalInput";
+import { AgentStepperView, StepItem } from "@/components/agent/AgentStepperView";
+import { LiteratureReviewCard } from "@/components/agent/LiteratureReviewCard";
+import { ProposedDirectionsCard } from "@/components/agent/ProposedDirectionsCard";
+import { DatasetsBenchmarksCard } from "@/components/agent/DatasetsBenchmarksCard";
+import { SelfCritiqueCard } from "@/components/agent/SelfCritiqueCard";
+
+const MarkdownComponents: any = {
+  h1: ({ node, ...props }: any) => <h1 className="text-xl font-bold mt-6 mb-3 text-foreground border-b border-border/50 pb-2" {...props} />,
+  h2: ({ node, ...props }: any) => <h2 className="text-lg font-bold mt-5 mb-2.5 text-indigo-400" {...props} />,
+  h3: ({ node, ...props }: any) => <h3 className="text-base font-bold mt-4 mb-2 text-foreground" {...props} />,
+  strong: ({ node, ...props }: any) => <strong className="font-semibold text-foreground" {...props} />,
+  p: ({ node, ...props }: any) => <p className="mb-3 leading-relaxed text-foreground/90 text-xs" {...props} />,
+  ul: ({ node, ...props }: any) => <ul className="list-disc pl-5 mb-4 space-y-1 text-xs" {...props} />,
+  ol: ({ node, ...props }: any) => <ol className="list-decimal pl-5 mb-4 space-y-1 text-xs" {...props} />,
+  li: ({ node, ...props }: any) => <li className="text-foreground/90" {...props} />,
+};
+
+const normalizeMarkdown = (value: string) => {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/([^\n])\s*(#{2,6})(?!#)\s*/g, "$1\n\n$2 ")
+    .replace(/^(\s*#{2,6})([^\s#])/gm, "$1 $2")
+    .replace(/^\s*\*\*(.*?)\*\*\s*$/gm, "## $1");
+};
 
 interface EventStep {
   type: string;
@@ -55,7 +65,6 @@ interface EventStep {
   timestamp?: string;
 }
 
-// Safely convert string or object to renderable text string in React
 const renderTextOrObject = (val: any): string => {
   if (!val) return "";
   if (typeof val === "string") return val;
@@ -84,8 +93,18 @@ const PRESET_PROMPTS = [
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// Stepper steps for clean animated progress UI
-const RESEARCH_STEPS = [
+const TOOL_META: Record<string, { name: string; desc: string; icon: any }> = {
+  search_papers: { name: "Literature Repository Search", desc: "Searching Semantic Scholar, Crossref & arXiv", icon: Search },
+  search_workspace_vector_db: { name: "Vector Database Search", desc: "Searching Supabase pgvector workspace index", icon: Database },
+  analyze_insights: { name: "Methodology & Insights Analysis", desc: "Extracting paper abstractions & technical insights", icon: BookOpen },
+  analyze_paper: { name: "Paper Analysis", desc: "Extracting methodology and key assertions", icon: BookOpen },
+  detect_gaps: { name: "Research Gap Detection", desc: "Identifying unexplored research gaps & limitations", icon: Zap },
+  generate_problem: { name: "Novel Research Directions", desc: "Formulating research directions & core bottlenecks", icon: Target },
+  find_datasets: { name: "Dataset & Benchmark Selection", desc: "Evaluating SOTA datasets & metrics", icon: Database },
+  plan_experiment: { name: "Experimental Roadmap Design", desc: "Designing multi-stage experimental execution roadmap", icon: FlaskConical },
+};
+
+const RESEARCH_STEPS: StepItem[] = [
   { id: 1, name: "Literature Repository Search", desc: "Searching Semantic Scholar, Crossref, arXiv & pgvector", icon: Search },
   { id: 2, name: "Methodology & Insights Analysis", desc: "Extracting paper abstractions & technical insights", icon: BookOpen },
   { id: 3, name: "Novel Research Directions", desc: "Formulating research directions & core bottlenecks", icon: Target },
@@ -100,6 +119,7 @@ export default function AgentMode() {
   const [isRunning, setIsRunning] = useState(false);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [events, setEvents] = useState<EventStep[]>([]);
+  const [plannedSteps, setPlannedSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [finalAnswer, setFinalAnswer] = useState<string | null>(null);
   const [resultsData, setResultsData] = useState<any[]>([]);
@@ -107,16 +127,60 @@ export default function AgentMode() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"cards" | "stepper" | "raw">("cards");
 
-  // Citation Intelligence sorting & year filtering controls
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
   const [selectedYear, setSelectedYear] = useState<string>("all");
   const [paperSearchQuery, setPaperSearchQuery] = useState("");
 
-  // Experiment Planner state for dynamic roadmaps
   const [loadingPlanIndex, setLoadingPlanIndex] = useState<number | null>(null);
   const [directionPlans, setDirectionPlans] = useState<Record<number, any[]>>({});
 
   const sseRef = useRef<EventSource | null>(null);
+
+  const activeResearchSteps = useMemo<StepItem[]>(() => {
+    if (!plannedSteps || plannedSteps.length === 0) {
+      if (isRunning) {
+        return [
+          {
+            id: 1,
+            name: "Analyzing Intent & Structuring Tool Graph",
+            desc: "LLM Router is selecting exact agent tools for user request...",
+            icon: Zap,
+          },
+        ];
+      }
+      return RESEARCH_STEPS;
+    }
+
+    const list: StepItem[] = [];
+    plannedSteps.forEach((st, idx) => {
+      const meta = TOOL_META[st.tool] || {
+        name: st.description || `Tool execution: ${st.tool}`,
+        desc: st.description || `Executing tool ${st.tool}`,
+        icon: Zap,
+      };
+      list.push({
+        id: idx + 1,
+        name: meta.name,
+        desc: meta.desc,
+        icon: meta.icon,
+      });
+    });
+
+    list.push({
+      id: list.length + 1,
+      name: "Peer-Review Self-Critique",
+      desc: "Verifying claims & citation coverage against sources",
+      icon: ShieldCheck,
+    });
+    list.push({
+      id: list.length + 1,
+      name: "Report Synthesis",
+      desc: "Synthesizing executive literature report",
+      icon: FileText,
+    });
+
+    return list;
+  }, [plannedSteps]);
 
   useEffect(() => {
     return () => {
@@ -135,6 +199,7 @@ export default function AgentMode() {
 
     setIsRunning(true);
     setEvents([]);
+    setPlannedSteps([]);
     setCurrentStepIndex(1);
     setFinalAnswer(null);
     setResultsData([]);
@@ -190,7 +255,6 @@ export default function AgentMode() {
           if (taskData.status === "done") {
             window.clearInterval(pollInterval);
             setIsRunning(false);
-            setCurrentStepIndex(6);
             if (taskData.live_history) {
               const finalEvt = taskData.live_history.find((e: any) => e.type === "final");
               if (finalEvt && finalEvt.answer) {
@@ -214,21 +278,25 @@ export default function AgentMode() {
 
         setEvents((prev) => [...prev, payload]);
 
-        // Advance stepper step dynamically based on tool being run
+        if (payload.type === "plan" && (payload as any).steps) {
+          setPlannedSteps((payload as any).steps);
+        }
+
         if (payload.type === "tool_call" || payload.type === "tool_result") {
-          if (payload.tool === "search_papers" || payload.tool === "search_workspace_vector_db") setCurrentStepIndex(1);
-          else if (payload.tool === "analyze_paper") setCurrentStepIndex(2);
-          else if (payload.tool === "generate_problem") setCurrentStepIndex(3);
-          else if (payload.tool === "find_datasets" || payload.tool === "validate_citations") setCurrentStepIndex(4);
+          if (payload.step_index) {
+            setCurrentStepIndex(payload.step_index);
+          } else if (payload.tool === "search_papers" || payload.tool === "search_workspace_vector_db") {
+            setCurrentStepIndex(1);
+          }
         } else if (payload.type === "critique" || payload.type === "critique_start") {
-          setCurrentStepIndex(5);
+          setCurrentStepIndex((prev) => Math.max(prev, plannedSteps.length > 0 ? plannedSteps.length + 1 : 5));
         } else if (payload.type === "synthesis_start") {
-          setCurrentStepIndex(6);
+          setCurrentStepIndex((prev) => Math.max(prev, plannedSteps.length > 0 ? plannedSteps.length + 2 : 6));
         }
 
         if (payload.type === "final") {
           window.clearInterval(pollInterval);
-          setCurrentStepIndex(6);
+          setCurrentStepIndex(activeResearchSteps.length);
           setFinalAnswer(payload.answer || null);
           setResultsData(payload.results || []);
           setCritiqueData(payload.critique || null);
@@ -247,8 +315,8 @@ export default function AgentMode() {
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.error("SSE connection notice", err);
+    eventSource.onerror = () => {
+      // Keep SSE open for automatic reconnects
     };
   };
 
@@ -256,18 +324,16 @@ export default function AgentMode() {
     if (!finalAnswer) return;
     navigator.clipboard.writeText(finalAnswer);
     setCopied(true);
-    toast.success("Full research report copied to clipboard!");
+    toast.success("Report copied to clipboard.");
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Call Experiment Planner Route (/api/plan-experiment) dynamically for a direction
-  const handlePlanExperimentRoadmap = async (idx: number, directionTitle: string) => {
+  const handlePlanExperimentRoadmap = async (idx: number, title: string) => {
     if (directionPlans[idx]) {
-      // Toggle collapse if already loaded
       setDirectionPlans((prev) => {
-        const updated = { ...prev };
-        delete updated[idx];
-        return updated;
+        const next = { ...prev };
+        delete next[idx];
+        return next;
       });
       return;
     }
@@ -281,29 +347,28 @@ export default function AgentMode() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ topic: directionTitle, difficulty: "advanced" }),
+        body: JSON.stringify({ topic: title, difficulty: "advanced" }),
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to generate experiment plan (${res.status})`);
+        throw new Error("Failed to generate experiment plan");
       }
 
       const data = await res.json();
-      const planSteps = data.steps || [];
-      setDirectionPlans((prev) => ({ ...prev, [idx]: planSteps }));
-      toast.success(`Generated experiment plan roadmap for "${directionTitle}"!`);
+      const steps = data.steps || [];
+
+      setDirectionPlans((prev) => ({ ...prev, [idx]: steps }));
+      toast.success(`Generated experiment plan for Direction #${idx + 1}`);
     } catch (err: any) {
-      toast.error(err.message || "Could not generate experiment plan roadmap.");
+      toast.error(err.message || "Could not fetch experiment roadmap.");
     } finally {
       setLoadingPlanIndex(null);
     }
   };
 
-  // Safe Extraction of paper search, datasets, problems
   const paperSearchResults = resultsData.find((r) => r.tool === "search_papers")?.result;
   const rawPapersList: any[] = paperSearchResults?.papers || [];
 
-  // Citation Intelligence Year Buckets computation
   const yearwiseCounts = useMemo(() => {
     const counts = new Map<number, number>();
     for (const p of rawPapersList) {
@@ -317,17 +382,14 @@ export default function AgentMode() {
       .map(([year, count]) => ({ year, count }));
   }, [rawPapersList]);
 
-  // Filter and Sort papers dynamically (Citation Intelligence Mechanism)
   const filteredAndSortedPapers = useMemo(() => {
     let items = [...rawPapersList];
 
-    // Filter by year bucket
     if (selectedYear !== "all") {
       const targetY = parseInt(selectedYear, 10);
       items = items.filter((p) => p.year === targetY);
     }
 
-    // Filter by search text
     if (paperSearchQuery.trim()) {
       const q = paperSearchQuery.toLowerCase().trim();
       items = items.filter((p) => {
@@ -338,7 +400,6 @@ export default function AgentMode() {
       });
     }
 
-    // Sort order
     items.sort((a, b) => {
       const citeA = a.citation_count || 0;
       const citeB = b.citation_count || 0;
@@ -348,7 +409,6 @@ export default function AgentMode() {
       if (sortOrder === "highest") return citeB - citeA;
       if (sortOrder === "lowest") return citeA - citeB;
       if (sortOrder === "oldest") return yearA - yearB;
-      // Default: newest first
       if (yearA !== yearB) return yearB - yearA;
       return citeB - citeA;
     });
@@ -362,141 +422,59 @@ export default function AgentMode() {
   const datasetResult = resultsData.find((r) => r.tool === "find_datasets")?.result;
   const datasetsList: any[] = datasetResult?.datasets || [];
 
-  // Dynamic Dataset summary for top banner card
-  const topDatasetName = datasetsList[0]?.name || "MoleculeNet / PDBbind Benchmark Suite";
-  const topDatasetType = datasetsList[0]?.type || "2D/3D Graph Representations";
-  const topDatasetTasks = datasetsList[0]?.tasks || "Molecular Property Prediction & Binding Affinity";
-  const topDatasetMetrics = datasetsList[0]?.metrics || "ROC-AUC, RMSE, Pearson Correlation";
+  const hasDatasets = datasetsList.length > 0;
+  const topDatasetName = hasDatasets ? datasetsList[0]?.name : "Domain Literature Synthesis";
+  const topDatasetType = hasDatasets ? datasetsList[0]?.type : `${rawPapersList.length} Peer-Reviewed Papers Indexed`;
+  const topDatasetTasks = hasDatasets ? datasetsList[0]?.tasks : "Literature Survey & Method Taxonomy";
+  const topDatasetMetrics = hasDatasets ? datasetsList[0]?.metrics : "Citation Coverage & Methodological Rigor";
 
-  const progressPercent = Math.min(Math.round((currentStepIndex / 6) * 100), 100);
+  const totalStepCount = activeResearchSteps.length;
+  const progressPercent = Math.min(Math.round((currentStepIndex / totalStepCount) * 100), 100);
 
   return (
     <div className="space-y-6 text-foreground font-sans">
-      {/* Header Banner - Professional Academic Theme */}
-      <div className="rounded-xl border border-border/70 bg-card p-6 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-secondary text-foreground border border-border/50">
-              <BrainCircuit className="w-5 h-5 text-indigo-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">
-                Agent Mode: Autonomous Research Orchestrator
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Literature review, step-by-step problem roadmaps, dataset selection & self-critique.
-              </p>
-            </div>
-          </div>
+      <AgentHeaderBanner
+        presetPrompts={PRESET_PROMPTS}
+        isRunning={isRunning}
+        onSelectPreset={(preset) => {
+          setGoal(preset);
+          handleStartAgent(preset);
+        }}
+      />
 
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs font-mono px-2.5 py-1 border-border/70">
-              Model: Groq / Llama-3.3-70B
-            </Badge>
-            <Badge variant="outline" className="text-xs font-mono px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-              MCP & Supabase pgvector Active
-            </Badge>
-          </div>
-        </div>
+      <AgentGoalInput
+        goal={goal}
+        setGoal={setGoal}
+        isRunning={isRunning}
+        onStartAgent={() => handleStartAgent()}
+      />
 
-        {/* Preset Prompts */}
-        <div className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Sample Research Prompts:
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_PROMPTS.map((preset, idx) => (
-              <button
-                key={idx}
-                disabled={isRunning}
-                onClick={() => {
-                  setGoal(preset);
-                  handleStartAgent(preset);
-                }}
-                className="text-xs px-3 py-1.5 rounded-lg border border-border/70 bg-secondary/40 hover:bg-secondary hover:border-border text-foreground transition-all text-left flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                <span className="truncate max-w-lg">{preset}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Input Box */}
-      <Card className="p-4 border-border/70 bg-card shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 font-mono">
-            <Search className="w-3.5 h-3.5 text-indigo-400" />
-            Enter Research Goal & Requirements
-          </label>
-          {isRunning && (
-            <div className="flex items-center gap-2 text-xs text-indigo-400 font-mono animate-pulse">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Agent loop executing...
-            </div>
-          )}
-        </div>
-
-        <Textarea
-          value={goal}
-          onChange={(e) => setGoal(e.target.value)}
-          disabled={isRunning}
-          placeholder="e.g. Graph neural networks for drug discovery: do a literature review and identify 3 unexplored directions."
-          className="min-h-[85px] rounded-lg bg-background border-border/70 focus-visible:ring-1 focus-visible:ring-ring text-sm"
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <span className="text-xs text-muted-foreground">
-            Queries literature repositories, builds step-by-step problem roadmaps & recommends SOTA datasets dynamically.
-          </span>
-          <Button
-            disabled={isRunning || !goal.trim()}
-            onClick={() => handleStartAgent()}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-5 text-xs font-semibold shadow-sm"
-          >
-            {isRunning ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Running Research Task...
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 mr-2 fill-current" />
-                Run Multi-Agent Task
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
-
-      {/* View Switcher Tabs */}
       {(events.length > 0 || isRunning || finalAnswer) && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-border/70 pb-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
+            <div className="flex items-center gap-1.5 bg-secondary/40 p-1 rounded-xl border border-border/60">
               <button
                 onClick={() => setActiveTab("cards")}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   activeTab === "cards"
-                    ? "bg-secondary text-foreground border border-border"
+                    ? "bg-indigo-600 text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                Structured Research Workspace
+                <Award className="w-3.5 h-3.5" />
+                Structured Findings ({resultsData.length} Tools)
               </button>
 
               <button
                 onClick={() => setActiveTab("stepper")}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   activeTab === "stepper"
-                    ? "bg-secondary text-foreground border border-border"
+                    ? "bg-indigo-600 text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <BrainCircuit className="w-3.5 h-3.5 text-indigo-400" />
-                Live Execution Progress
+                <BrainCircuit className="w-3.5 h-3.5" />
+                Live Execution Progress ({activeResearchSteps.length} Steps)
               </button>
 
               {finalAnswer && (
@@ -534,10 +512,8 @@ export default function AgentMode() {
             )}
           </div>
 
-          {/* VIEW 1: STRUCTURED SECTIONS / CARDS */}
           {activeTab === "cards" && (
             <div className="space-y-6">
-              {/* Executive Recommendation Banner Card - 100% DYNAMIC */}
               <Card className="p-5 border-border/70 bg-card shadow-sm space-y-3">
                 <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
                   <div className="flex items-center gap-2">
@@ -550,7 +526,7 @@ export default function AgentMode() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-1">
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase font-mono">Top Recommended Benchmark</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase font-mono">Top Benchmark / Focus</span>
                     <p className="font-bold text-sm text-foreground line-clamp-1">{topDatasetName}</p>
                     <p className="text-muted-foreground text-[11px] line-clamp-2">{topDatasetType}</p>
                   </div>
@@ -571,451 +547,76 @@ export default function AgentMode() {
                 </div>
               </Card>
 
-              {/* CARD SECTION 1: PRIMARY LITERATURE REVIEW & ALL 30+ PAPERS WITH SCROLL & YEAR FILTERS */}
-              <Card className="p-5 border-border/70 bg-card shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-indigo-400" />
-                    <h3 className="text-sm font-bold tracking-tight">1. Literature Review & Paper Repository</h3>
-                    <Badge variant="outline" className="text-xs font-mono bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-                      {rawPapersList.length} Papers Discovered
-                    </Badge>
-                  </div>
+              {(() => {
+                let cardCounter = 0;
+                const litIndex = rawPapersList.length > 0 ? ++cardCounter : 0;
+                const probIndex = proposedProblems.length > 0 ? ++cardCounter : 0;
+                const datasetIndex = datasetsList.length > 0 ? ++cardCounter : 0;
+                const critiqueIndex = critiqueData ? ++cardCounter : 0;
 
-                  {/* Citation Intelligence Controls: Sort Order & Search */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                      <Input
-                        type="text"
-                        placeholder="Search paper title/venue..."
-                        value={paperSearchQuery}
-                        onChange={(e) => setPaperSearchQuery(e.target.value)}
-                        className="h-8 w-44 pl-8 text-xs bg-background border-border/70 rounded-lg"
+                return (
+                  <>
+                    {rawPapersList.length > 0 && (
+                      <LiteratureReviewCard
+                        papers={rawPapersList}
+                        filteredPapers={filteredAndSortedPapers}
+                        paperSearchQuery={paperSearchQuery}
+                        setPaperSearchQuery={setPaperSearchQuery}
+                        sortOrder={sortOrder}
+                        setSortOrder={setSortOrder}
+                        selectedYear={selectedYear}
+                        setSelectedYear={setSelectedYear}
+                        yearwiseCounts={yearwiseCounts}
+                        renderTextOrObject={renderTextOrObject}
+                        sectionIndex={litIndex}
                       />
-                    </div>
+                    )}
 
-                    <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/60 text-xs">
-                      <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-1" />
-                      <select
-                        value={sortOrder}
-                        onChange={(e) => setSortOrder(e.target.value as any)}
-                        className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
-                      >
-                        <option value="newest" className="bg-card text-foreground">Newest First</option>
-                        <option value="oldest" className="bg-card text-foreground">Oldest First</option>
-                        <option value="highest" className="bg-card text-foreground">Highest Citations</option>
-                        <option value="lowest" className="bg-card text-foreground">Lowest Citations</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
+                    <ProposedDirectionsCard
+                      proposedProblems={proposedProblems}
+                      directionPlans={directionPlans}
+                      loadingPlanIndex={loadingPlanIndex}
+                      onPlanExperimentRoadmap={handlePlanExperimentRoadmap}
+                      renderTextOrObject={renderTextOrObject}
+                      sectionIndex={probIndex}
+                    />
 
-                {/* Citation Intelligence Year Buckets Filter Chips */}
-                {yearwiseCounts.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                    <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1 mr-1">
-                      <Filter className="w-3 h-3" /> Year Buckets:
-                    </span>
-                    <button
-                      onClick={() => setSelectedYear("all")}
-                      className={`text-xs px-2.5 py-0.5 rounded-full border transition-all ${
-                        selectedYear === "all"
-                          ? "bg-indigo-600 text-white border-indigo-600 font-semibold"
-                          : "bg-secondary/40 text-muted-foreground border-border/60 hover:text-foreground"
-                      }`}
-                    >
-                      All ({rawPapersList.length})
-                    </button>
+                    <DatasetsBenchmarksCard
+                      datasetsList={datasetsList}
+                      renderTextOrObject={renderTextOrObject}
+                      sectionIndex={datasetIndex}
+                    />
 
-                    {yearwiseCounts.map((yb) => (
-                      <button
-                        key={yb.year}
-                        onClick={() => setSelectedYear(String(yb.year))}
-                        className={`text-xs px-2.5 py-0.5 rounded-full border transition-all ${
-                          selectedYear === String(yb.year)
-                            ? "bg-indigo-600 text-white border-indigo-600 font-semibold"
-                            : "bg-secondary/40 text-muted-foreground border-border/60 hover:text-foreground"
-                        }`}
-                      >
-                        {yb.year} ({yb.count})
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* SCROLLABLE PRIMARY CARD CONTAINER FOR ALL 20-30+ PAPERS */}
-                {filteredAndSortedPapers.length > 0 ? (
-                  <div className="max-h-[520px] overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 gap-3 font-sans">
-                    {filteredAndSortedPapers.map((paper, idx) => (
-                      <div key={idx} className="p-3.5 rounded-lg bg-secondary/20 border border-border/60 hover:border-border transition-all space-y-2 text-xs">
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-semibold text-foreground leading-snug">{renderTextOrObject(paper.title)}</h4>
-                          {paper.url && (
-                            <a href={paper.url} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 flex-shrink-0" title="Open paper link">
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground font-mono">
-                          {paper.year && <span className="bg-secondary px-1.5 py-0.5 rounded border border-border/40">Year: {paper.year}</span>}
-                          {paper.venue && <span className="truncate max-w-[160px]">• {renderTextOrObject(paper.venue)}</span>}
-                          {paper.citation_count !== undefined && <span className="text-indigo-400 font-bold">• {paper.citation_count} Citations</span>}
-                        </div>
-
-                        {paper.summary && (
-                          <p className="text-muted-foreground text-[11px] line-clamp-3 leading-relaxed">
-                            {renderTextOrObject(paper.summary)}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground leading-relaxed py-4 text-center">
-                    No literature papers matching the selected filter criteria.
-                  </p>
-                )}
-              </Card>
-
-              {/* CARD SECTION 2: PROPOSED NOVEL RESEARCH DIRECTIONS & INTERACTIVE EXPERIMENT PLANNER */}
-              <Card className="p-6 border-border/70 bg-card shadow-sm space-y-5">
-                <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Target className="w-4.5 h-4.5 text-indigo-400" />
-                    <h3 className="text-base font-bold tracking-tight text-foreground">
-                      2. Proposed Novel Research Directions
-                    </h3>
-                  </div>
-                  <Badge variant="outline" className="text-xs font-mono bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-                    Problem Generator Engine
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-1 gap-5">
-                  {proposedProblems.map((prob, idx) => {
-                    const title = renderTextOrObject(prob.title) || `Novel Direction #${idx + 1}`;
-                    const problemStatement = renderTextOrObject(prob.problem_statement || prob.description || prob.desc);
-                    const objective = renderTextOrObject(prob.objective);
-                    const isExpanded = Boolean(directionPlans[idx]);
-                    const isLoadingThis = loadingPlanIndex === idx;
-                    const loadedSteps = directionPlans[idx] || [];
-
-                    return (
-                      <div
-                        key={idx}
-                        className="rounded-2xl border border-border/70 bg-secondary/10 p-5 space-y-4 hover:border-indigo-500/30 transition-all duration-200"
-                      >
-                        {/* Title & Badge */}
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-bold">
-                              DIRECTION #{idx + 1}
-                            </span>
-                            <h4 className="text-sm font-bold text-foreground leading-snug">{title}</h4>
-                          </div>
-                          <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 text-xs">
-                            High Impact Direction
-                          </Badge>
-                        </div>
-
-                        {/* Clean 2-Column Grid: Core Bottleneck & Proposed Solution */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                          {problemStatement && (
-                            <div className="p-3.5 rounded-xl bg-background/70 border border-border/60 space-y-1.5">
-                              <span className="font-semibold text-amber-400 text-[11px] flex items-center gap-1.5 font-mono">
-                                <AlertCircle className="w-3.5 h-3.5" /> Core Bottleneck / Problem Statement:
-                              </span>
-                              <p className="text-muted-foreground leading-relaxed text-[11px]">{problemStatement}</p>
-                            </div>
-                          )}
-
-                          {objective && (
-                            <div className="p-3.5 rounded-xl bg-background/70 border border-border/60 space-y-1.5">
-                              <span className="font-semibold text-emerald-400 text-[11px] flex items-center gap-1.5 font-mono">
-                                <CheckSquare className="w-3.5 h-3.5" /> Proposed Solution & Objective:
-                              </span>
-                              <p className="text-muted-foreground leading-relaxed text-[11px]">{objective}</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* CTA BUTTON: PLAN ROADMAP IN EXPERIMENT PLANNER */}
-                        <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-xs text-muted-foreground">
-                            Generate full staged experiment design & mitigation roadmap.
-                          </span>
-
-                          <Button
-                            onClick={() => handlePlanExperimentRoadmap(idx, title)}
-                            disabled={isLoadingThis}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2 text-xs font-semibold shadow-sm transition-all flex items-center gap-2"
-                          >
-                            {isLoadingThis ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                Generating Experiment Plan...
-                              </>
-                            ) : isExpanded ? (
-                              <>
-                                <ChevronUp className="w-4 h-4" />
-                                Hide Experiment Plan Roadmap
-                              </>
-                            ) : (
-                              <>
-                                <FlaskConical className="w-4 h-4 text-indigo-200" />
-                                Plan Roadmap in Experiment Planner
-                              </>
-                            )}
-                          </Button>
-                        </div>
-
-                        {/* INTERACTIVE EXPANDED EXPERIMENT PLAN ROADMAP (FETCHED FROM /api/plan-experiment) */}
-                        {isExpanded && (
-                          <div className="pt-3 border-t border-border/50 space-y-3 animate-in fade-in duration-300">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
-                                <FlaskConical className="w-4 h-4" /> Experiment Planner Execution Roadmap ({loadedSteps.length} Stages)
-                              </span>
-                              <Badge variant="outline" className="text-[10px] font-mono">
-                                Route: /api/plan-experiment
-                              </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-                              {loadedSteps.map((st: any, sIdx: number) => (
-                                <div
-                                  key={sIdx}
-                                  className="p-3.5 rounded-xl bg-background/80 border border-border/70 space-y-2 hover:border-indigo-500/30 transition-all"
-                                >
-                                  <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
-                                    <div className="flex items-center gap-2 font-bold text-foreground text-xs">
-                                      <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-mono text-[10px]">
-                                        {st.num || sIdx + 1}
-                                      </span>
-                                      <span>{renderTextOrObject(st.title)}</span>
-                                    </div>
-                                  </div>
-
-                                  <p className="text-muted-foreground text-[11px] leading-relaxed">
-                                    {renderTextOrObject(st.details)}
-                                  </p>
-
-                                  {st.params && (
-                                    <div className="text-[10px] text-indigo-300 font-mono bg-indigo-500/5 p-1.5 rounded border border-indigo-500/10">
-                                      <strong>Config/Params:</strong> {renderTextOrObject(st.params)}
-                                    </div>
-                                  )}
-
-                                  {st.risks && (
-                                    <div className="text-[10px] text-amber-300 font-mono bg-amber-500/5 p-1.5 rounded border border-amber-500/10">
-                                      <strong>Risk Checkpoint:</strong> {renderTextOrObject(st.risks)}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-
-              {/* CARD SECTION 3: RECOMMENDED DATASETS & BENCHMARKS (100% POPULATED & MATCHING MAIN ROUTE) */}
-              <Card className="p-6 border-border/70 bg-card shadow-sm space-y-5">
-                <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Database className="w-4 h-4 text-cyan-400" />
-                    <h3 className="text-sm font-bold tracking-tight text-foreground">
-                      3. Datasets, Benchmarks & Evaluation Metrics
-                    </h3>
-                  </div>
-                  <Badge variant="outline" className="text-xs font-mono bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
-                    {datasetsList.length} Recommended Datasets
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {datasetsList.map((ds, idx) => {
-                    const name = renderTextOrObject(ds.name) || `Dataset #${idx + 1}`;
-                    const description = renderTextOrObject(ds.short_description || ds.description || ds.summary || ds.details?.short_description);
-                    const fitScore = typeof ds.fit_score === "number" ? ds.fit_score.toFixed(1) : (ds.details?.fit_score ? String(ds.details.fit_score) : "4.8");
-                    
-                    const modality = renderTextOrObject(ds.type || ds.format || ds.details?.modality || ds.details?.type) || "Multi-modal Records & Feature Vectors";
-                    
-                    let tasks = renderTextOrObject(ds.tasks || ds.details?.tasks);
-                    if (!tasks && Array.isArray(ds.details?.tasks)) {
-                      tasks = ds.details.tasks.join(", ");
-                    }
-                    if (!tasks) tasks = "Classification, Segmentation & Benchmarking";
-
-                    let metrics = renderTextOrObject(ds.metrics || ds.details?.metrics || ds.details?.primary_metrics);
-                    if (!metrics && Array.isArray(ds.details?.primary_metrics)) {
-                      metrics = ds.details.primary_metrics.join(", ");
-                    }
-                    if (!metrics) metrics = "ROC-AUC, F1-Score, RMSE, Accuracy";
-
-                    const recommendation = renderTextOrObject(ds.recommendation) || (ds.fit_score ? `${fitScore}/5 High-Fit Benchmark` : "SOTA Benchmark");
-
-                    return (
-                      <div
-                        key={idx}
-                        className="rounded-xl border border-border/70 bg-secondary/15 p-4 space-y-3 hover:border-cyan-500/30 transition-all shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-bold text-sm text-foreground leading-snug">{name}</h4>
-                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold flex-shrink-0">
-                            {fitScore}/5 Fit
-                          </span>
-                        </div>
-
-                        {description && (
-                          <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
-                        )}
-
-                        <div className="space-y-2 pt-2 border-t border-border/40 text-xs font-sans">
-                          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
-                            <span className="font-semibold text-muted-foreground text-[11px] min-w-[125px] font-mono">
-                              Modalities / Format:
-                            </span>
-                            <span className="text-foreground text-[11px] font-medium">{modality}</span>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
-                            <span className="font-semibold text-muted-foreground text-[11px] min-w-[125px] font-mono">
-                              Primary Tasks:
-                            </span>
-                            <span className="text-foreground text-[11px] font-medium">{tasks}</span>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
-                            <span className="font-semibold text-muted-foreground text-[11px] min-w-[125px] font-mono">
-                              Evaluation Metrics:
-                            </span>
-                            <span className="text-cyan-300 font-mono text-[11px] font-semibold">{metrics}</span>
-                          </div>
-                        </div>
-
-                        {recommendation && (
-                          <div className="pt-1">
-                            <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 text-[10px]">
-                              {recommendation}
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-
-              {/* CARD SECTION 4: Peer-Review Self-Critique & Audit Verification */}
-              {critiqueData && (
-                <Card className="p-5 border-border/70 bg-card shadow-sm space-y-3 text-xs">
-                  <div className="flex items-center gap-2 border-b border-border/50 pb-2.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-bold tracking-tight">4. Peer-Review Self-Critique & Verification</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <span className="font-semibold text-emerald-400">Validated Strengths:</span>
-                      <ul className="list-disc list-inside text-muted-foreground space-y-0.5 text-[11px]">
-                        {(critiqueData.strengths || ["Comprehensive literature search", "Clear dataset recommendation"]).map((s: any, i: number) => (
-                          <li key={i}>{renderTextOrObject(s)}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="font-semibold text-amber-400">Review Notes:</span>
-                      <ul className="list-disc list-inside text-muted-foreground space-y-0.5 text-[11px]">
-                        {(critiqueData.issues || ["Minor gap in scanner distribution shift"]).map((iss: any, i: number) => (
-                          <li key={i}>{renderTextOrObject(iss)}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </Card>
-              )}
+                    <SelfCritiqueCard
+                      critiqueData={critiqueData}
+                      renderTextOrObject={renderTextOrObject}
+                      sectionIndex={critiqueIndex}
+                    />
+                  </>
+                );
+              })()}
             </div>
           )}
 
-          {/* VIEW 2: ANIMATED STEPPER PROGRESS UI */}
           {activeTab === "stepper" && (
-            <Card className="p-6 border-border/70 bg-card shadow-sm space-y-6">
-              <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                <div className="flex items-center gap-2">
-                  <BrainCircuit className="w-4 h-4 text-indigo-400" />
-                  <h3 className="text-sm font-bold tracking-tight">Autonomous Multi-Agent Progress</h3>
-                </div>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {progressPercent}% Complete
-                </Badge>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full bg-secondary/50 rounded-full h-2 overflow-hidden border border-border/40">
-                <div
-                  className="bg-indigo-500 h-full transition-all duration-500 ease-out"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-
-              {/* Stepper Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {RESEARCH_STEPS.map((st) => {
-                  const isDone = currentStepIndex > st.id || (!isRunning && finalAnswer !== null);
-                  const isCurrent = isRunning && currentStepIndex === st.id;
-                  const IconComp = st.icon;
-
-                  return (
-                    <div
-                      key={st.id}
-                      className={`p-4 rounded-lg border transition-all duration-300 space-y-2 ${
-                        isCurrent
-                          ? "bg-indigo-500/10 border-indigo-500/50 shadow-md shadow-indigo-500/5"
-                          : isDone
-                          ? "bg-emerald-500/5 border-emerald-500/20"
-                          : "bg-secondary/20 border-border/40 opacity-60"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-md ${
-                            isCurrent ? "bg-indigo-500 text-white" : isDone ? "bg-emerald-500/20 text-emerald-400" : "bg-secondary text-muted-foreground"
-                          }`}>
-                            <IconComp className="w-4 h-4" />
-                          </div>
-                          <span className="font-semibold text-xs text-foreground">
-                            Step {st.id}: {st.name}
-                          </span>
-                        </div>
-
-                        {isDone ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                        ) : isCurrent ? (
-                          <Loader2 className="w-4 h-4 text-indigo-400 animate-spin flex-shrink-0" />
-                        ) : null}
-                      </div>
-
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">{st.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
+            <AgentStepperView
+              steps={activeResearchSteps}
+              currentStepIndex={currentStepIndex}
+              progressPercent={progressPercent}
+              isRunning={isRunning}
+              finalAnswer={finalAnswer}
+            />
           )}
 
-          {/* VIEW 3: FULL RAW MARKDOWN SYNTHESIS */}
           {activeTab === "raw" && finalAnswer && (
             <Card className="p-6 border-border/70 bg-card shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-border/50 pb-3">
                 <h3 className="text-sm font-bold">Full Markdown Synthesized Report</h3>
               </div>
-              <div className="prose prose-invert max-w-none text-xs leading-relaxed whitespace-pre-wrap font-sans">
-                {finalAnswer}
+              <div className="prose prose-invert max-w-none text-xs leading-relaxed font-sans">
+                <ReactMarkdown components={MarkdownComponents}>
+                  {normalizeMarkdown(finalAnswer)}
+                </ReactMarkdown>
               </div>
             </Card>
           )}
