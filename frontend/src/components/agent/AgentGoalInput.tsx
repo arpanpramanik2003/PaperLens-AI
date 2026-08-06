@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Loader2, Play, Square, RefreshCw, Wand2, Globe, Database, ShieldCheck, CornerDownLeft } from "lucide-react";
+import { Search, Loader2, Play, Square, RefreshCw, Wand2, Globe, Database, ShieldCheck, CornerDownLeft, BrainCircuit } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
@@ -68,10 +68,10 @@ export const AgentGoalInput: React.FC<AgentGoalInputProps> = ({
         <div className="hidden md:flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
           <span className="font-mono text-[10px] uppercase font-semibold text-muted-foreground/70">Capabilities:</span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/40 border border-border/40 font-mono text-foreground/80">
-            <Globe className="w-3 h-3 text-cyan-400" /> Global Paper Search
+            <BrainCircuit className="w-3 h-3 text-indigo-400" /> ReAct Reasoning Memory
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/40 border border-border/40 font-mono text-foreground/80">
-            <Search className="w-3 h-3 text-indigo-400" /> Research Gap Analysis
+            <Globe className="w-3 h-3 text-cyan-400" /> Global Paper Search
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/40 border border-border/40 font-mono text-foreground/80">
             <ShieldCheck className="w-3 h-3 text-emerald-400" /> Peer-Review Audit

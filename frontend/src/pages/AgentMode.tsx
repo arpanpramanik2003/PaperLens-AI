@@ -124,6 +124,8 @@ export default function AgentMode() {
   const [finalAnswer, setFinalAnswer] = useState<string | null>(null);
   const [resultsData, setResultsData] = useState<any[]>([]);
   const [critiqueData, setCritiqueData] = useState<any | null>(null);
+  const [latestThought, setLatestThought] = useState<string | null>(null);
+  const [memorySummary, setMemorySummary] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"cards" | "stepper" | "raw">("cards");
 
@@ -138,16 +140,6 @@ export default function AgentMode() {
 
   const activeResearchSteps = useMemo<StepItem[]>(() => {
     if (!plannedSteps || plannedSteps.length === 0) {
-      if (isRunning) {
-        return [
-          {
-            id: 1,
-            name: "Analyzing Intent & Structuring Research Steps",
-            desc: "Analyzing research objectives and planning execution steps...",
-            icon: Zap,
-          },
-        ];
-      }
       return RESEARCH_STEPS;
     }
 
@@ -204,6 +196,8 @@ export default function AgentMode() {
     setFinalAnswer(null);
     setResultsData([]);
     setCritiqueData(null);
+    setLatestThought(null);
+    setMemorySummary(null);
     setDirectionPlans({});
     setActiveTab("stepper");
 
@@ -311,16 +305,29 @@ export default function AgentMode() {
           setPlannedSteps((payload as any).steps);
         }
 
-        if (payload.type === "tool_call" || payload.type === "tool_result") {
-          if (payload.step_index) {
-            setCurrentStepIndex(payload.step_index);
-          } else if (payload.tool === "search_papers" || payload.tool === "search_workspace_vector_db") {
+        if (payload.type === "thought") {
+          if ((payload as any).thought) setLatestThought((payload as any).thought);
+          if ((payload as any).memory_summary) setMemorySummary((payload as any).memory_summary);
+          if (payload.step_index) setCurrentStepIndex(payload.step_index);
+        } else if (payload.type === "action" || payload.type === "observation" || payload.type === "tool_call" || payload.type === "tool_result") {
+          const t = payload.tool;
+          if (t === "search_papers" || t === "search_workspace_vector_db") {
             setCurrentStepIndex(1);
+          } else if (t === "analyze_paper" || t === "analyze_insights") {
+            setCurrentStepIndex(2);
+          } else if (t === "generate_problem") {
+            setCurrentStepIndex(3);
+          } else if (t === "find_datasets" || t === "plan_experiment") {
+            setCurrentStepIndex(4);
+          } else if (payload.step_index) {
+            setCurrentStepIndex(payload.step_index);
           }
+        } else if (payload.type === "memory_update") {
+          if ((payload as any).active_memory_summary) setMemorySummary((payload as any).active_memory_summary);
         } else if (payload.type === "critique" || payload.type === "critique_start") {
-          setCurrentStepIndex((prev) => Math.max(prev, plannedSteps.length > 0 ? plannedSteps.length + 1 : 5));
+          setCurrentStepIndex(5);
         } else if (payload.type === "synthesis_start") {
-          setCurrentStepIndex((prev) => Math.max(prev, plannedSteps.length > 0 ? plannedSteps.length + 2 : 6));
+          setCurrentStepIndex(6);
         }
 
         if (payload.type === "final") {
@@ -644,6 +651,8 @@ export default function AgentMode() {
               progressPercent={progressPercent}
               isRunning={isRunning}
               finalAnswer={finalAnswer}
+              latestThought={latestThought}
+              memorySummary={memorySummary}
             />
           )}
 

@@ -15,6 +15,8 @@ interface AgentStepperViewProps {
   progressPercent: number;
   isRunning: boolean;
   finalAnswer: string | null;
+  latestThought?: string | null;
+  memorySummary?: string | null;
 }
 
 export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
@@ -23,9 +25,12 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
   progressPercent,
   isRunning,
   finalAnswer,
+  latestThought,
+  memorySummary,
 }) => {
   return (
     <div className="rounded-2xl border border-border/80 bg-card/90 p-6 md:p-8 shadow-xl backdrop-blur-xl space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-4">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -33,23 +38,23 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
           </div>
           <div>
             <h3 className="text-base font-bold tracking-tight text-foreground">
-              Autonomous Execution Pipeline
+              Autonomous ReAct Execution Stream
             </h3>
             <p className="text-xs text-muted-foreground">
-              Live event stream of intent router, tool execution graph, self-critique & report synthesis
+              Iterative reasoning loop (Thought $\rightarrow$ Action $\rightarrow$ Observation) with dynamic working memory
             </p>
           </div>
         </div>
         <Badge variant="outline" className="text-xs font-mono px-3 py-1 bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-          {progressPercent}% Orchestration Complete
+          {progressPercent}% Complete
         </Badge>
       </div>
 
       {/* Modern Gradient Progress Bar */}
       <div className="space-y-1.5">
         <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
-          <span>Pipeline Status: {isRunning ? "Processing Steps..." : finalAnswer ? "Workflow Finished" : "Ready"}</span>
-          <span>{currentStepIndex} of {steps.length} Steps</span>
+          <span>ReAct State: {isRunning ? "Active Reasoning Cycle..." : finalAnswer ? "Workflow Completed" : "Ready"}</span>
+          <span>Step {currentStepIndex} of {steps.length}</span>
         </div>
         <div className="w-full bg-secondary/60 rounded-full h-2.5 overflow-hidden border border-border/40 p-0.5">
           <div
@@ -57,6 +62,27 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
             style={{ width: `${progressPercent}%` }}
           />
         </div>
+      </div>
+
+      {/* Live ReAct Working Memory Scratchpad */}
+      <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-mono uppercase tracking-wider font-bold text-indigo-400 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            Agent Working Memory Scratchpad:
+          </span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+            Dynamic ReAct State
+          </span>
+        </div>
+        <p className="text-xs md:text-sm text-foreground/90 font-medium leading-relaxed italic">
+          "{latestThought || "Reasoning about research objective and dynamically building execution steps..."}"
+        </p>
+        {memorySummary && (
+          <p className="text-[11px] font-mono text-muted-foreground pt-1 border-t border-indigo-500/20">
+            Memory Status: {memorySummary}
+          </p>
+        )}
       </div>
 
       {/* Stepper Cards Grid */}
