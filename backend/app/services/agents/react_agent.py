@@ -83,19 +83,21 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
 
         system_prompt = (
             "You are Paperlens Autonomous ReAct AI Research Agent.\n"
-            "Your objective is to achieve the user's research goal using iterative Reasoning (Thought) and Acting (Tool Call).\n\n"
+            "Your objective is to satisfy the user's EXACT research request using optimal Reasoning (Thought) and Acting (Tool Call).\n\n"
             f"Available Tools Schema:\n{json.dumps(AVAILABLE_TOOLS_SCHEMA, indent=2)}\n\n"
-            "REACT WORKFLOW RULES:\n"
-            "1. In every turn, inspect previous observations in Working Memory and output your Thought and next Action.\n"
-            "2. Pass dynamic parameters derived from previous observations (e.g. use paper titles/gaps found in earlier steps).\n"
-            "3. When you have executed sufficient tools (literature search, research directions, datasets), set \"is_final\": true.\n\n"
+            "CRITICAL INTENT ROUTING RULES:\n"
+            "1. Analyze the user's query intent carefully BEFORE selecting tools.\n"
+            "2. If user asks ONLY for datasets, benchmarks, evaluation metrics, or data -> call ONLY 'find_datasets' and set is_final: true when done. Do NOT call search_papers or generate_problem unless explicitly asked!\n"
+            "3. If user asks ONLY for literature, papers, background, or survey -> call ONLY 'search_papers' and set is_final: true when done.\n"
+            "4. If user asks ONLY for research directions, roadmaps, or gaps -> call ONLY 'generate_problem' and set is_final: true when done.\n"
+            "5. If user asks for a comprehensive multi-stage research proposal -> call relevant tools ('search_papers', 'generate_problem', 'find_datasets').\n\n"
             "Return ONLY a JSON object with this exact schema:\n"
             "{\n"
-            '  "thought": "Reasoning about current goal and what to do next based on memory",\n'
-            '  "action": "search_papers",\n'
-            '  "action_input": {"domain": "..."},\n'
+            '  "thought": "Reasoning about query intent and previous memory",\n'
+            '  "action": "find_datasets",\n'
+            '  "action_input": {"topic": "..."},\n'
             '  "is_final": false,\n'
-            '  "memory_summary": "Short 1-sentence summary of active memory state"\n'
+            '  "memory_summary": "Short 1-sentence summary of active state"\n'
             "}"
         )
 
@@ -284,7 +286,65 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
 
 
 def _fallback_react_decision(goal: str, step: int, executed: set) -> Dict[str, Any]:
-    """Deterministic ReAct step fallback if LLM reasoning call times out."""
+    """Intent-aware ReAct step decision fallback."""
+    lower_goal = goal.lower()
+
+    is_dataset_request = any(k in lower_goal for k in ["dataset", "benchmark", "metrics", "data", "find out best dataset", "heart disease dataset"])
+    is_direction_request = any(k in lower_goal for k in ["direction", "problem", "roadmap", "plan", "future work", "gap"])
+    is_literature_request = any(k in lower_goal for k in ["literature", "paper", "survey", "review", "prior work", "overview"])
+
+    if is_dataset_request and not is_literature_request and not is_direction_request:
+        if "find_datasets" not in executed:
+            return {
+                "thought": f"User specifically requested benchmark datasets for '{goal}'. Calling dataset finder tool directly.",
+                "action": "find_datasets",
+                "action_input": {"topic": goal, "domain": goal},
+                "is_final": False,
+                "memory_summary": "Recommending benchmark datasets.",
+            }
+        return {
+            "thought": "Completed dataset recommendation. Proceeding to final synthesis.",
+            "action": "none",
+            "action_input": {},
+            "is_final": True,
+            "memory_summary": "Dataset finder action completed.",
+        }
+
+    if is_direction_request and not is_literature_request:
+        if "generate_problem" not in executed:
+            return {
+                "thought": f"User requested novel research directions for '{goal}'. Calling problem generator tool.",
+                "action": "generate_problem",
+                "action_input": {"domain": goal, "topic": goal},
+                "is_final": False,
+                "memory_summary": "Formulating novel research directions.",
+            }
+        return {
+            "thought": "Completed research direction formulation. Proceeding to final synthesis.",
+            "action": "none",
+            "action_input": {},
+            "is_final": True,
+            "memory_summary": "Research directions completed.",
+        }
+
+    if is_literature_request and not is_direction_request and not is_dataset_request:
+        if "search_papers" not in executed:
+            return {
+                "thought": f"User requested literature review papers for '{goal}'. Searching academic repositories.",
+                "action": "search_papers",
+                "action_input": {"domain": goal, "topic": goal},
+                "is_final": False,
+                "memory_summary": "Searching literature repositories.",
+            }
+        return {
+            "thought": "Completed literature search. Proceeding to final synthesis.",
+            "action": "none",
+            "action_input": {},
+            "is_final": True,
+            "memory_summary": "Literature search completed.",
+        }
+
+    # Full proposal default
     if "search_papers" not in executed:
         return {
             "thought": "Searching literature repositories for primary research papers...",
@@ -292,14 +352,6 @@ def _fallback_react_decision(goal: str, step: int, executed: set) -> Dict[str, A
             "action_input": {"domain": goal, "topic": goal},
             "is_final": False,
             "memory_summary": "Initiated literature search.",
-        }
-    if "generate_problem" not in executed:
-        return {
-            "thought": "Analyzing retrieved papers to formulate novel research directions...",
-            "action": "generate_problem",
-            "action_input": {"domain": goal, "topic": goal},
-            "is_final": False,
-            "memory_summary": "Formulating research directions.",
         }
     if "find_datasets" not in executed:
         return {

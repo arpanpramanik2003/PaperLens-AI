@@ -26,6 +26,7 @@ import { AgentGoalInput } from "@/components/agent/AgentGoalInput";
 import { AgentStepperView, StepItem } from "@/components/agent/AgentStepperView";
 import { LiteratureReviewCard } from "@/components/agent/LiteratureReviewCard";
 import { ProposedDirectionsCard } from "@/components/agent/ProposedDirectionsCard";
+import { ExperimentPlanCard } from "@/components/agent/ExperimentPlanCard";
 import { DatasetsBenchmarksCard } from "@/components/agent/DatasetsBenchmarksCard";
 import { SelfCritiqueCard } from "@/components/agent/SelfCritiqueCard";
 
@@ -499,6 +500,9 @@ export default function AgentMode() {
   const problemResult = resultsData.find((r) => r.tool === "generate_problem")?.result;
   const proposedProblems: any[] = problemResult?.problems || problemResult?.ideas || [];
 
+  const experimentResult = resultsData.find((r) => r.tool === "plan_experiment")?.result;
+  const experimentPlanSteps: any[] = experimentResult?.steps || [];
+
   const datasetResult = resultsData.find((r) => r.tool === "find_datasets")?.result;
   const datasetsList: any[] = datasetResult?.datasets || [];
 
@@ -636,6 +640,7 @@ export default function AgentMode() {
                 let cardCounter = 0;
                 const litIndex = rawPapersList.length > 0 ? ++cardCounter : 0;
                 const probIndex = proposedProblems.length > 0 ? ++cardCounter : 0;
+                const expIndex = experimentPlanSteps.length > 0 ? ++cardCounter : 0;
                 const datasetIndex = datasetsList.length > 0 ? ++cardCounter : 0;
                 const critiqueIndex = critiqueData ? ++cardCounter : 0;
 
@@ -665,6 +670,14 @@ export default function AgentMode() {
                       renderTextOrObject={renderTextOrObject}
                       sectionIndex={probIndex}
                     />
+
+                    {experimentPlanSteps.length > 0 && (
+                      <ExperimentPlanCard
+                        steps={experimentPlanSteps}
+                        renderTextOrObject={renderTextOrObject}
+                        sectionIndex={expIndex}
+                      />
+                    )}
 
                     <DatasetsBenchmarksCard
                       datasetsList={datasetsList}
