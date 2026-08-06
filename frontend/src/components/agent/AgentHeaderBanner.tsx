@@ -1,5 +1,5 @@
 import React from "react";
-import { BrainCircuit, Sparkles, Dna, Layers, Cpu, Database, ArrowRight } from "lucide-react";
+import { BrainCircuit, Sparkles, Dna, Layers, BookOpen, ShieldCheck, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface AgentHeaderBannerProps {
@@ -55,17 +55,17 @@ export const AgentHeaderBanner: React.FC<AgentHeaderBannerProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant="outline"
-            className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono bg-secondary/40 border-border/60 text-foreground"
+            className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
           >
-            <Cpu className="w-3 h-3 text-indigo-400" />
-            Model: Groq / Llama-3.3-70B
+            <BookOpen className="w-3 h-3" />
+            Academic Paper Search
           </Badge>
           <Badge
             variant="outline"
             className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
           >
-            <Database className="w-3 h-3" />
-            MCP & Supabase pgvector Active
+            <ShieldCheck className="w-3 h-3" />
+            Automated Self-Critique Active
           </Badge>
         </div>
       </div>

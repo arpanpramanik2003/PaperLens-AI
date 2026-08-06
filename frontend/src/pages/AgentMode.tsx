@@ -94,8 +94,8 @@ const PRESET_PROMPTS = [
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const TOOL_META: Record<string, { name: string; desc: string; icon: any }> = {
-  search_papers: { name: "Literature Repository Search", desc: "Searching Semantic Scholar, Crossref & arXiv", icon: Search },
-  search_workspace_vector_db: { name: "Vector Database Search", desc: "Searching Supabase pgvector workspace index", icon: Database },
+  search_papers: { name: "Literature Repository Search", desc: "Searching academic publication repositories", icon: Search },
+  search_workspace_vector_db: { name: "Workspace Paper Index", desc: "Searching indexed papers in workspace", icon: Database },
   analyze_insights: { name: "Methodology & Insights Analysis", desc: "Extracting paper abstractions & technical insights", icon: BookOpen },
   analyze_paper: { name: "Paper Analysis", desc: "Extracting methodology and key assertions", icon: BookOpen },
   detect_gaps: { name: "Research Gap Detection", desc: "Identifying unexplored research gaps & limitations", icon: Zap },
@@ -105,10 +105,10 @@ const TOOL_META: Record<string, { name: string; desc: string; icon: any }> = {
 };
 
 const RESEARCH_STEPS: StepItem[] = [
-  { id: 1, name: "Literature Repository Search", desc: "Searching Semantic Scholar, Crossref, arXiv & pgvector", icon: Search },
+  { id: 1, name: "Literature Repository Search", desc: "Searching global paper repositories & workspace index", icon: Search },
   { id: 2, name: "Methodology & Insights Analysis", desc: "Extracting paper abstractions & technical insights", icon: BookOpen },
   { id: 3, name: "Novel Research Directions", desc: "Formulating research directions & core bottlenecks", icon: Target },
-  { id: 4, name: "Dataset & Benchmark Selection", desc: "Evaluating SOTA datasets & metrics (e.g. MoleculeNet, ZINC)", icon: Database },
+  { id: 4, name: "Dataset & Benchmark Selection", desc: "Evaluating SOTA datasets & metrics", icon: Database },
   { id: 5, name: "Peer-Review Self-Critique", desc: "Verifying claims & citation coverage against sources", icon: ShieldCheck },
   { id: 6, name: "Report Synthesis", desc: "Synthesizing executive literature review proposal", icon: FileText },
 ];
@@ -142,8 +142,8 @@ export default function AgentMode() {
         return [
           {
             id: 1,
-            name: "Analyzing Intent & Structuring Tool Graph",
-            desc: "LLM Router is selecting exact agent tools for user request...",
+            name: "Analyzing Intent & Structuring Research Steps",
+            desc: "Analyzing research objectives and planning execution steps...",
             icon: Zap,
           },
         ];
@@ -233,6 +233,31 @@ export default function AgentMode() {
     }
   };
 
+  const handleStopAgent = async () => {
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+
+    setIsRunning(false);
+
+    if (taskId) {
+      try {
+        const token = await getToken();
+        await fetch(`${API_BASE_URL}/api/agent/task/${taskId}/cancel`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } catch (err) {
+        console.error("Failed to cancel agent task on backend", err);
+      }
+    }
+
+    toast.info("Autonomous research process terminated by user.");
+  };
+
   const connectSSE = (tId: string, token: string | null) => {
     if (sseRef.current) {
       sseRef.current.close();
@@ -264,6 +289,10 @@ export default function AgentMode() {
                 setActiveTab("cards");
               }
             }
+          } else if (taskData.status === "cancelled") {
+            window.clearInterval(pollInterval);
+            setIsRunning(false);
+            eventSource.close();
           }
         }
       } catch (err) {
@@ -303,6 +332,11 @@ export default function AgentMode() {
           setIsRunning(false);
           setActiveTab("cards");
           toast.success("Autonomous research workflow complete!");
+          eventSource.close();
+        } else if (payload.type === "cancelled") {
+          window.clearInterval(pollInterval);
+          setIsRunning(false);
+          toast.info(payload.message || "Process terminated by user.");
           eventSource.close();
         } else if (payload.type === "error") {
           window.clearInterval(pollInterval);
@@ -447,6 +481,7 @@ export default function AgentMode() {
         setGoal={setGoal}
         isRunning={isRunning}
         onStartAgent={() => handleStartAgent()}
+        onStopAgent={handleStopAgent}
       />
 
       {(events.length > 0 || isRunning || finalAnswer) && (

@@ -8,6 +8,18 @@ from app.services.agents import planner, critique, trace
 
 logger = logging.getLogger(__name__)
 
+# Track cancelled task IDs in memory
+_cancelled_tasks: set = set()
+
+
+def cancel_task(task_id: str):
+    """Mark a task_id as cancelled so background loops stop immediately."""
+    _cancelled_tasks.add(task_id)
+    trace.emit_event(task_id, {
+        "type": "cancelled",
+        "message": "Process terminated by user.",
+    })
+
 
 def summarize_result(result: Any) -> str:
     """Summarize tool result into a short readable text snippet for SSE events."""
@@ -53,6 +65,13 @@ async def run_research_task(task_id: str, user_id: str, goal: str):
         # 2. Execute plan steps
         executed_tools = set()
         while step_index < len(plan.steps):
+            if task_id in _cancelled_tasks:
+                logger.info("Task %s was cancelled by user. Halting execution loop.", task_id)
+                task.status = "cancelled"
+                db.commit()
+                _cancelled_tasks.discard(task_id)
+                return
+
             step = plan.steps[step_index]
             step_index += 1
 
@@ -74,6 +93,13 @@ async def run_research_task(task_id: str, user_id: str, goal: str):
                     result = {"error": str(exc)}
             else:
                 result = {"error": f"Tool {step.tool} not registered"}
+
+            if task_id in _cancelled_tasks:
+                logger.info("Task %s was cancelled during tool execution. Halting.", task_id)
+                task.status = "cancelled"
+                db.commit()
+                _cancelled_tasks.discard(task_id)
+                return
 
             executed_tools.add(step.tool)
             results.append({"tool": step.tool, "args": step.args, "result": result})

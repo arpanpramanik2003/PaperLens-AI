@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.agent_task import AgentTask, AgentStep
-from app.services.agents.orchestrator import run_research_task
+from app.services.agents.orchestrator import run_research_task, cancel_task
 from app.services.agents.trace import subscribe_to_task_events, get_task_history
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,24 @@ async def create_task(
     asyncio.create_task(run_research_task(task_id=task.id, user_id=user_id, goal=task.goal))
 
     return {"task_id": task.id, "status": "running", "goal": task.goal}
+
+
+@router.post("/task/{task_id}/cancel")
+async def stop_agent_task(
+    task_id: str,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cancel / terminate an active autonomous research process."""
+    task = db.query(AgentTask).filter(AgentTask.id == task_id, AgentTask.user_id == user_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task.status = "cancelled"
+    db.commit()
+
+    cancel_task(task_id)
+    return {"task_id": task_id, "status": "cancelled", "message": "Research task terminated."}
 
 
 from app.core.security import get_current_user, get_current_user_from_token
