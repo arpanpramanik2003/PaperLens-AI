@@ -67,6 +67,34 @@ AVAILABLE_TOOLS_SCHEMA = [
 ]
 
 
+def extract_required_tools(goal: str) -> list[str]:
+    """Extract required tools based on user prompt keywords."""
+    lower = goal.lower()
+    req_tools = []
+
+    # Literature / Papers intent
+    if any(k in lower for k in ["paper", "literature", "survey", "review", "publication", "article"]):
+        req_tools.append("search_papers")
+
+    # Datasets / Benchmarks intent
+    if any(k in lower for k in ["dataset", "benchmark", "metrics", "data", "database"]):
+        req_tools.append("find_datasets")
+
+    # Novel Problems / Gaps intent
+    if any(k in lower for k in ["problem", "direction", "gap", "bottleneck", "idea"]):
+        req_tools.append("generate_problem")
+
+    # Experiment Plan intent
+    if any(k in lower for k in ["plan", "roadmap", "experiment", "framework"]):
+        req_tools.append("plan_experiment")
+
+    # If no specific tools were explicitly mentioned, default to literature + datasets
+    if not req_tools:
+        req_tools = ["search_papers", "find_datasets"]
+
+    return req_tools
+
+
 async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
     """Iterative ReAct (Reasoning + Acting) Agent Execution Loop with live memory scratchpad."""
     db = SessionLocal()
@@ -75,6 +103,9 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         if not task:
             logger.error("AgentTask %s not found in DB", task_id)
             return
+
+        required_tools = extract_required_tools(goal)
+        logger.info("Goal '%s' extracted required tools: %s", goal, required_tools)
 
         # Working Memory & Context State
         messages: List[Dict[str, Any]] = []
@@ -85,12 +116,11 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             "You are Paperlens Autonomous ReAct AI Research Agent.\n"
             "Your objective is to satisfy the user's EXACT research request using optimal Reasoning (Thought) and Acting (Tool Call).\n\n"
             f"Available Tools Schema:\n{json.dumps(AVAILABLE_TOOLS_SCHEMA, indent=2)}\n\n"
+            f"REQUIRED TOOLS FOR THIS PROMPT: {json.dumps(required_tools)}\n"
             "CRITICAL INTENT ROUTING RULES:\n"
-            "1. Analyze the user's query intent carefully BEFORE selecting tools.\n"
-            "2. If user asks ONLY for datasets, benchmarks, evaluation metrics, or data -> call ONLY 'find_datasets' and set is_final: true when done. Do NOT call search_papers or generate_problem unless explicitly asked!\n"
-            "3. If user asks ONLY for literature, papers, background, or survey -> call ONLY 'search_papers' and set is_final: true when done.\n"
-            "4. If user asks ONLY for research directions, roadmaps, or gaps -> call ONLY 'generate_problem' and set is_final: true when done.\n"
-            "5. If user asks for a comprehensive multi-stage research proposal -> call relevant tools ('search_papers', 'generate_problem', 'find_datasets').\n\n"
+            "1. Inspect the user prompt intent and execute all tools listed in REQUIRED TOOLS.\n"
+            "2. If multiple tools are required (e.g. search_papers AND find_datasets), execute them sequentially in turn.\n"
+            "3. Once all required tools have been executed, set \"is_final\": true.\n\n"
             "Return ONLY a JSON object with this exact schema:\n"
             "{\n"
             '  "thought": "Reasoning about query intent and previous memory",\n'
@@ -102,7 +132,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         )
 
         step_count = 0
-        max_steps = 5
+        max_steps = max(len(required_tools) + 1, 4)
 
         while step_count < max_steps:
             if task_id in _cancelled_tasks:
@@ -119,7 +149,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             step_count += 1
 
             # Prepare prompt context
-            user_prompt = f"User Goal: {goal}\n\nStep #{step_count} of Max {max_steps}.\n"
+            user_prompt = f"User Goal: {goal}\nRequired Tools: {required_tools}\nStep #{step_count} of Max {max_steps}.\n"
             if executed_results:
                 compact_memory = [
                     {
@@ -151,7 +181,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 decision = _fallback_react_decision(goal, step_count, executed_tools)
 
             thought = decision.get("thought", f"Analyzing step #{step_count} requirements...")
-            action_tool = decision.get("action", "search_papers")
+            action_tool = decision.get("action", required_tools[0] if required_tools else "search_papers")
             action_args = decision.get("action_input") or {"domain": goal, "topic": goal}
             is_final = decision.get("is_final", False)
             memory_summary = decision.get("memory_summary", f"Step {step_count} reasoning active.")
@@ -230,14 +260,9 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 "active_memory_summary": f"Collected findings from {len(executed_results)} action cycles.",
             })
 
-            # Early Exit for Focused Single-Intent Queries to Save Tokens & Latency
-            lower_goal = goal.lower()
-            is_dataset_only = any(k in lower_goal for k in ["dataset", "benchmark", "metrics", "find out best dataset"]) and not any(k in lower_goal for k in ["literature", "survey", "plan", "proposal"])
-            is_lit_only = any(k in lower_goal for k in ["literature", "papers", "survey", "review"]) and not any(k in lower_goal for k in ["dataset", "benchmark", "plan", "proposal"])
-            is_direction_only = any(k in lower_goal for k in ["direction", "roadmap", "future work"]) and not any(k in lower_goal for k in ["dataset", "literature", "proposal"])
-
-            if (is_dataset_only or is_lit_only or is_direction_only) and len(executed_results) >= 1:
-                logger.info("Single intent research task achieved at step %s. Proceeding to synthesis.", step_count)
+            # Early Exit Check: If all required tools for the prompt have executed, proceed to synthesis
+            if all(t in executed_tools for t in required_tools):
+                logger.info("All required tools (%s) executed. Proceeding to synthesis.", required_tools)
                 break
 
         if task_id in _cancelled_tasks:
@@ -296,85 +321,30 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
 
 
 def _fallback_react_decision(goal: str, step: int, executed: set) -> Dict[str, Any]:
-    """Intent-aware ReAct step decision fallback."""
-    lower_goal = goal.lower()
+    """Intent-aware ReAct step decision fallback using required tools."""
+    required = extract_required_tools(goal)
 
-    is_dataset_request = any(k in lower_goal for k in ["dataset", "benchmark", "metrics", "data", "find out best dataset", "heart disease dataset"])
-    is_direction_request = any(k in lower_goal for k in ["direction", "problem", "roadmap", "plan", "future work", "gap"])
-    is_literature_request = any(k in lower_goal for k in ["literature", "paper", "survey", "review", "prior work", "overview"])
+    for tool_name in required:
+        if tool_name not in executed:
+            thought_desc = {
+                "search_papers": "Searching academic literature repositories for primary research papers...",
+                "find_datasets": "Evaluating SOTA benchmark datasets and evaluation metrics...",
+                "generate_problem": "Analyzing research gaps and formulating novel problem directions...",
+                "plan_experiment": "Designing multi-stage experimental execution roadmap...",
+            }.get(tool_name, f"Executing tool {tool_name}...")
 
-    if is_dataset_request and not is_literature_request and not is_direction_request:
-        if "find_datasets" not in executed:
             return {
-                "thought": f"User specifically requested benchmark datasets for '{goal}'. Calling dataset finder tool directly.",
-                "action": "find_datasets",
-                "action_input": {"topic": goal, "domain": goal},
-                "is_final": False,
-                "memory_summary": "Recommending benchmark datasets.",
-            }
-        return {
-            "thought": "Completed dataset recommendation. Proceeding to final synthesis.",
-            "action": "none",
-            "action_input": {},
-            "is_final": True,
-            "memory_summary": "Dataset finder action completed.",
-        }
-
-    if is_direction_request and not is_literature_request:
-        if "generate_problem" not in executed:
-            return {
-                "thought": f"User requested novel research directions for '{goal}'. Calling problem generator tool.",
-                "action": "generate_problem",
+                "thought": f"Executing required research step: {thought_desc}",
+                "action": tool_name,
                 "action_input": {"domain": goal, "topic": goal},
                 "is_final": False,
-                "memory_summary": "Formulating novel research directions.",
+                "memory_summary": f"Executing {tool_name}.",
             }
-        return {
-            "thought": "Completed research direction formulation. Proceeding to final synthesis.",
-            "action": "none",
-            "action_input": {},
-            "is_final": True,
-            "memory_summary": "Research directions completed.",
-        }
 
-    if is_literature_request and not is_direction_request and not is_dataset_request:
-        if "search_papers" not in executed:
-            return {
-                "thought": f"User requested literature review papers for '{goal}'. Searching academic repositories.",
-                "action": "search_papers",
-                "action_input": {"domain": goal, "topic": goal},
-                "is_final": False,
-                "memory_summary": "Searching literature repositories.",
-            }
-        return {
-            "thought": "Completed literature search. Proceeding to final synthesis.",
-            "action": "none",
-            "action_input": {},
-            "is_final": True,
-            "memory_summary": "Literature search completed.",
-        }
-
-    # Full proposal default
-    if "search_papers" not in executed:
-        return {
-            "thought": "Searching literature repositories for primary research papers...",
-            "action": "search_papers",
-            "action_input": {"domain": goal, "topic": goal},
-            "is_final": False,
-            "memory_summary": "Initiated literature search.",
-        }
-    if "find_datasets" not in executed:
-        return {
-            "thought": "Evaluating SOTA benchmark datasets and evaluation metrics...",
-            "action": "find_datasets",
-            "action_input": {"topic": goal, "domain": goal},
-            "is_final": False,
-            "memory_summary": "Recommending datasets.",
-        }
     return {
-        "thought": "Completed tool actions. Proceeding to final synthesis.",
+        "thought": "All required tool steps completed. Proceeding to final synthesis.",
         "action": "none",
         "action_input": {},
         "is_final": True,
-        "memory_summary": "All tool actions finished.",
+        "memory_summary": "All required tool steps finished.",
     }
