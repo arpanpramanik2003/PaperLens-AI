@@ -126,6 +126,7 @@ export default function AgentMode() {
   const [critiqueData, setCritiqueData] = useState<any | null>(null);
   const [latestThought, setLatestThought] = useState<string | null>(null);
   const [memorySummary, setMemorySummary] = useState<string | null>(null);
+  const [dynamicSteps, setDynamicSteps] = useState<StepItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"cards" | "stepper" | "raw">("cards");
 
@@ -139,40 +140,23 @@ export default function AgentMode() {
   const sseRef = useRef<EventSource | null>(null);
 
   const activeResearchSteps = useMemo<StepItem[]>(() => {
-    if (!plannedSteps || plannedSteps.length === 0) {
-      return RESEARCH_STEPS;
+    if (dynamicSteps.length > 0) {
+      return dynamicSteps;
     }
 
-    const list: StepItem[] = [];
-    plannedSteps.forEach((st, idx) => {
-      const meta = TOOL_META[st.tool] || {
-        name: st.description || `Tool execution: ${st.tool}`,
-        desc: st.description || `Executing tool ${st.tool}`,
-        icon: Zap,
-      };
-      list.push({
-        id: idx + 1,
-        name: meta.name,
-        desc: meta.desc,
-        icon: meta.icon,
-      });
-    });
+    if (isRunning) {
+      return [
+        {
+          id: 1,
+          name: "Agent Reasoning & Tool Selection",
+          desc: "Analyzing request intent and selecting dynamic tools...",
+          icon: Zap,
+        },
+      ];
+    }
 
-    list.push({
-      id: list.length + 1,
-      name: "Peer-Review Self-Critique",
-      desc: "Verifying claims & citation coverage against sources",
-      icon: ShieldCheck,
-    });
-    list.push({
-      id: list.length + 1,
-      name: "Report Synthesis",
-      desc: "Synthesizing executive literature report",
-      icon: FileText,
-    });
-
-    return list;
-  }, [plannedSteps]);
+    return RESEARCH_STEPS;
+  }, [dynamicSteps, isRunning]);
 
   useEffect(() => {
     return () => {
@@ -192,6 +176,7 @@ export default function AgentMode() {
     setIsRunning(true);
     setEvents([]);
     setPlannedSteps([]);
+    setDynamicSteps([]);
     setCurrentStepIndex(1);
     setFinalAnswer(null);
     setResultsData([]);
@@ -225,6 +210,55 @@ export default function AgentMode() {
       toast.error(err.message || "Could not start research task.");
       setIsRunning(false);
     }
+  };
+
+  const pushDynamicStep = (toolName: string, customDesc?: string) => {
+    setDynamicSteps((prev) => {
+      if (prev.some((s) => (s as any).tool === toolName)) return prev;
+      const meta = TOOL_META[toolName] || {
+        name: customDesc || `Tool execution: ${toolName}`,
+        desc: customDesc || `Executing tool ${toolName}`,
+        icon: Zap,
+      };
+      const newStep: StepItem = {
+        id: prev.length + 1,
+        name: meta.name,
+        desc: meta.desc,
+        icon: meta.icon,
+        tool: toolName,
+      } as any;
+      return [...prev, newStep];
+    });
+  };
+
+  const pushCritiqueStep = () => {
+    setDynamicSteps((prev) => {
+      if (prev.some((s) => s.name === "Peer-Review Self-Critique")) return prev;
+      return [
+        ...prev,
+        {
+          id: prev.length + 1,
+          name: "Peer-Review Self-Critique",
+          desc: "Verifying claims & citation coverage against sources",
+          icon: ShieldCheck,
+        },
+      ];
+    });
+  };
+
+  const pushSynthesisStep = () => {
+    setDynamicSteps((prev) => {
+      if (prev.some((s) => s.name === "Report Synthesis")) return prev;
+      return [
+        ...prev,
+        {
+          id: prev.length + 1,
+          name: "Report Synthesis",
+          desc: "Synthesizing executive literature report",
+          icon: FileText,
+        },
+      ];
+    });
   };
 
   const handleStopAgent = async () => {
@@ -308,26 +342,31 @@ export default function AgentMode() {
         if (payload.type === "thought") {
           if ((payload as any).thought) setLatestThought((payload as any).thought);
           if ((payload as any).memory_summary) setMemorySummary((payload as any).memory_summary);
-          if (payload.step_index) setCurrentStepIndex(payload.step_index);
         } else if (payload.type === "action" || payload.type === "observation" || payload.type === "tool_call" || payload.type === "tool_result") {
-          const t = payload.tool;
-          if (t === "search_papers" || t === "search_workspace_vector_db") {
-            setCurrentStepIndex(1);
-          } else if (t === "analyze_paper" || t === "analyze_insights") {
-            setCurrentStepIndex(2);
-          } else if (t === "generate_problem") {
-            setCurrentStepIndex(3);
-          } else if (t === "find_datasets" || t === "plan_experiment") {
-            setCurrentStepIndex(4);
-          } else if (payload.step_index) {
-            setCurrentStepIndex(payload.step_index);
+          if (payload.tool) {
+            pushDynamicStep(payload.tool, (payload as any).description);
+            setDynamicSteps((current) => {
+              const idx = current.findIndex((s) => (s as any).tool === payload.tool);
+              if (idx !== -1) setCurrentStepIndex(idx + 1);
+              return current;
+            });
           }
         } else if (payload.type === "memory_update") {
           if ((payload as any).active_memory_summary) setMemorySummary((payload as any).active_memory_summary);
         } else if (payload.type === "critique" || payload.type === "critique_start") {
-          setCurrentStepIndex(5);
+          pushCritiqueStep();
+          setDynamicSteps((current) => {
+            const idx = current.findIndex((s) => s.name === "Peer-Review Self-Critique");
+            if (idx !== -1) setCurrentStepIndex(idx + 1);
+            return current;
+          });
         } else if (payload.type === "synthesis_start") {
-          setCurrentStepIndex(6);
+          pushSynthesisStep();
+          setDynamicSteps((current) => {
+            const idx = current.findIndex((s) => s.name === "Report Synthesis");
+            if (idx !== -1) setCurrentStepIndex(idx + 1);
+            return current;
+          });
         }
 
         if (payload.type === "final") {
