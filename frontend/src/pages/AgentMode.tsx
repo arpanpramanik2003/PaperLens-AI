@@ -20,6 +20,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { AgentHeaderBanner } from "@/components/agent/AgentHeaderBanner";
 import { AgentGoalInput } from "@/components/agent/AgentGoalInput";
@@ -37,16 +38,38 @@ const MarkdownComponents: any = {
   strong: ({ node, ...props }: any) => <strong className="font-semibold text-foreground" {...props} />,
   p: ({ node, ...props }: any) => <p className="mb-3 leading-relaxed text-foreground/90 text-xs" {...props} />,
   ul: ({ node, ...props }: any) => <ul className="list-disc pl-5 mb-4 space-y-1 text-xs" {...props} />,
-  ol: ({ node, ...props }: any) => <ol className="list-decimal pl-5 mb-4 space-y-1 text-xs" {...props} />,
-  li: ({ node, ...props }: any) => <li className="text-foreground/90" {...props} />,
+  ol: ({ node, ...props }: any) => <ol className="list-decimal pl-5 mb-4 space-y-1 text-xs text-foreground/90" {...props} />,
+  li: ({ node, ...props }: any) => <li className="text-foreground/90 leading-relaxed" {...props} />,
+  table: ({ node, ...props }: any) => (
+    <div className="overflow-x-auto my-4 rounded-xl border border-border/80 bg-card/90 shadow-xl backdrop-blur-xl">
+      <table className="w-full text-left border-collapse text-xs" {...props} />
+    </div>
+  ),
+  thead: ({ node, ...props }: any) => <thead className="bg-secondary/80 text-indigo-400 font-mono border-b border-border/60" {...props} />,
+  tbody: ({ node, ...props }: any) => <tbody className="divide-y divide-border/40 text-foreground/90" {...props} />,
+  tr: ({ node, ...props }: any) => <tr className="hover:bg-indigo-500/5 transition-colors" {...props} />,
+  th: ({ node, ...props }: any) => <th className="p-3 font-bold uppercase tracking-wider text-[11px] border-r border-border/30 last:border-r-0" {...props} />,
+  td: ({ node, ...props }: any) => <td className="p-3 align-top leading-relaxed text-xs border-r border-border/30 last:border-r-0" {...props} />,
+  code: ({ node, inline, ...props }: any) =>
+    inline ? (
+      <code className="px-1.5 py-0.5 rounded bg-secondary text-indigo-300 font-mono text-[11px]" {...props} />
+    ) : (
+      <code className="block p-3 rounded-xl bg-secondary/80 text-foreground font-mono text-xs overflow-x-auto my-3 border border-border/60" {...props} />
+    ),
 };
 
 const normalizeMarkdown = (value: string) => {
-  return value
-    .replace(/\r\n/g, "\n")
-    .replace(/([^\n])\s*(#{2,6})(?!#)\s*/g, "$1\n\n$2 ")
-    .replace(/^(\s*#{2,6})([^\s#])/gm, "$1 $2")
-    .replace(/^\s*\*\*(.*?)\*\*\s*$/gm, "## $1");
+  if (!value) return "";
+  let norm = value.replace(/\r\n/g, "\n");
+
+  // Reformat collapsed inline markdown table rows separated by `| |` or `|  |`
+  norm = norm.replace(/\|\s*\|\s*(?=[A-Za-z0-9\-–\s—\[\*\<])/g, "|\n|");
+
+  // Fix missing newlines before markdown headings
+  norm = norm.replace(/([^\n])\s*(#{1,6})(?!#)\s*/g, "$1\n\n$2 ");
+  norm = norm.replace(/^(\s*#{1,6})([^\s#])/gm, "$1 $2");
+
+  return norm;
 };
 
 interface EventStep {
@@ -717,7 +740,7 @@ export default function AgentMode() {
                 </Badge>
               </div>
               <div className="prose prose-invert max-w-none text-xs md:text-sm leading-relaxed font-sans">
-                <ReactMarkdown components={MarkdownComponents}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                   {normalizeMarkdown(finalAnswer)}
                 </ReactMarkdown>
               </div>

@@ -166,8 +166,10 @@ async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[st
     system_prompt = (
         "You are a distinguished senior researcher. Synthesize a comprehensive, beautifully formatted Markdown "
         "report based on the research goal, retrieved data, and step execution results.\n\n"
-        "CRITICAL INSTRUCTION: Tailor your section headers dynamically based ONLY on the data present in Execution Results. "
-        "Do NOT output empty, blank, or placeholder sections for tools that were not executed.\n\n"
+        "CRITICAL FORMATTING & TABLE RULES:\n"
+        "1. Tailor your section headers dynamically based ONLY on the data present in Execution Results.\n"
+        "2. Do NOT output empty, blank, or placeholder sections for tools that were not executed.\n"
+        "3. When generating Markdown tables, output every row on its own line with explicit newline breaks (e.g. '| Col 1 | Col 2 |\\n|---|---|\\n| Val 1 | Val 2 |\\n'). Never collapse table rows onto a single line!\n\n"
         "Recommended Section Header Guidelines:\n"
         "- If ONLY Dataset/Benchmark Finder tool was executed:\n"
         "  # Benchmark Datasets & Evaluation Suite\n"

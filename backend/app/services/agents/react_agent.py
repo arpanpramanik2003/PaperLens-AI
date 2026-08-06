@@ -230,6 +230,16 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 "active_memory_summary": f"Collected findings from {len(executed_results)} action cycles.",
             })
 
+            # Early Exit for Focused Single-Intent Queries to Save Tokens & Latency
+            lower_goal = goal.lower()
+            is_dataset_only = any(k in lower_goal for k in ["dataset", "benchmark", "metrics", "find out best dataset"]) and not any(k in lower_goal for k in ["literature", "survey", "plan", "proposal"])
+            is_lit_only = any(k in lower_goal for k in ["literature", "papers", "survey", "review"]) and not any(k in lower_goal for k in ["dataset", "benchmark", "plan", "proposal"])
+            is_direction_only = any(k in lower_goal for k in ["direction", "roadmap", "future work"]) and not any(k in lower_goal for k in ["dataset", "literature", "proposal"])
+
+            if (is_dataset_only or is_lit_only or is_direction_only) and len(executed_results) >= 1:
+                logger.info("Single intent research task achieved at step %s. Proceeding to synthesis.", step_count)
+                break
+
         if task_id in _cancelled_tasks:
             task.status = "cancelled"
             db.commit()

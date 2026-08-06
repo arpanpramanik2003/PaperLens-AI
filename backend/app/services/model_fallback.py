@@ -9,11 +9,11 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_PRIMARY_MODEL = "llama-3.3-70b-versatile"
-DEFAULT_FALLBACK_MODELS = "openai/gpt-oss-120b,llama-3.1-8b-instant"
+DEFAULT_PRIMARY_MODEL = "llama-3.1-8b-instant"
+DEFAULT_FALLBACK_MODELS = "mixtral-8x7b-32768,gemma2-9b-it,llama-3.3-70b-versatile"
 
 FAST_ROUTER_MODEL = "llama-3.1-8b-instant"
-HEAVY_ANALYTICAL_MODEL = "llama-3.3-70b-versatile"
+HEAVY_ANALYTICAL_MODEL = "llama-3.1-8b-instant"
 
 
 def _split_model_list(raw: str | None) -> list[str]:

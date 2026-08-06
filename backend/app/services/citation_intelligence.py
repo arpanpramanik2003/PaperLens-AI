@@ -17,8 +17,8 @@ from app.services.model_fallback import create_completion_with_fallback
 
 logger = logging.getLogger(__name__)
 
-HEAVY_PRIMARY_MODEL = "openai/gpt-oss-120b"
-HEAVY_FALLBACK_MODELS = "meta-llama/llama-4-scout-17b-16e-instruct"
+HEAVY_PRIMARY_MODEL = "llama-3.3-70b-versatile"
+HEAVY_FALLBACK_MODELS = "llama-3.1-8b-instant,mixtral-8x7b-32768"
 
 
 REFERENCE_SECTION_HEADERS = [
