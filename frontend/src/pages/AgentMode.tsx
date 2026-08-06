@@ -432,7 +432,7 @@ export default function AgentMode() {
   const progressPercent = Math.min(Math.round((currentStepIndex / totalStepCount) * 100), 100);
 
   return (
-    <div className="space-y-6 text-foreground font-sans">
+    <div className="w-full space-y-6 text-foreground font-sans">
       <AgentHeaderBanner
         presetPrompts={PRESET_PROMPTS}
         isRunning={isRunning}
@@ -450,14 +450,15 @@ export default function AgentMode() {
       />
 
       {(events.length > 0 || isRunning || finalAnswer) && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
-            <div className="flex items-center gap-1.5 bg-secondary/40 p-1 rounded-xl border border-border/60">
+        <div className="space-y-6 pt-2">
+          {/* Workspace Navigation Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/40 pb-4">
+            <div className="flex items-center gap-1.5 bg-secondary/50 p-1.5 rounded-2xl border border-border/60 backdrop-blur-md">
               <button
                 onClick={() => setActiveTab("cards")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                   activeTab === "cards"
-                    ? "bg-indigo-600 text-white shadow-sm"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -467,22 +468,22 @@ export default function AgentMode() {
 
               <button
                 onClick={() => setActiveTab("stepper")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                   activeTab === "stepper"
-                    ? "bg-indigo-600 text-white shadow-sm"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <BrainCircuit className="w-3.5 h-3.5" />
-                Live Execution Progress ({activeResearchSteps.length} Steps)
+                Live Execution Stream ({activeResearchSteps.length} Steps)
               </button>
 
               {finalAnswer && (
                 <button
                   onClick={() => setActiveTab("raw")}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                     activeTab === "raw"
-                      ? "bg-secondary text-foreground border border-border"
+                      ? "bg-background text-foreground border border-border shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -497,15 +498,15 @@ export default function AgentMode() {
                 variant="outline"
                 size="sm"
                 onClick={handleCopyReport}
-                className="h-8 text-xs border-border/70"
+                className="h-9 px-4 text-xs font-semibold border-border/80 rounded-xl hover:bg-secondary transition-all"
               >
                 {copied ? (
                   <>
-                    <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" /> Copied
+                    <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> Copied Report
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5 mr-1" /> Copy Report
+                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy Complete Report
                   </>
                 )}
               </Button>
@@ -514,38 +515,41 @@ export default function AgentMode() {
 
           {activeTab === "cards" && (
             <div className="space-y-6">
-              <Card className="p-5 border-border/70 bg-card shadow-sm space-y-3">
-                <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-bold tracking-tight">Executive Summary & Dataset Recommendation</h3>
+              {/* Executive Insights & Recommendation Card */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-card/90 p-6 shadow-xl backdrop-blur-xl space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold tracking-tight text-foreground">Executive Domain Summary & Recommendations</h3>
                   </div>
-                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs font-mono">
+                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs font-mono px-3 py-1">
                     Dynamic Domain Alignment
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                  <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-1">
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase font-mono">Top Benchmark / Focus</span>
+                  <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-1.5">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono tracking-wider">Top Benchmark Focus</span>
                     <p className="font-bold text-sm text-foreground line-clamp-1">{topDatasetName}</p>
-                    <p className="text-muted-foreground text-[11px] line-clamp-2">{topDatasetType}</p>
+                    <p className="text-muted-foreground text-xs line-clamp-2">{topDatasetType}</p>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-1">
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase font-mono">Primary Tasks & Metrics</span>
+                  <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-1.5">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono tracking-wider">Primary Tasks & Metrics</span>
                     <p className="font-bold text-sm text-foreground line-clamp-1">{topDatasetTasks}</p>
-                    <p className="text-muted-foreground text-[11px] line-clamp-2">Metrics: {topDatasetMetrics}</p>
+                    <p className="text-muted-foreground text-xs line-clamp-2">Metrics: {topDatasetMetrics}</p>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-1">
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase font-mono">Self-Critique Audit</span>
+                  <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-1.5">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono tracking-wider">Self-Critique Audit</span>
                     <p className="font-bold text-sm text-emerald-400">
                       {renderTextOrObject(critiqueData?.verdict) || "Passed with High Confidence"}
                     </p>
-                    <p className="text-muted-foreground text-[11px]">Citation Coverage: {renderTextOrObject(critiqueData?.citation_coverage_score) || "0.95"} (Verified)</p>
+                    <p className="text-muted-foreground text-xs">Citation Coverage: {renderTextOrObject(critiqueData?.citation_coverage_score) || "0.95"} (Verified)</p>
                   </div>
                 </div>
-              </Card>
+              </div>
 
               {(() => {
                 let cardCounter = 0;
@@ -609,16 +613,19 @@ export default function AgentMode() {
           )}
 
           {activeTab === "raw" && finalAnswer && (
-            <Card className="p-6 border-border/70 bg-card shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                <h3 className="text-sm font-bold">Full Markdown Synthesized Report</h3>
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-6 md:p-8 shadow-xl backdrop-blur-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-border/40 pb-4">
+                <h3 className="text-base font-bold text-foreground">Full Markdown Synthesized Report</h3>
+                <Badge variant="outline" className="text-xs font-mono">
+                  Synthesized Output
+                </Badge>
               </div>
-              <div className="prose prose-invert max-w-none text-xs leading-relaxed font-sans">
+              <div className="prose prose-invert max-w-none text-xs md:text-sm leading-relaxed font-sans">
                 <ReactMarkdown components={MarkdownComponents}>
                   {normalizeMarkdown(finalAnswer)}
                 </ReactMarkdown>
               </div>
-            </Card>
+            </div>
           )}
         </div>
       )}
