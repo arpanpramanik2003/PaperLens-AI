@@ -18,7 +18,7 @@ from app.services.model_fallback import create_completion_with_fallback
 logger = logging.getLogger(__name__)
 
 HEAVY_PRIMARY_MODEL = "llama-3.3-70b-versatile"
-HEAVY_FALLBACK_MODELS = "llama-3.1-8b-instant,mixtral-8x7b-32768"
+HEAVY_FALLBACK_MODELS = "llama-3.1-8b-instant,llama3-70b-8192,llama3-8b-8192"
 
 
 REFERENCE_SECTION_HEADERS = [

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_PRIMARY_MODEL = "llama-3.1-8b-instant"
-DEFAULT_FALLBACK_MODELS = "mixtral-8x7b-32768,gemma2-9b-it,llama-3.3-70b-versatile"
+DEFAULT_FALLBACK_MODELS = "llama-3.3-70b-versatile,llama3-70b-8192,llama3-8b-8192"
 
 FAST_ROUTER_MODEL = "llama-3.1-8b-instant"
 HEAVY_ANALYTICAL_MODEL = "llama-3.1-8b-instant"
