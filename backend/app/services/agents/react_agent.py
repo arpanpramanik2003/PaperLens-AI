@@ -67,45 +67,14 @@ AVAILABLE_TOOLS_SCHEMA = [
 ]
 
 
-def extract_required_tools(goal: str) -> list[str]:
-    """Extract required tools based on user prompt keywords."""
-    lower = goal.lower()
-    req_tools = []
-
-    # Literature / Papers intent
-    if any(k in lower for k in ["paper", "literature", "survey", "review", "publication", "article"]):
-        req_tools.append("search_papers")
-
-    # Datasets / Benchmarks intent
-    if any(k in lower for k in ["dataset", "benchmark", "metrics", "data", "database"]):
-        req_tools.append("find_datasets")
-
-    # Novel Problems / Gaps intent
-    if any(k in lower for k in ["problem", "direction", "gap", "bottleneck", "idea"]):
-        req_tools.append("generate_problem")
-
-    # Experiment Plan intent
-    if any(k in lower for k in ["plan", "roadmap", "experiment", "framework"]):
-        req_tools.append("plan_experiment")
-
-    # If no specific tools were explicitly mentioned, default to literature + datasets
-    if not req_tools:
-        req_tools = ["search_papers", "find_datasets"]
-
-    return req_tools
-
-
 async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
-    """Iterative ReAct (Reasoning + Acting) Agent Execution Loop with live memory scratchpad."""
+    """Iterative Autonomous ReAct (Reasoning + Acting) Agent Execution Loop with live memory scratchpad."""
     db = SessionLocal()
     try:
         task = db.query(AgentTask).filter(AgentTask.id == task_id).first()
         if not task:
             logger.error("AgentTask %s not found in DB", task_id)
             return
-
-        required_tools = extract_required_tools(goal)
-        logger.info("Goal '%s' extracted required tools: %s", goal, required_tools)
 
         # Working Memory & Context State
         messages: List[Dict[str, Any]] = []
@@ -114,25 +83,30 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
 
         system_prompt = (
             "You are Paperlens Autonomous ReAct AI Research Agent.\n"
-            "Your objective is to satisfy the user's EXACT research request using optimal Reasoning (Thought) and Acting (Tool Call).\n\n"
-            f"Available Tools Schema:\n{json.dumps(AVAILABLE_TOOLS_SCHEMA, indent=2)}\n\n"
-            f"REQUIRED TOOLS FOR THIS PROMPT: {json.dumps(required_tools)}\n"
-            "CRITICAL INTENT ROUTING RULES:\n"
-            "1. Inspect the user prompt intent and execute all tools listed in REQUIRED TOOLS.\n"
-            "2. If multiple tools are required (e.g. search_papers AND find_datasets), execute them sequentially in turn.\n"
-            "3. Once all required tools have been executed, set \"is_final\": true.\n\n"
-            "Return ONLY a JSON object with this exact schema:\n"
+            "Your objective is to analyze the user's research request and select the optimal sequence of tools to satisfy it completely.\n\n"
+            f"REGISTERED TOOLS & CAPABILITIES:\n{json.dumps(AVAILABLE_TOOLS_SCHEMA, indent=2)}\n\n"
+            "AUTONOMOUS REASONING PROTOCOL:\n"
+            "1. Carefully analyze the user's research request intent.\n"
+            "2. Decide which tools from REGISTERED TOOLS are required to satisfy the goal:\n"
+            "   - If user needs academic papers, literature, or domain background -> call 'search_papers'.\n"
+            "   - If user needs datasets, benchmark suites, or evaluation metrics -> call 'find_datasets'.\n"
+            "   - If user needs novel research directions, problem statements, or unexplored gaps -> call 'generate_problem'.\n"
+            "   - If user needs an experimental roadmap, implementation steps, or execution guide -> call 'plan_experiment'.\n"
+            "   - If user requests a workflow, guide, proposal, how-to, or comprehensive research overview -> call multiple tools ('search_papers', 'generate_problem', 'find_datasets', 'plan_experiment') in logical sequence.\n"
+            "3. In each step, inspect Working Memory to pass parameters from earlier tool outputs (e.g. use paper topics found in Step 1 for dataset search in Step 2).\n"
+            "4. When all tools necessary to fulfill the request have executed, set \"is_final\": true.\n\n"
+            "Return ONLY a JSON object:\n"
             "{\n"
-            '  "thought": "Reasoning about query intent and previous memory",\n'
-            '  "action": "find_datasets",\n'
-            '  "action_input": {"topic": "..."},\n'
+            '  "thought": "Your detailed reasoning about user intent, findings so far, and next action",\n'
+            '  "action": "search_papers",\n'
+            '  "action_input": {"domain": "..."},\n'
             '  "is_final": false,\n'
-            '  "memory_summary": "Short 1-sentence summary of active state"\n'
+            '  "memory_summary": "1-sentence summary of current findings"\n'
             "}"
         )
 
         step_count = 0
-        max_steps = max(len(required_tools) + 1, 4)
+        max_steps = 6
 
         while step_count < max_steps:
             if task_id in _cancelled_tasks:
@@ -149,7 +123,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             step_count += 1
 
             # Prepare prompt context
-            user_prompt = f"User Goal: {goal}\nRequired Tools: {required_tools}\nStep #{step_count} of Max {max_steps}.\n"
+            user_prompt = f"User Research Goal: {goal}\nStep #{step_count} of Max {max_steps}.\n"
             if executed_results:
                 compact_memory = [
                     {
@@ -181,7 +155,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 decision = _fallback_react_decision(goal, step_count, executed_tools)
 
             thought = decision.get("thought", f"Analyzing step #{step_count} requirements...")
-            action_tool = decision.get("action", required_tools[0] if required_tools else "search_papers")
+            action_tool = decision.get("action", "search_papers")
             action_args = decision.get("action_input") or {"domain": goal, "topic": goal}
             is_final = decision.get("is_final", False)
             memory_summary = decision.get("memory_summary", f"Step {step_count} reasoning active.")
@@ -195,7 +169,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 "is_final": is_final,
             })
 
-            if is_final or step_count >= max_steps:
+            if is_final or action_tool == "none" or step_count >= max_steps:
                 logger.info("ReAct agent reached final state at step %s", step_count)
                 break
 
@@ -260,11 +234,6 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 "active_memory_summary": f"Collected findings from {len(executed_results)} action cycles.",
             })
 
-            # Early Exit Check: If all required tools for the prompt have executed, proceed to synthesis
-            if all(t in executed_tools for t in required_tools):
-                logger.info("All required tools (%s) executed. Proceeding to synthesis.", required_tools)
-                break
-
         if task_id in _cancelled_tasks:
             task.status = "cancelled"
             db.commit()
@@ -321,20 +290,20 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
 
 
 def _fallback_react_decision(goal: str, step: int, executed: set) -> Dict[str, Any]:
-    """Intent-aware ReAct step decision fallback using required tools."""
-    required = extract_required_tools(goal)
+    """Autonomous ReAct step decision fallback using un-executed tools in logical pipeline sequence."""
+    pipeline = ["search_papers", "generate_problem", "find_datasets", "plan_experiment"]
 
-    for tool_name in required:
+    for tool_name in pipeline:
         if tool_name not in executed:
             thought_desc = {
                 "search_papers": "Searching academic literature repositories for primary research papers...",
-                "find_datasets": "Evaluating SOTA benchmark datasets and evaluation metrics...",
                 "generate_problem": "Analyzing research gaps and formulating novel problem directions...",
+                "find_datasets": "Evaluating SOTA benchmark datasets and evaluation metrics...",
                 "plan_experiment": "Designing multi-stage experimental execution roadmap...",
             }.get(tool_name, f"Executing tool {tool_name}...")
 
             return {
-                "thought": f"Executing required research step: {thought_desc}",
+                "thought": f"Executing research step: {thought_desc}",
                 "action": tool_name,
                 "action_input": {"domain": goal, "topic": goal},
                 "is_final": False,
@@ -342,9 +311,9 @@ def _fallback_react_decision(goal: str, step: int, executed: set) -> Dict[str, A
             }
 
     return {
-        "thought": "All required tool steps completed. Proceeding to final synthesis.",
+        "thought": "All research tool steps completed. Proceeding to final synthesis.",
         "action": "none",
         "action_input": {},
         "is_final": True,
-        "memory_summary": "All required tool steps finished.",
+        "memory_summary": "All tool steps finished.",
     }

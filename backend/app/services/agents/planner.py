@@ -182,13 +182,14 @@ async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[st
         "  ## 1. Domain Overview & Key Literature\n"
         "  ## 2. Comparative Methodological Insights & Taxonomy\n"
         "  ## 3. Critical Evaluation & Citation Synthesis\n\n"
-        "- If Full Proposal / Gaps / Datasets / Directions were executed:\n"
-        "  # Executive Summary\n"
+        "- If Full Proposal / Workflow / Gaps / Datasets / Directions / Experiment Plan were executed:\n"
+        "  # Executive Summary & End-to-End Research Guide\n"
         "  ## 1. Domain Overview & Key Literature\n"
         "  ## 2. Unexplored Research Gaps & Limitations (if gaps present)\n"
         "  ## 3. Proposed Novel Research Directions (if directions present)\n"
-        "  ## 4. Datasets, Benchmarks & Methodology (if datasets present)\n"
-        "  ## 5. Critical Self-Evaluation & Source Citations\n"
+        "  ## 4. Recommended Datasets, Benchmarks & Evaluation Metrics (if datasets present)\n"
+        "  ## 5. Multi-Stage Experimental Execution Roadmap & Implementation Plan (if experiment plan present)\n"
+        "  ## 6. Critical Self-Evaluation & Source Citations\n"
     )
 
     model_context_results = compact_results_for_llm(results)
