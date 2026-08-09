@@ -38,12 +38,25 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+import uuid
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class CorrelationIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        correlation_id = request.headers.get("X-Request-ID") or request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
+        request.state.correlation_id = correlation_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = correlation_id
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
+
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS",
     "http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://localhost:8000,http://localhost:8081"
 ).split(",")
 origins = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
 
+app.add_middleware(CorrelationIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

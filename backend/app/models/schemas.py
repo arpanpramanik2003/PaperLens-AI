@@ -103,6 +103,27 @@ class SavedItemResponse(BaseModel):
     created_at: str
 
 
+class AnalyzeResponse(BaseModel):
+    result: str
+    doc_id: str
+    page_count: Optional[int] = None
+    detected_title: Optional[str] = None
+    fallback_title: Optional[str] = None
+
+
+class DetectGapsResponse(BaseModel):
+    gaps: list[dict] = []
+    overview: Optional[str] = None
+
+
+class CitationIntelligenceResponse(BaseModel):
+    matched_count: int = 0
+    missing_count: int = 0
+    references_processed: int = 0
+    top_cited: list[dict] = []
+    missing_references: list[dict] = []
+
+
 # ---------------------------------------------------------------------------
 # New schemas for pgvector pipeline
 # ---------------------------------------------------------------------------

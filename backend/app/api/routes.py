@@ -18,7 +18,7 @@ from app.core.rate_limiter import check_rate_limit
 from app.models.domain import Document, Activity, SavedItem
 
 from app.core.config import settings
-from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest, CitationDiscoveryRequest, UploadPaperResponse, SummarizeResponse, SaveItemRequest
+from app.models.schemas import AskRequest, ExperimentPlanRequest, ProblemGeneratorRequest, GapDetectionRequest, ProblemDetailRequest, DatasetBenchmarkFinderRequest, CitationRecommendationRequest, CitationDiscoveryRequest, UploadPaperResponse, SummarizeResponse, SaveItemRequest, AnalyzeResponse, DetectGapsResponse, CitationIntelligenceResponse
 from app.services.cache import get_doc, get_current_doc_id, has_doc, set_active_doc, store_doc
 from app.services.chunking import chunk_text_semantic
 from app.services.llm import analyze_paper, build_analysis_prompt, stream_completion, stream_answer, summarize_chunks
@@ -247,7 +247,7 @@ def _sanitize_detected_title(title: Optional[str]) -> Optional[str]:
     return normalized
 
 
-@router.post("/analyze")
+@router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(request: Request, file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
     await check_rate_limit(request, user_id)
     try:
@@ -418,10 +418,11 @@ async def analyze_stream(request: Request, file: UploadFile = File(...), user_id
             cached = get_doc(doc_id)
 
             def cached_stream():
-                yield f"__DOC_ID__:{doc_id}\n"
-                yield cached["analysis"]
+                yield f"event: doc_id\ndata: {json.dumps({'doc_id': doc_id})}\n\n"
+                yield f"event: token\ndata: {json.dumps({'token': cached['analysis']})}\n\n"
+                yield f"event: done\ndata: {{}}\n\n"
 
-            return StreamingResponse(cached_stream(), media_type="text/plain")
+            return StreamingResponse(cached_stream(), media_type="text/event-stream")
 
         path = os.path.join(settings.UPLOAD_FOLDER, f"{doc_id}_{file.filename}")
 
@@ -444,7 +445,7 @@ async def analyze_stream(request: Request, file: UploadFile = File(...), user_id
             )
 
         if not pages:
-            return JSONResponse({"error": "Could not extract text"}, status_code=400)
+            return JSONResponse({"error": "Could not extract text", "code": "EXTRACT_FAILED"}, status_code=400)
 
         _raise_if_paper_too_lengthy(pages)
 
@@ -461,14 +462,16 @@ async def analyze_stream(request: Request, file: UploadFile = File(...), user_id
         def stream_response():
 
             full_text = ""
-            yield f"__DOC_ID__:{doc_id}\n"
+            yield f"event: doc_id\ndata: {json.dumps({'doc_id': doc_id})}\n\n"
 
             for token in stream_completion(
                 prompt,
                 "You write structured, strictly grounded research summaries."
             ):
                 full_text += token
-                yield token
+                yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+
+            yield f"event: done\ndata: {{}}\n\n"
 
             store_doc(doc_id, {
                 "chunks": chunks,
@@ -544,9 +547,9 @@ async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
     # ------------------------------------------------------------------
     if payload.doc_id:
         if not set_active_doc(payload.doc_id):
-            return JSONResponse({"error": "Document not found. Please re-upload."}, status_code=400)
+            return JSONResponse({"error": "Document not found. Please re-upload.", "code": "DOCUMENT_NOT_FOUND"}, status_code=404)
     elif get_current_doc_id() is None:
-        return JSONResponse({"error": "No document loaded. Please upload first."}, status_code=400)
+        return JSONResponse({"error": "No document loaded. Please upload first.", "code": "NO_DOCUMENT_LOADED"}, status_code=400)
 
     try:
         from app.services.llm import answer_question
@@ -554,10 +557,8 @@ async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
         answer = await asyncio.to_thread(answer_question, payload.question, payload.history)
 
         return {"answer": answer}
-    except Exception:
-        return {
-            "answer": "I ran into a temporary issue while generating that response. Please try once more.",
-        }
+    except Exception as exc:
+        return _internal_error_response(exc, "ask")
 
 
 @router.post("/ask_stream")
@@ -646,10 +647,11 @@ async def get_documents(user_id: str = Depends(get_current_user), db: Session = 
     return [{"id": d.id, "filename": d.filename} for d in docs]
 
 
-@router.post("/detect-gaps")
+@router.post("/detect-gaps", response_model=DetectGapsResponse)
 async def detect_gaps(
     file: Optional[UploadFile] = File(None),
     text: Optional[str] = Form(None),
+    doc_id: Optional[str] = Form(None),
     user_id: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -689,8 +691,8 @@ async def detect_gaps(
             
             chunks = chunk_text_semantic(pages)
             content_to_analyze = summarize_chunks(chunks)
-        elif text:
-            content_to_analyze = text
+        elif payload.text:
+            content_to_analyze = payload.text
         else:
             return JSONResponse({"error": "No file or text provided"}, status_code=400)
 
@@ -744,7 +746,7 @@ async def find_datasets_benchmarks(
         return _internal_error_response(exc, "find-datasets-benchmarks")
 
 
-@router.post("/citation-intelligence")
+@router.post("/citation-intelligence", response_model=CitationIntelligenceResponse)
 async def citation_intelligence(
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user),
