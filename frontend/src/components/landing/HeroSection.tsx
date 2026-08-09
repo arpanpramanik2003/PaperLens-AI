@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
 import ShaderBackground from "@/components/ui/shader-background";
 import LightHeroBackground from "@/components/ui/light-hero-background";
+import "./HeroSection.css";
 
 const ease = [0.2, 0, 0, 1] as const;
 

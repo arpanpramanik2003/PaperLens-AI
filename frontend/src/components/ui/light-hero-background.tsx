@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import "./light-hero-background.css";
 
 /**
  * Elegant light-theme hero background with visible aurora mesh animation.
