@@ -193,7 +193,7 @@ export default function DashboardLayout() {
           {/* Logo */}
           <div className="h-16 flex items-center justify-center px-4 border-b border-border/60 flex-shrink-0 relative">
             <div className="absolute inset-x-5 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
-            <img src="/favicon.svg" alt="PaperLens Logo" className="w-8 h-8 flex-shrink-0" />
+            <img src="/favicon.svg" alt="PaperLens Logo" width="32" height="32" decoding="async" className="w-8 h-8 flex-shrink-0" />
             {sidebarOpen && (
               <div className="ml-2.5 flex flex-col leading-tight">
                 <span className="font-semibold text-foreground whitespace-nowrap text-sm tracking-wide">PaperLens AI</span>
@@ -315,7 +315,7 @@ export default function DashboardLayout() {
               </span>
             </Button>
             <div className="lg:hidden flex items-center gap-2">
-              <img src="/favicon.svg" alt="PaperLens Logo" className="w-6 h-6" />
+              <img src="/favicon.svg" alt="PaperLens Logo" width="24" height="24" decoding="async" className="w-6 h-6" />
               <span className="font-semibold text-sm">PaperLens AI</span>
             </div>
             <div className="hidden sm:flex items-center rounded-full border border-border/60 bg-card/50 px-3 py-1.5">

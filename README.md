@@ -1,7 +1,10 @@
 # PaperLens AI
 
 <p align="center">
-  <img src="frontend/public/demo.png" alt="PaperLens AI Landing Page" width="100%" />
+  <picture>
+    <source srcset="frontend/public/demo.webp" type="image/webp" />
+    <img src="frontend/public/demo.png" alt="PaperLens AI Landing Page" width="100%" loading="lazy" decoding="async" />
+  </picture>
 </p>
 
 <p align="center">

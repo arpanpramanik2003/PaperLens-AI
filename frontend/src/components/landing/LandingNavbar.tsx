@@ -104,7 +104,7 @@ export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: Lan
       >
         <div className="h-14 px-4 sm:px-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 min-w-0 group">
-          <img src="/favicon.svg" alt="PaperLens Logo" className="w-7 h-7 flex-shrink-0" />
+          <img src="/favicon.svg" alt="PaperLens Logo" width="28" height="28" decoding="async" className="w-7 h-7 flex-shrink-0" />
           <span className="font-semibold text-foreground/95 group-hover:text-foreground transition-colors hidden sm:inline">PaperLens AI</span>
         </Link>
 
