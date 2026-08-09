@@ -685,14 +685,16 @@ export default function AgentMode() {
                       />
                     )}
 
-                    <ProposedDirectionsCard
-                      proposedProblems={proposedProblems}
-                      directionPlans={directionPlans}
-                      loadingPlanIndex={loadingPlanIndex}
-                      onPlanExperimentRoadmap={handlePlanExperimentRoadmap}
-                      renderTextOrObject={renderTextOrObject}
-                      sectionIndex={probIndex}
-                    />
+                    {proposedProblems.length > 0 && (
+                      <ProposedDirectionsCard
+                        proposedProblems={proposedProblems}
+                        directionPlans={directionPlans}
+                        loadingPlanIndex={loadingPlanIndex}
+                        onPlanExperimentRoadmap={handlePlanExperimentRoadmap}
+                        renderTextOrObject={renderTextOrObject}
+                        sectionIndex={probIndex}
+                      />
+                    )}
 
                     {experimentPlanSteps.length > 0 && (
                       <ExperimentPlanCard
@@ -702,17 +704,21 @@ export default function AgentMode() {
                       />
                     )}
 
-                    <DatasetsBenchmarksCard
-                      datasetsList={datasetsList}
-                      renderTextOrObject={renderTextOrObject}
-                      sectionIndex={datasetIndex}
-                    />
+                    {datasetsList.length > 0 && (
+                      <DatasetsBenchmarksCard
+                        datasetsList={datasetsList}
+                        renderTextOrObject={renderTextOrObject}
+                        sectionIndex={datasetIndex}
+                      />
+                    )}
 
-                    <SelfCritiqueCard
-                      critiqueData={critiqueData}
-                      renderTextOrObject={renderTextOrObject}
-                      sectionIndex={critiqueIndex}
-                    />
+                    {critiqueData && (
+                      <SelfCritiqueCard
+                        critiqueData={critiqueData}
+                        renderTextOrObject={renderTextOrObject}
+                        sectionIndex={critiqueIndex}
+                      />
+                    )}
                   </>
                 );
               })()}

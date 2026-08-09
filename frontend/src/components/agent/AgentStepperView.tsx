@@ -41,7 +41,7 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
               Autonomous ReAct Execution Stream
             </h3>
             <p className="text-xs text-muted-foreground">
-              Iterative reasoning loop (Thought $\rightarrow$ Action $\rightarrow$ Observation) with dynamic working memory
+              Iterative reasoning loop (Thought → Action → Observation) with dynamic working memory
             </p>
           </div>
         </div>

@@ -1,5 +1,15 @@
 {
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/myenv/Scripts/python.exe",
     "python.analysis.extraPaths": [
-        "./backend"
+        "${workspaceFolder}/backend",
+        "${workspaceFolder}/backend/myenv/Lib/site-packages"
+    ],
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/backend",
+        "${workspaceFolder}/backend/myenv/Lib/site-packages"
+    ],
+    "pyrefly.analysis.extraPaths": [
+        "${workspaceFolder}/backend",
+        "${workspaceFolder}/backend/myenv/Lib/site-packages"
     ]
 }
