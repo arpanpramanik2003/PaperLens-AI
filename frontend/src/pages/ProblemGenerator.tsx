@@ -623,17 +623,25 @@ export default function ProblemGenerator() {
       <AnimatePresence>
         {selectedIdea && selectedIdeaDetails && (
           <motion.div
-            className="fixed inset-0 lg:left-[var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-2 sm:p-6 flex items-end sm:items-center justify-center"
+            role="button"
+            tabIndex={0}
+            aria-label="Close modal"
+            className="fixed inset-0 lg:left-[var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-2 sm:p-6 flex items-end sm:items-center justify-center cursor-pointer"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setExpandedIdeaIndex(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+                setExpandedIdeaIndex(null);
+              }
+            }}
           >
             <motion.div
-              className="w-full max-w-[calc(100vw-1rem)] sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-border/60 bg-gradient-to-b from-card to-card/95 shadow-2xl premium-shadow"
+              className="w-full max-w-[calc(100vw-1rem)] sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-border/60 bg-gradient-to-b from-card to-card/95 shadow-2xl premium-shadow cursor-default"
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              exit={{ opacity: 0, y: 12, scale: 1 }}
               transition={{ duration: 0.25, ease }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -649,6 +657,7 @@ export default function ProblemGenerator() {
                   size="icon" 
                   variant="ghost" 
                   onClick={() => setExpandedIdeaIndex(null)} 
+                  aria-label="Close brief"
                   className="h-9 w-9 flex-shrink-0 hover:bg-secondary/50"
                 >
                   <X className="w-5 h-5" />

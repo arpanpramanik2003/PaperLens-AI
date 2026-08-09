@@ -383,14 +383,22 @@ export default function SettingsPage() {
       <AnimatePresence>
         {selectedSavedItem && (
           <motion.div
-            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            role="button"
+            tabIndex={0}
+            aria-label="Close modal"
+            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center cursor-pointer"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedSavedItem(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+                setSelectedSavedItem(null);
+              }
+            }}
           >
             <motion.div
-              className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl premium-shadow"
+              className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl premium-shadow cursor-default"
               initial={{ opacity: 0, y: 16, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.97 }}
@@ -405,7 +413,7 @@ export default function SettingsPage() {
                   <h3 className="text-lg sm:text-xl font-semibold text-foreground break-words">{selectedSavedItem.title}</h3>
                   <p className="text-xs text-muted-foreground mt-1">{new Date(selectedSavedItem.created_at).toLocaleString()}</p>
                 </div>
-                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => setSelectedSavedItem(null)}>
+                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => setSelectedSavedItem(null)} aria-label="Close modal">
                   <X className="w-4 h-4" />
                 </Button>
               </div>

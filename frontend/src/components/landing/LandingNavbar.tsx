@@ -103,6 +103,12 @@ export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: Lan
         paddingRight: `${navHorizontalPadding}px`,
       }}
     >
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        Skip to main content
+      </a>
       <div
         className={`mx-auto transition-all duration-500 ${
           isScrolled

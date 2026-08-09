@@ -54,7 +54,8 @@ export default function LandingPage() {
         onToggleTheme={() => setIsDark((prev) => !prev)}
         onNavigate={handleNavigate}
       />
-      <div
+      <main
+        id="main-content"
         ref={scrollContainerRef}
         className={isTouchDevice ? "min-h-screen overflow-x-hidden bg-background" : "h-screen overflow-hidden bg-background"}
       >
@@ -82,7 +83,7 @@ export default function LandingPage() {
           <LandingFooter onOpenAbout={() => setShowAbout(true)} />
           <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

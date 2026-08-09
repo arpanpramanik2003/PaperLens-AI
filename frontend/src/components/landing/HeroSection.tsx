@@ -216,12 +216,12 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.9 }}
           >
-            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground/60">Scroll to explore</span>
+            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground font-medium">Scroll to explore</span>
             <motion.div
               animate={{ y: [0, 6, 0] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
             >
-              <ChevronDown className="w-4 h-4 text-muted-foreground/40" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </motion.div>
           </motion.div>
         )}

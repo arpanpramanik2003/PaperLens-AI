@@ -171,6 +171,12 @@ export default function DashboardLayout() {
 
   return (
     <TooltipProvider delayDuration={150}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        Skip to main content
+      </a>
       <div className="min-h-screen bg-background relative overflow-x-hidden flex">
       <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(circle_at_8%_12%,hsl(var(--accent)/0.14),transparent_34%),radial-gradient(circle_at_92%_88%,hsl(var(--accent)/0.1),transparent_32%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(to_right,hsl(var(--border)/0.18)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.18)_1px,transparent_1px)] [background-size:38px_38px]" />
@@ -178,8 +184,16 @@ export default function DashboardLayout() {
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 lg:hidden"
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar"
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 lg:hidden cursor-pointer"
           onClick={() => setSidebarOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+              setSidebarOpen(false);
+            }
+          }}
         />
       )}
 
@@ -341,31 +355,44 @@ export default function DashboardLayout() {
               <Input
                 ref={searchInputRef}
                 placeholder="Search..."
+                aria-label="Search dashboard"
                 className="pl-9 h-9 w-64 text-sm bg-card/70 border-border/60 rounded-xl focus-visible:ring-2 focus-visible:ring-accent/50"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowSearchResults(true)}
               />
               {showSearchResults && searchQuery && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-card border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50">
+                <ul
+                  role="listbox"
+                  aria-label="Search results"
+                  className="absolute top-full left-0 mt-2 w-64 bg-card border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50 p-0 m-0 list-none"
+                >
                   {searchResults.map((result, idx) => (
-                    <Link
-                      key={`${result.path}-${idx}`}
-                      to={result.path}
-                      onClick={() => {
-                        setSearchQuery("");
-                        setShowSearchResults(false);
-                      }}
-                      className="block px-4 py-2.5 text-sm text-foreground hover:bg-secondary/40 border-b border-border/40 last:border-b-0 transition-colors"
-                    >
-                      <div className="font-medium">{result.title}</div>
-                      <div className="text-xs text-muted-foreground">{result.description}</div>
-                    </Link>
+                    <li role="option" aria-selected="false" key={`${result.path}-${idx}`}>
+                      <Link
+                        to={result.path}
+                        onClick={() => {
+                          setSearchQuery("");
+                          setShowSearchResults(false);
+                        }}
+                        className="block px-4 py-2.5 text-sm text-foreground hover:bg-secondary/40 border-b border-border/40 last:border-b-0 transition-colors"
+                      >
+                        <div className="font-medium">{result.title}</div>
+                        <div className="text-xs text-muted-foreground">{result.description}</div>
+                      </Link>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </div>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl border border-border/60 bg-card/50 hover:bg-card" onClick={toggleTheme}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-xl border border-border/60 bg-card/50 hover:bg-card"
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
             <SignedIn>
@@ -375,7 +402,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content — pt compensates for the fixed header on both breakpoints */}
-        <main data-scroll-container className="flex-1 px-4 pb-4 pt-16 lg:px-7 lg:pb-7 lg:pt-[5.5rem] overflow-auto">
+        <main id="main-content" data-scroll-container className="flex-1 px-4 pb-4 pt-16 lg:px-7 lg:pb-7 lg:pt-[5.5rem] overflow-auto">
           <Outlet />
         </main>
       </div>

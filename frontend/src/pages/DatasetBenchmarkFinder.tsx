@@ -255,8 +255,54 @@ export default function DatasetBenchmarkFinder() {
     }
   };
 
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!activeItem) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeDetails();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    const timeout = setTimeout(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      first?.focus();
+    }, 50);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      clearTimeout(timeout);
+    };
+  }, [activeItem]);
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <motion.section
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -495,14 +541,26 @@ export default function DatasetBenchmarkFinder() {
       <AnimatePresence>
         {activeItem && activeType && (
           <motion.div
-            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center"
+            role="button"
+            tabIndex={0}
+            aria-label="Close modal"
+            className="fixed inset-y-0 right-0 lg:[left:var(--dashboard-sidebar-offset,0px)] z-50 bg-black/50 backdrop-blur-sm p-4 sm:p-6 flex items-end sm:items-center justify-center cursor-pointer"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeDetails}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+                closeDetails();
+              }
+            }}
           >
             <motion.div
-              className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl premium-shadow"
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${activeType === "dataset" ? "Dataset" : "Benchmark"} Details`}
+              className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl premium-shadow cursor-default"
               initial={{ opacity: 0, y: 16, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.97 }}
@@ -516,7 +574,7 @@ export default function DatasetBenchmarkFinder() {
                   </p>
                   <h3 className="text-xl font-semibold text-foreground leading-tight">{activeItem.name}</h3>
                 </div>
-                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={closeDetails}>
+                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={closeDetails} aria-label="Close details">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
