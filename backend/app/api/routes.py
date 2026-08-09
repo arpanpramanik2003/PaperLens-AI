@@ -1,17 +1,20 @@
+import asyncio
 import hashlib
 import json
 import logging
 import os
 import re
 import shutil
+import time
 from typing import Optional
 
-from fastapi import APIRouter, File, UploadFile, Depends, Form
+from fastapi import APIRouter, File, UploadFile, Depends, Form, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.core.database import get_db
+from app.core.rate_limiter import check_rate_limit
 from app.models.domain import Document, Activity, SavedItem
 
 from app.core.config import settings
@@ -25,6 +28,30 @@ from app.services.citation_intelligence import run_citation_intelligence, discov
 
 logger = logging.getLogger("paper_explainer.routes")
 router = APIRouter()
+
+MAX_CONCURRENT_UPLOADS = 5
+UPLOAD_SEMAPHORE = asyncio.Semaphore(MAX_CONCURRENT_UPLOADS)
+
+def cleanup_old_uploads(max_age_seconds: int = 1800):
+    """
+    Remove temporary uploaded files in UPLOAD_FOLDER older than max_age_seconds.
+    """
+    upload_dir = settings.UPLOAD_FOLDER
+    if not os.path.exists(upload_dir):
+        return
+    now = time.time()
+    try:
+        for filename in os.listdir(upload_dir):
+            file_path = os.path.join(upload_dir, filename)
+            if os.path.isfile(file_path):
+                file_age = now - os.path.getmtime(file_path)
+                if file_age > max_age_seconds:
+                    try:
+                        os.remove(file_path)
+                    except OSError:
+                        pass
+    except Exception as exc:
+        logger.warning("Error during uploads directory cleanup: %s", exc)
 
 
 def _internal_error_response(exc: Exception, context: str = "endpoint"):
@@ -221,8 +248,8 @@ def _sanitize_detected_title(title: Optional[str]) -> Optional[str]:
 
 
 @router.post("/analyze")
-async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
-
+async def analyze(request: Request, file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    await check_rate_limit(request, user_id)
     try:
 
         if not file.filename:
@@ -262,75 +289,81 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
                 "fallback_title": _filename_to_title(cached.get("filename")),
             }
 
-        path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
+        os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+        cleanup_old_uploads()
 
-        with open(path, "wb") as handle:
-            shutil.copyfileobj(file.file, handle)
+        async with UPLOAD_SEMAPHORE:
+            path = os.path.join(settings.UPLOAD_FOLDER, f"{doc_id}_{file.filename}")
 
-        file.file.seek(0)
+            try:
+                with open(path, "wb") as handle:
+                    shutil.copyfileobj(file.file, handle)
 
-        if ext == ".pdf":
-            pages = extract_pdf_pages(
-                path,
-                max_pages=settings.MAX_PAGES,
-                max_total_chars=settings.MAX_TOTAL_CHARS
-            )
-        else:
-            pages = extract_docx_pages(
-                path,
-                max_pages=settings.MAX_PAGES,
-                max_total_chars=settings.MAX_TOTAL_CHARS
-            )
+                file.file.seek(0)
 
-        if not pages:
-            return JSONResponse({"error": "Could not extract text"}, status_code=400)
+                if ext == ".pdf":
+                    pages = extract_pdf_pages(
+                        path,
+                        max_pages=settings.MAX_PAGES,
+                        max_total_chars=settings.MAX_TOTAL_CHARS
+                    )
+                else:
+                    pages = extract_docx_pages(
+                        path,
+                        max_pages=settings.MAX_PAGES,
+                        max_total_chars=settings.MAX_TOTAL_CHARS
+                    )
 
-        _raise_if_paper_too_lengthy(pages)
+                if not pages:
+                    return JSONResponse({"error": "Could not extract text"}, status_code=400)
 
-        page_count = len(pages)
-        detected_title = _sanitize_detected_title(_detect_paper_title(pages))
+                _raise_if_paper_too_lengthy(pages)
 
-        chunks = chunk_text_semantic(pages)
+                page_count = len(pages)
+                detected_title = _sanitize_detected_title(_detect_paper_title(pages))
 
-        if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
-            chunks = chunks[:settings.MAX_CHUNKS]
+                chunks = chunk_text_semantic(pages)
 
-        index, bm25 = build_vector_store(chunks)
+                if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
+                    chunks = chunks[:settings.MAX_CHUNKS]
 
-        result = analyze_paper(chunks)
+                index, bm25 = build_vector_store(chunks)
 
-        store_doc(doc_id, {
-            "chunks": chunks,
-            "vector_index": index,
-            "bm25_index": bm25,
-            "analysis": result,
-            "filename": file.filename,
-            "page_count": page_count,
-            "detected_title": detected_title,
-        })
+                result = analyze_paper(chunks)
 
-        set_active_doc(doc_id)
-        
-        db_doc = db.query(Document).filter(Document.id == doc_id).first()
-        if not db_doc:
-            db_doc = Document(id=doc_id, user_id=user_id, filename=file.filename, title=file.filename, status="Analyzed")
-            db.add(db_doc)
-        db_activity = Activity(user_id=user_id, action_type="analyze_paper", metadata_json={"filename": file.filename})
-        db.add(db_activity)
-        db.commit()
+                store_doc(doc_id, {
+                    "chunks": chunks,
+                    "vector_index": index,
+                    "bm25_index": bm25,
+                    "analysis": result,
+                    "filename": file.filename,
+                    "page_count": page_count,
+                    "detected_title": detected_title,
+                })
 
-        try:
-            os.remove(path)
-        except OSError:
-            pass
+                set_active_doc(doc_id)
+                
+                db_doc = db.query(Document).filter(Document.id == doc_id).first()
+                if not db_doc:
+                    db_doc = Document(id=doc_id, user_id=user_id, filename=file.filename, title=file.filename, status="Analyzed")
+                    db.add(db_doc)
+                db_activity = Activity(user_id=user_id, action_type="analyze_paper", metadata_json={"filename": file.filename})
+                db.add(db_activity)
+                db.commit()
 
-        return {
-            "result": result,
-            "doc_id": doc_id,
-            "page_count": page_count,
-            "detected_title": detected_title,
-            "fallback_title": _filename_to_title(file.filename),
-        }
+                return {
+                    "result": result,
+                    "doc_id": doc_id,
+                    "page_count": page_count,
+                    "detected_title": detected_title,
+                    "fallback_title": _filename_to_title(file.filename),
+                }
+            finally:
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
 
     except PaperTooLengthyError as exc:
 
@@ -354,8 +387,8 @@ async def analyze(file: UploadFile = File(...), user_id: str = Depends(get_curre
 
 
 @router.post("/analyze_stream")
-async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
-
+async def analyze_stream(request: Request, file: UploadFile = File(...), user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    await check_rate_limit(request, user_id)
     try:
 
         if not file.filename:
@@ -367,6 +400,7 @@ async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(ge
             return JSONResponse({"error": "Only PDF or DOCX files allowed"}, status_code=400)
 
         os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+        cleanup_old_uploads()
 
         file.file.seek(0, os.SEEK_END)
         size_bytes = file.file.tell()
@@ -387,7 +421,7 @@ async def analyze_stream(file: UploadFile = File(...), user_id: str = Depends(ge
 
             return StreamingResponse(cached_stream(), media_type="text/plain")
 
-        path = os.path.join(settings.UPLOAD_FOLDER, file.filename)
+        path = os.path.join(settings.UPLOAD_FOLDER, f"{doc_id}_{file.filename}")
 
         with open(path, "wb") as handle:
             shutil.copyfileobj(file.file, handle)
@@ -542,7 +576,8 @@ async def ask_stream(payload: AskRequest, user_id: str = Depends(get_current_use
 
 
 @router.post("/plan-experiment")
-async def plan_experiment(payload: ExperimentPlanRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+async def plan_experiment(request: Request, payload: ExperimentPlanRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    await check_rate_limit(request, user_id)
     try:
         from app.services.llm import generate_experiment_plan
         plan = generate_experiment_plan(payload.topic, payload.difficulty)
@@ -557,7 +592,8 @@ async def plan_experiment(payload: ExperimentPlanRequest, user_id: str = Depends
 
 
 @router.post("/generate-problems")
-async def generate_problems(payload: ProblemGeneratorRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+async def generate_problems(request: Request, payload: ProblemGeneratorRequest, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    await check_rate_limit(request, user_id)
     try:
         from app.services.llm import generate_research_problems
         ideas = generate_research_problems(payload.domain, payload.subdomain, payload.complexity)

@@ -1,4 +1,5 @@
 import logging
+import os
 # pyrefly: ignore [missing-import]
 from fastapi import FastAPI, Depends, Request
 # pyrefly: ignore [missing-import]
@@ -38,9 +39,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+ALLOWED_ORIGINS = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://localhost:8000,http://localhost:8081"
+).split(",")
+origins = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
