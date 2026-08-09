@@ -170,9 +170,9 @@ export default function DashboardHome() {
                 </div>
                 <span className="text-[11px] text-accent font-mono uppercase tracking-wider">{s.change}</span>
               </div>
-              <p className="relative z-10 text-2xl font-semibold text-foreground tabular-nums">
+              <div className="relative z-10 text-2xl font-semibold text-foreground tabular-nums">
                 {loading ? <Skeleton className="h-8 w-12" /> : s.value}
-              </p>
+              </div>
               <p className="relative z-10 text-xs text-muted-foreground mt-1.5 tracking-wide">{s.label}</p>
             </motion.div>
           );
