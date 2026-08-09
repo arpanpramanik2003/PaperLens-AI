@@ -24,42 +24,54 @@ export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: Lan
   const desktopNavRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      setIsScrolled(y > 10);
-      setScrollProgress(Math.min(y / 160, 1));
+    let sectionAnchors: { href: string; top: number }[] = [];
 
-      const sectionAnchors = navLinks
+    const updateAnchors = () => {
+      sectionAnchors = navLinks
         .map((link) => {
           const section = document.getElementById(link.href.replace("#", ""));
           return section ? { href: link.href, top: section.offsetTop } : null;
         })
         .filter((item): item is { href: string; top: number } => Boolean(item))
         .sort((a, b) => a.top - b.top);
-
-      if (!sectionAnchors.length) {
-        return;
-      }
-
-      const viewportProbe = y + window.innerHeight * 0.35;
-      let currentHref = sectionAnchors[0].href;
-
-      for (const anchor of sectionAnchors) {
-        if (viewportProbe >= anchor.top) {
-          currentHref = anchor.href;
-        } else {
-          break;
-        }
-      }
-
-      setActiveHref((prev) => (prev === currentHref ? prev : currentHref));
     };
 
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    updateAnchors();
+    window.addEventListener("resize", updateAnchors, { passive: true });
+
+    let rAFId: number | null = null;
+    const handleScroll = () => {
+      if (rAFId) return;
+      rAFId = requestAnimationFrame(() => {
+        rAFId = null;
+        const y = window.scrollY;
+        setIsScrolled(y > 10);
+        setScrollProgress(Math.min(y / 160, 1));
+
+        if (!sectionAnchors.length) return;
+
+        const viewportProbe = y + window.innerHeight * 0.35;
+        let currentHref = sectionAnchors[0].href;
+
+        for (const anchor of sectionAnchors) {
+          if (viewportProbe >= anchor.top) {
+            currentHref = anchor.href;
+          } else {
+            break;
+          }
+        }
+
+        setActiveHref((prev) => (prev === currentHref ? prev : currentHref));
+      });
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", updateAnchors);
+      window.removeEventListener("scroll", handleScroll);
+      if (rAFId) cancelAnimationFrame(rAFId);
     };
   }, []);
 

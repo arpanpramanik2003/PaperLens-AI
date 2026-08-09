@@ -289,8 +289,17 @@ const ShaderBackground = ({
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    let animFrameId: number | null = null;
+    let isIntersecting = true;
+    let isTabVisible = !document.hidden;
     const startTime = Date.now();
+
     const render = () => {
+      if (!isIntersecting || !isTabVisible) {
+        animFrameId = null;
+        return;
+      }
+
       const currentTime = (Date.now() - startTime) / 1000;
 
       if (variant === 'line-only') {
@@ -321,13 +330,71 @@ const ShaderBackground = ({
       gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      requestAnimationFrame(render);
+      animFrameId = requestAnimationFrame(render);
     };
 
-    requestAnimationFrame(render);
+    const startAnimation = () => {
+      if (!animFrameId && isIntersecting && isTabVisible) {
+        animFrameId = requestAnimationFrame(render);
+      }
+    };
+
+    const stopAnimation = () => {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+    };
+
+    // Pause animation when hero scrolled out of viewport
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        isIntersecting = entry.isIntersecting;
+        if (isIntersecting) {
+          startAnimation();
+        } else {
+          stopAnimation();
+        }
+      },
+      { threshold: 0.05 }
+    );
+    observer.observe(canvas);
+
+    // Pause animation when tab inactive
+    const handleVisibilityChange = () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible) {
+        startAnimation();
+      } else {
+        stopAnimation();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    startAnimation();
 
     return () => {
+      stopAnimation();
       window.removeEventListener('resize', resizeCanvas);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      observer.disconnect();
+
+      // Clean up WebGL resources
+      if (positionBuffer) {
+        gl.deleteBuffer(positionBuffer);
+      }
+      if (shaderProgram) {
+        const attachedShaders = gl.getAttachedShaders(shaderProgram);
+        if (attachedShaders) {
+          attachedShaders.forEach((s) => {
+            gl.detachShader(shaderProgram, s);
+            gl.deleteShader(s);
+          });
+        }
+        gl.deleteProgram(shaderProgram);
+      }
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
   }, [variant]);
 
