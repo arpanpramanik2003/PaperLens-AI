@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
-from app.core.database import get_db
+from app.core.database import get_db, get_db_context
 from app.core.rate_limiter import check_rate_limit
 from app.models.domain import Document, Activity, SavedItem
 
@@ -302,13 +302,15 @@ async def analyze(request: Request, file: UploadFile = File(...), user_id: str =
                 file.file.seek(0)
 
                 if ext == ".pdf":
-                    pages = extract_pdf_pages(
+                    pages = await asyncio.to_thread(
+                        extract_pdf_pages,
                         path,
                         max_pages=settings.MAX_PAGES,
                         max_total_chars=settings.MAX_TOTAL_CHARS
                     )
                 else:
-                    pages = extract_docx_pages(
+                    pages = await asyncio.to_thread(
+                        extract_docx_pages,
                         path,
                         max_pages=settings.MAX_PAGES,
                         max_total_chars=settings.MAX_TOTAL_CHARS
@@ -322,14 +324,14 @@ async def analyze(request: Request, file: UploadFile = File(...), user_id: str =
                 page_count = len(pages)
                 detected_title = _sanitize_detected_title(_detect_paper_title(pages))
 
-                chunks = chunk_text_semantic(pages)
+                chunks = await asyncio.to_thread(chunk_text_semantic, pages)
 
                 if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
                     chunks = chunks[:settings.MAX_CHUNKS]
 
-                index, bm25 = build_vector_store(chunks)
+                index, bm25 = await asyncio.to_thread(build_vector_store, chunks)
 
-                result = analyze_paper(chunks)
+                result = await asyncio.to_thread(analyze_paper, chunks)
 
                 store_doc(doc_id, {
                     "chunks": chunks,
@@ -429,13 +431,13 @@ async def analyze_stream(request: Request, file: UploadFile = File(...), user_id
         file.file.seek(0)
 
         if ext == ".pdf":
-            pages = extract_pdf_pages(
+            pages = await asyncio.to_thread(extract_pdf_pages,
                 path,
                 max_pages=settings.MAX_PAGES,
                 max_total_chars=settings.MAX_TOTAL_CHARS
             )
         else:
-            pages = extract_docx_pages(
+            pages = await asyncio.to_thread(extract_docx_pages,
                 path,
                 max_pages=settings.MAX_PAGES,
                 max_total_chars=settings.MAX_TOTAL_CHARS
@@ -446,14 +448,14 @@ async def analyze_stream(request: Request, file: UploadFile = File(...), user_id
 
         _raise_if_paper_too_lengthy(pages)
 
-        chunks = chunk_text_semantic(pages)
+        chunks = await asyncio.to_thread(chunk_text_semantic, pages)
 
         if settings.MAX_CHUNKS > 0 and len(chunks) > settings.MAX_CHUNKS:
             chunks = chunks[:settings.MAX_CHUNKS]
 
-        index, bm25 = build_vector_store(chunks)
+        index, bm25 = await asyncio.to_thread(build_vector_store, chunks)
 
-        combined_summary = summarize_chunks(chunks)
+        combined_summary = await asyncio.to_thread(summarize_chunks, chunks)
         prompt = build_analysis_prompt(combined_summary)
 
         def stream_response():
@@ -478,13 +480,14 @@ async def analyze_stream(request: Request, file: UploadFile = File(...), user_id
 
             set_active_doc(doc_id)
             
-            db_doc = db.query(Document).filter(Document.id == doc_id).first()
-            if not db_doc:
-                db_doc = Document(id=doc_id, user_id=user_id, filename=file.filename, title=file.filename, status="Analyzed")
-                db.add(db_doc)
-            db_activity = Activity(user_id=user_id, action_type="analyze_paper", metadata_json={"filename": file.filename})
-            db.add(db_activity)
-            db.commit()
+            with get_db_context() as session:
+                db_doc = session.query(Document).filter(Document.id == doc_id).first()
+                if not db_doc:
+                    db_doc = Document(id=doc_id, user_id=user_id, filename=file.filename, title=file.filename, status="Analyzed")
+                    session.add(db_doc)
+                db_activity = Activity(user_id=user_id, action_type="analyze_paper", metadata_json={"filename": file.filename})
+                session.add(db_activity)
+                session.commit()
 
             try:
                 os.remove(path)
@@ -526,7 +529,8 @@ async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
     if payload.paper_id:
         try:
             from app.services.llm import answer_question_with_pgvector
-            answer = answer_question_with_pgvector(
+            answer = await asyncio.to_thread(
+                answer_question_with_pgvector,
                 payload.question,
                 payload.paper_id,
                 payload.history,
@@ -547,7 +551,7 @@ async def ask(payload: AskRequest, user_id: str = Depends(get_current_user)):
     try:
         from app.services.llm import answer_question
 
-        answer = answer_question(payload.question, payload.history)
+        answer = await asyncio.to_thread(answer_question, payload.question, payload.history)
 
         return {"answer": answer}
     except Exception:
@@ -580,7 +584,7 @@ async def plan_experiment(request: Request, payload: ExperimentPlanRequest, user
     await check_rate_limit(request, user_id)
     try:
         from app.services.llm import generate_experiment_plan
-        plan = generate_experiment_plan(payload.topic, payload.difficulty)
+        plan = await asyncio.to_thread(generate_experiment_plan, payload.topic, payload.difficulty)
         
         db_activity = Activity(user_id=user_id, action_type="plan_experiment", metadata_json={"topic": payload.topic, "difficulty": payload.difficulty})
         db.add(db_activity)
@@ -596,7 +600,7 @@ async def generate_problems(request: Request, payload: ProblemGeneratorRequest, 
     await check_rate_limit(request, user_id)
     try:
         from app.services.llm import generate_research_problems
-        ideas = generate_research_problems(payload.domain, payload.subdomain, payload.complexity)
+        ideas = await asyncio.to_thread(generate_research_problems, payload.domain, payload.subdomain, payload.complexity)
         
         db_activity = Activity(user_id=user_id, action_type="generate_problems", metadata_json={"domain": payload.domain, "subdomain": payload.subdomain})
         db.add(db_activity)
