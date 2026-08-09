@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON
+from sqlalchemy import Column, Integer, String, DateTime, JSON, Index
 from datetime import datetime
 from app.core.database import Base
 
@@ -14,6 +14,9 @@ class Document(Base):
 
 class Activity(Base):
     __tablename__ = "activities"
+    __table_args__ = (
+        Index("idx_activities_user_action", "user_id", "action_type"),
+    )
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(String, index=True, nullable=False)

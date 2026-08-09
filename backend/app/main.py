@@ -23,8 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("paper_explainer")
 
-# Push schema directly to Supabase
-Base.metadata.create_all(bind=engine)
+# Database DDL managed via Alembic migrations
 
 app = FastAPI(title="Paper Explainer API")
 

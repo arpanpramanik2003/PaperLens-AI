@@ -69,6 +69,30 @@ class SaveItemRequest(BaseModel):
     payload: dict
 
 
+class ActivityMetadataSchema(BaseModel):
+    filename: Optional[str] = None
+    topic: Optional[str] = None
+    domain: Optional[str] = None
+    subdomain: Optional[str] = None
+    difficulty: Optional[str] = None
+    project_title: Optional[str] = None
+    has_project_plan: Optional[bool] = None
+    method: Optional[str] = None
+    references_processed: Optional[int] = None
+    matched_count: Optional[int] = None
+    missing_count: Optional[int] = None
+
+
+class SavedItemPayloadSchema(BaseModel):
+    projectTitle: Optional[str] = None
+    projectPlan: Optional[str] = None
+    domainSummary: Optional[str] = None
+    datasets: Optional[list[dict]] = None
+    benchmarks: Optional[list[dict]] = None
+    technologies: Optional[list[dict]] = None
+    details: Optional[dict] = None
+
+
 class SavedItemResponse(BaseModel):
 
     id: int
