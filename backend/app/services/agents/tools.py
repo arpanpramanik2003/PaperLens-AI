@@ -120,8 +120,14 @@ async def search_papers(domain: str = "", limit: int = 35, **kwargs) -> Dict[str
     for ap in arxiv_papers:
         add_paper(ap)
 
+    def _parse_int_safe(val, default=0):
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+
     # Sort papers by year descending by default
-    papers_summary.sort(key=lambda p: (p.get("year") or 0, p.get("citation_count") or 0), reverse=True)
+    papers_summary.sort(key=lambda p: (_parse_int_safe(p.get("year")), _parse_int_safe(p.get("citation_count"))), reverse=True)
 
     return {
         "domain": target_domain,

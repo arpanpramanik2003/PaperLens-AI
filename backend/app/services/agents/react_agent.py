@@ -111,6 +111,8 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             "1. Carefully analyze user research intent.\n"
             "2. Select required tools in logical sequence. In each step, pass parameters from earlier tool outputs.\n"
             "3. When all tools necessary to fulfill the request have executed, set \"is_final\": true.\n\n"
+            "CRITICAL JSON FORMATTING RULE:\n"
+            "Do NOT include comments (such as # or //) anywhere in the JSON output!\n\n"
             f"EXPECTED JSON SCHEMA:\n{json.dumps(ReActDecision.model_json_schema(), indent=2)}\n\n"
             "Return ONLY valid JSON matching this schema exactly."
         )
@@ -120,6 +122,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             "You are Paperlens Autonomous ReAct AI Research Agent.\n"
             f"ACTIVE SCOPED TOOLS: {compact_tool_refs}\n\n"
             "Inspect Working Memory History, select next tool action, or set \"is_final\": true if finished.\n"
+            "CRITICAL JSON FORMATTING RULE: Do NOT include comments (such as # or //) anywhere in the JSON output!\n"
             f"EXPECTED JSON SCHEMA: {json.dumps(ReActDecision.model_json_schema())}\n"
             "Return ONLY valid JSON matching this schema exactly."
         )
