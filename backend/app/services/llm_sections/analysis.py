@@ -341,6 +341,8 @@ Future Work Specific Context:
             {"role": "user", "content": prompt}
         ],
     )
+    raw_text = response.choices[0].message.content or ""
+    return enforce_strict_analysis_format(raw_text)
 
 
 

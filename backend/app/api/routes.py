@@ -282,7 +282,7 @@ async def analyze(request: Request, file: UploadFile = File(...), user_id: str =
                 cached_page_count = len(cached_pages) if cached_pages else None
 
             return {
-                "result": cached["analysis"],
+                "result": cached.get("analysis") or "",
                 "doc_id": doc_id,
                 "page_count": cached_page_count,
                 "detected_title": _sanitize_detected_title(cached.get("detected_title")),
