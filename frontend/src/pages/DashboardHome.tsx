@@ -190,43 +190,107 @@ export default function DashboardHome() {
         </div>
       </motion.section>
 
-      {/* High-Density Metric Cards Grid (6 Columns on Desktop, 3 on Tablet, 2 on Mobile) */}
-      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {dashboardData.stats.map((s, i) => {
-          const Icon = iconMap[s.icon as keyof typeof iconMap] || FileText;
-          const style = statStyling[i % statStyling.length];
+      {/* Smart High-Density Metric Cards Grid (Only renders cards with non-zero counts) */}
+      {(() => {
+        const activeStats = dashboardData.stats.filter((s) => {
+          const num = parseInt(String(s.value).replace(/[^0-9]/g, ""), 10);
+          return !isNaN(num) && num > 0;
+        });
 
+        if (loading) {
+          return (
+            <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((idx) => (
+                <div key={idx} className="rounded-2xl border border-border/60 bg-card/90 p-4 space-y-2">
+                  <Skeleton className="h-8 w-8 rounded-xl" />
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              ))}
+            </section>
+          );
+        }
+
+        if (activeStats.length === 0) {
           return (
             <motion.div
-              key={s.label}
-              className={`group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-3.5 sm:p-4 transition-all duration-250 hover:-translate-y-0.5 ${style.border} ${style.glow} premium-shadow`}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.04, ease }}
+              className="rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/10 via-card to-card p-4 sm:p-5 flex items-center justify-between gap-4 premium-shadow"
             >
-              <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${style.gradient} opacity-80 group-hover:opacity-100 transition-opacity`} />
-              
-              <div className="relative z-10 flex items-center justify-between gap-2 mb-2">
-                <div className={`w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0 ${style.iconBg}`}>
-                  <Icon className="w-4 h-4" strokeWidth={1.8} />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center flex-shrink-0 text-accent">
+                  <Sparkles className="w-5 h-5 animate-pulse" />
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
-                  <TrendingUp className="w-2.5 h-2.5" />
-                  <span>{s.change.replace(" this week", "")}</span>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Welcome to PaperLens AI!</p>
+                  <p className="text-xs text-muted-foreground">You don't have active paper metrics yet. Launch a tool below to analyze your first paper.</p>
                 </div>
               </div>
-
-              <div className="relative z-10 text-xl sm:text-2xl font-extrabold text-foreground tracking-tight tabular-nums">
-                {loading ? <Skeleton className="h-7 w-12" /> : s.value}
-              </div>
-
-              <p className="relative z-10 text-[11px] font-medium text-muted-foreground mt-1 truncate tracking-wide">
-                {s.label}
-              </p>
+              <Link
+                to="/dashboard/analyzer"
+                className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-accent-foreground text-xs font-bold shadow-md hover:bg-accent/90 transition-all flex-shrink-0"
+              >
+                <span>Upload Paper</span>
+                <ArrowUpRight className="w-4 h-4" />
+              </Link>
             </motion.div>
           );
-        })}
-      </section>
+        }
+
+        // Dynamic column layout based on active count (e.g. 2 cols mobile, 3 cols tablet, auto-fit desktop)
+        const gridColsClass =
+          activeStats.length === 1
+            ? "grid-cols-1"
+            : activeStats.length === 2
+            ? "grid-cols-2 lg:grid-cols-2"
+            : activeStats.length === 3
+            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-3"
+            : activeStats.length === 4
+            ? "grid-cols-2 sm:grid-cols-2 lg:grid-cols-4"
+            : activeStats.length === 5
+            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+            : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6";
+
+        return (
+          <section className={`grid ${gridColsClass} gap-3`}>
+            {activeStats.map((s, i) => {
+              const Icon = iconMap[s.icon as keyof typeof iconMap] || FileText;
+              const style = statStyling[i % statStyling.length];
+
+              return (
+                <motion.div
+                  key={s.label}
+                  className={`group relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-3.5 sm:p-4 transition-all duration-250 hover:-translate-y-0.5 ${style.border} ${style.glow} premium-shadow`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: i * 0.04, ease }}
+                >
+                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${style.gradient} opacity-80 group-hover:opacity-100 transition-opacity`} />
+
+                  <div className="relative z-10 flex items-center justify-between gap-2 mb-2">
+                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0 ${style.iconBg}`}>
+                      <Icon className="w-4 h-4" strokeWidth={1.8} />
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
+                      <TrendingUp className="w-2.5 h-2.5" />
+                      <span>{s.change.replace(" this week", "")}</span>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 text-xl sm:text-2xl font-extrabold text-foreground tracking-tight tabular-nums">
+                    {s.value}
+                  </div>
+
+                  <p className="relative z-10 text-[11px] font-medium text-muted-foreground mt-1 truncate tracking-wide">
+                    {s.label}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </section>
+        );
+      })()}
 
       {/* Tools Launcher & Recent Papers Timeline */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
