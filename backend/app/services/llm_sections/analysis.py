@@ -22,74 +22,64 @@ logger.info(
 )
 
 
-def enforce_strict_analysis_format(text):
-
+def enforce_strict_analysis_format(text: str) -> str:
     if not text:
-        return text
+        return ""
 
-    cleaned = text.replace("\r\n", "\n")
+    sections = [
+        ("summary", "Executive Summary"),
+        ("problem_statement", "Problem Statement"),
+        ("methodology", "Methodology"),
+        ("results", "Results"),
+        ("limitations", "Limitations"),
+        ("future_work", "Future Work"),
+    ]
 
-    # Strip accidental reasoning blocks if model emits internal tags.
-    cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    out_sections = []
+    for tag, title in sections:
+        match = re.search(f"<{tag}>(.*?)</{tag}>", text, flags=re.DOTALL | re.IGNORECASE)
+        if match:
+            content = match.group(1).strip()
+            if content:
+                out_sections.append(f"## {title}\n{content}")
 
-    cleaned = re.sub(r"([^\n])\s*(#{2,6})(?!#)\s*", r"\1\n\n\2 ", cleaned)
-    cleaned = re.sub(r"^(\s*#{2,6})([^\s#])", r"\1 \2", cleaned, flags=re.MULTILINE)
-    cleaned = re.sub(r"^\s*\*\*(.+?)\*\*\s*$", r"## \1", cleaned, flags=re.MULTILINE)
+    if out_sections:
+        return "\n\n".join(out_sections)
 
-    # Drop any preface before the first section-like heading.
-    first_heading = re.search(
-        r"^\s*(?:#{1,6}\s+|(?:summary|overview|problem statement|methodology|approach|results|findings|limitations|future work)\s*$)",
-        cleaned,
-        flags=re.IGNORECASE | re.MULTILINE,
-    )
-    if first_heading:
-        cleaned = cleaned[first_heading.start():]
-
-    # Normalize plain section labels into markdown headings for consistent rendering.
-    cleaned = re.sub(
-        r"^\s*(summary|overview|problem statement|methodology|approach|results|findings|limitations|future work)\s*$",
-        r"## \1",
-        cleaned,
-        flags=re.IGNORECASE | re.MULTILINE,
-    )
-
-    return cleaned.strip()
+    # Fallback if raw markdown was produced instead of XML tags
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.IGNORECASE | re.DOTALL).strip()
+    return cleaned
 
 
 def summarize_chunks(chunks):
+    if not chunks:
+        return ""
 
-    summaries = []
+    sampled = sample_chunks_evenly(chunks, 3)
+    excerpts = "\n\n---\n\n".join([f"Excerpt {idx + 1} (Page {c.get('page', 1)}):\n{c['text']}" for idx, c in enumerate(sampled)])
 
-    chunks = sample_chunks_evenly(chunks, 3)
-
-    for chunk in chunks:
-
+    try:
         response = create_completion_with_fallback(
             llm_client=client,
-            task_name="paper_analyzer_chunk_summary",
+            task_name="paper_analyzer_batched_chunk_summary",
             primary_model=PAPER_ANALYZER_PRIMARY_MODEL,
             fallback_models=PAPER_ANALYZER_FALLBACK_MODELS,
-            max_tokens=PAPER_ANALYZER_SUMMARY_MAX_TOKENS,
+            max_tokens=500,
             messages=[
                 {
                     "role": "system",
-                    "content": "You summarize academic text faithfully and concisely."
+                    "content": "You summarize research paper excerpts faithfully and concisely into a single unified summary."
                 },
                 {
                     "role": "user",
-                    "content": f"""
-Summarize this part of a research paper. Keep key details, avoid speculation.
-
-Text:
-{chunk["text"]}
-"""
+                    "content": f"Summarize key methodological insights and findings across these research paper excerpts into a single coherent paragraph:\n\n{excerpts}"
                 }
             ],
         )
-
-        summaries.append(response.choices[0].message.content)
-
-    return " ".join(summaries)
+        return response.choices[0].message.content.strip()
+    except Exception as exc:
+        logger.warning("Batched summarize_chunks failed: %s", exc)
+        return " ".join([c["text"][:200] for c in sampled])
 
 
 def sample_chunks_evenly(chunks, max_chunks):
@@ -271,49 +261,70 @@ def analyze_paper(chunks):
         [f"- {m['text']} [Page {m['page']}]" for m in metrics]
     )
 
+    prob_ctx = format_context(sections["Problem Statement"])
+    meth_ctx = format_context(sections["Methodology"])
+    res_ctx = format_context(sections["Results"])
+    lim_ctx = format_context(sections["Limitations"])
+    fut_ctx = format_context(sections["Future Work"])
+
     prompt = f"""
 You are a research assistant.
 
-Write a structured markdown analysis of the paper using ONLY the context provided for each section.
+Write a structured research paper analysis using ONLY the context provided for each section.
+
+OUTPUT FORMAT REQUIREMENTS:
+You MUST structure your response using these exact XML section tags:
+
+<summary>
+Short coherent paragraph summary.
+</summary>
+
+<problem_statement>
+- Concise bullet points of key problem statement details.
+</problem_statement>
+
+<methodology>
+- Concise bullet points of methodology details.
+</methodology>
+
+<results>
+- Concise bullet points of results and key metrics.
+</results>
+
+<limitations>
+- Concise bullet points of limitations.
+</limitations>
+
+<future_work>
+- Concise bullet points of future directions.
+</future_work>
 
 Rules:
-- Use section headings in markdown, but choose heading wording naturally (do not force exact fixed phrases).
-- Cover themes in this preferred sequence: summary, problem statement, methodology, results, limitations, future work.
-- Keep one heading per section and separate sections clearly.
-- Do NOT reveal chain-of-thought, scratchpad notes, or any internal reasoning.
-- Never output tags like <think> or meta commentary such as "let's think".
-- Leave one blank line between sections.
-- Summary section must be a short coherent paragraph.
-- For all non-summary sections, present content as concise pointwise bullets.
-- Prefer short bullets with one idea per bullet; avoid dense paragraph blocks.
-- If a section context is empty, you may infer likely points, but label them clearly as "Inferred:".
+- Do NOT output any preamble, meta commentary, or tags like <think>.
 - Use citations like [Page 2] to support any explicit claims.
-- Keep each section concise and specific.
-- In Results, include explicit numeric metrics if any are provided in "Key Metrics".
-- If metrics are present, list them as short bullet points before the narrative sentence.
-- Avoid vague results like "best" or "competitive" without citing metrics.
-- If no metrics are available, explicitly say "Metrics not provided in extracted context."
+- For all bulleted sections, keep items concise and specific.
+- If a section specific context indicates to refer to Shared Document Summary Context, extract or infer relevant points from Shared Document Summary Context and label inferred points as "Inferred:".
 
-Summary context:
+Shared Document Summary Context:
 {summary_context}
 
-Problem statement context:
-{format_context(sections["Problem Statement"]) or summary_context}
+Problem Statement Specific Context:
+{prob_ctx if prob_ctx else "(Refer to Shared Document Summary Context above)"}
 
-Methodology context:
-{format_context(sections["Methodology"]) or summary_context}
+Methodology Specific Context:
+{meth_ctx if meth_ctx else "(Refer to Shared Document Summary Context above)"}
 
-Results context:
-{format_context(sections["Results"]) or summary_context}
+Results Specific Context:
+{res_ctx if res_ctx else "(Refer to Shared Document Summary Context above)"}
 
 Key Metrics (use if relevant):
-{metrics_context}
+{metrics_context if metrics_context else "(None extracted)"}
 
-Limitations context:
-{format_context(sections["Limitations"]) or ""}
+Limitations Specific Context:
+{lim_ctx if lim_ctx else "(None extracted)"}
 
-Future work context:
-{format_context(sections["Future Work"]) or ""}
+Future Work Specific Context:
+{fut_ctx if fut_ctx else "(None extracted)"}
 """
 
     response = create_completion_with_fallback(
@@ -325,13 +336,12 @@ Future work context:
         messages=[
             {
                 "role": "system",
-                "content": "You write concise, well-structured markdown research analyses with clear section headings and grounded claims."
+                "content": "You write concise research analyses strictly formatted with explicit XML section tags (<summary>, <problem_statement>, <methodology>, <results>, <limitations>, <future_work>)."
             },
             {"role": "user", "content": prompt}
         ],
     )
 
-    return enforce_strict_analysis_format(response.choices[0].message.content)
 
 
 def stream_completion(prompt, system_text):

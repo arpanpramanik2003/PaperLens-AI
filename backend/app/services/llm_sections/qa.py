@@ -1,5 +1,7 @@
 import logging
 import re
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 from app.services.model_fallback import (
     DEFAULT_FALLBACK_MODELS,
@@ -20,10 +22,19 @@ QA_FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
 QA_MAX_TOKENS = 900
 
 
-def _sanitize_no_table_output(text: str) -> str:
+class QAResponse(BaseModel):
+    answer: str = Field(description="Structured answer text formatted in clean Markdown (use bullet points for lists, strictly no tables)")
+    citations: List[str] = Field(default_factory=list, description="List of page citations referenced, e.g. ['Page 1', 'Page 3']")
 
+
+def _sanitize_no_table_output(text: str) -> str:
     if not text:
         return text
+
+    # Extract clean answer content if structured XML tag is present
+    answer_match = re.search(r"<answer>(.*?)</answer>", text, flags=re.DOTALL | re.IGNORECASE)
+    if answer_match:
+        text = answer_match.group(1).strip()
 
     lines = text.splitlines()
     table_row_pattern = re.compile(r"^\s*\|.*\|\s*$")
@@ -218,10 +229,37 @@ def _get_last_qa_pair(history):
     return (last_user, last_assistant)
 
 
+def _build_qa_prompt(question: str, history_turns: list[dict], relevant_chunks: list[dict]) -> str:
+    context = "\n\n".join([f"[Page {c['page']}]\n{c['text']}" for c in relevant_chunks])
+    conversation_history = _format_history_for_prompt(history_turns)
+
+    return f"""
+You are an expert research assistant.
+
+Answer the user's question using the provided conversation history and research paper context.
+
+Rules:
+- Wrap your final answer inside explicit <answer>...</answer> XML tags.
+- When asked for the paper title, paper name, authors, or affiliations, analyze the Page 1 context carefully, extract the exact Title and Author names (including affiliations if present), and state them clearly in well-structured markdown.
+- Do NOT say "Inferred:" or claim context is missing if the title or author details appear anywhere in the provided context.
+- Cite page numbers like [Page 1] for explicit claims.
+- Be concise, academic, and conversationally aware.
+- Strictly DO NOT use markdown tables or ASCII tables. Present comparisons as bullet points or numbered lists only.
+- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns from Conversation History to resolve references.
+
+Conversation history:
+{conversation_history or "(No prior turns)"}
+
+Context:
+{context}
+
+Latest question:
+{question}
+"""
+
+
 def answer_question(question, history=None):
     history_turns = _normalize_history(history)
-    is_follow_up = _is_follow_up_question(question)
-    prev_user_q, prev_assistant_a = _get_last_qa_pair(history_turns)
     q_lower = question.lower()
 
     acknowledgement_phrases = {
@@ -269,45 +307,7 @@ def answer_question(question, history=None):
     if not relevant_chunks:
         return "Not mentioned in the paper."
 
-    context = ""
-    for c in relevant_chunks:
-        context += f"[Page {c['page']}]\n{c['text']}\n\n"
-
-    conversation_history = _format_history_for_prompt(history_turns)
-    follow_up_reference = ""
-
-    if is_follow_up and (prev_user_q or prev_assistant_a):
-        follow_up_reference = f"""
-Follow-up reference:
-- Previous user question: {prev_user_q or "(not available)"}
-- Previous assistant answer: {prev_assistant_a or "(not available)"}
-"""
-
-    prompt = f"""
-You are an expert research assistant.
-
-Answer the user's question using the provided conversation history and research paper context.
-
-Rules:
-- When asked for the paper title, paper name, authors, or affiliations, analyze the Page 1 context carefully, extract the exact Title and Author names (including affiliations if present), and state them clearly in well-structured markdown.
-- Do NOT say "Inferred:" or claim context is missing if the title or author details appear anywhere in the provided context.
-- Cite page numbers like [Page 1] for explicit claims.
-- Be concise, academic, and conversationally aware.
-- Strictly DO NOT use markdown tables or ASCII tables.
-- Present comparisons as bullet points or numbered lists only.
-- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve references.
-
-Conversation history:
-{conversation_history or "(No prior turns)"}
-
-{follow_up_reference}
-
-Context:
-{context}
-
-Latest question:
-{question}
-"""
+    prompt = _build_qa_prompt(question, history_turns, relevant_chunks)
 
     response = _create_chat_with_fallback(
         [
@@ -324,8 +324,6 @@ Latest question:
 
 def stream_answer(question, history=None):
     history_turns = _normalize_history(history)
-    is_follow_up = _is_follow_up_question(question)
-    prev_user_q, prev_assistant_a = _get_last_qa_pair(history_turns)
     q_lower = question.lower()
 
     acknowledgement_phrases = {
@@ -378,45 +376,7 @@ def stream_answer(question, history=None):
         yield "Not mentioned in the paper."
         return
 
-    context = ""
-    for c in relevant_chunks:
-        context += f"[Page {c['page']}]\n{c['text']}\n\n"
-
-    conversation_history = _format_history_for_prompt(history_turns)
-    follow_up_reference = ""
-
-    if is_follow_up and (prev_user_q or prev_assistant_a):
-        follow_up_reference = f"""
-Follow-up reference:
-- Previous user question: {prev_user_q or "(not available)"}
-- Previous assistant answer: {prev_assistant_a or "(not available)"}
-"""
-
-    prompt = f"""
-You are an expert research assistant.
-
-Answer the user's question using the provided conversation history and research paper context.
-
-Rules:
-- When asked for the paper title, paper name, authors, or affiliations, analyze the Page 1 context carefully, extract the exact Title and Author names (including affiliations if present), and state them clearly in well-structured markdown.
-- Do NOT say "Inferred:" or claim context is missing if the title or author details appear anywhere in the provided context.
-- Cite page numbers like [Page 1] for explicit claims.
-- Be concise, academic, and conversationally aware.
-- Strictly DO NOT use markdown tables or ASCII tables.
-- Present comparisons as bullet points or numbered lists only.
-- If the latest question is a follow-up (e.g., "are you sure?"), use prior turns to resolve references.
-
-Conversation history:
-{conversation_history or "(No prior turns)"}
-
-{follow_up_reference}
-
-Context:
-{context}
-
-Latest question:
-{question}
-"""
+    prompt = _build_qa_prompt(question, history_turns, relevant_chunks)
 
     stream_messages = [
         {
@@ -447,8 +407,6 @@ def answer_question_with_pgvector(
     from app.services.retrieval import search_pgvector_chunks
 
     history_turns = _normalize_history(history)
-    is_follow_up = _is_follow_up_question(question)
-    prev_user_q, prev_assistant_a = _get_last_qa_pair(history_turns)
     q_lower = question.lower()
 
     acknowledgement_phrases = {
@@ -478,44 +436,7 @@ def answer_question_with_pgvector(
     if not relevant_chunks:
         return "The relevant content was not found in this paper."
 
-    context = "\n\n".join(
-        [f"[Page {c['page']}]\n{c['text']}" for c in relevant_chunks]
-    )
-
-    conversation_history = _format_history_for_prompt(history_turns)
-    follow_up_reference = ""
-
-    if is_follow_up and (prev_user_q or prev_assistant_a):
-        follow_up_reference = f"""
-Follow-up reference:
-- Previous user question: {prev_user_q or "(not available)"}
-- Previous assistant answer: {prev_assistant_a or "(not available)"}
-"""
-
-    prompt = f"""You are an expert research assistant.
-
-Answer the user's question strictly using the provided research paper context.
-
-Rules:
-- When asked for the paper title, paper name, authors, or affiliations, analyze the Page 1 context carefully, extract the exact Title and Author names (including affiliations if present), and state them clearly in well-structured markdown.
-- Do NOT say "Inferred:" or claim context is missing if the title or author details appear anywhere in the provided context.
-- Cite page numbers like [Page 1] for explicit claims.
-- Be concise, academic, and conversationally aware.
-- Strictly DO NOT use markdown tables or ASCII tables.
-- Present comparisons as bullet points or numbered lists only.
-- If the question is a follow-up, use conversation history to resolve references.
-
-Conversation history:
-{conversation_history or "(No prior turns)"}
-
-{follow_up_reference}
-
-Context from paper:
-{context}
-
-Latest question:
-{question}
-"""
+    prompt = _build_qa_prompt(question, history_turns, relevant_chunks)
 
     response = _create_chat_with_fallback(
         [

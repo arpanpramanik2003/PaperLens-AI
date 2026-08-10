@@ -48,15 +48,13 @@ def _sample_evenly(chunks: list[dict], limit: int) -> list[dict]:
 # MAP step: summarize one chunk
 # ---------------------------------------------------------------------------
 
-def map_summarize_chunk(chunk_text: str) -> Optional[str]:
-    """
-    Summarizes a single chunk of text using Groq.
-    Returns summary string or None on failure.
-    """
+def map_summarize_batch(chunk_texts: list[str]) -> Optional[str]:
+    """Summarizes a batch of 2-3 chunks in a single prompt to minimize LLM call overhead."""
+    joined_text = "\n\n---\n\n".join([f"Excerpt {i+1}:\n{text}" for i, text in enumerate(chunk_texts)])
     try:
         response = create_completion_with_fallback(
             llm_client=client,
-            task_name="map_reduce_chunk_summary",
+            task_name="map_reduce_batch_summary",
             primary_model=SUMMARIZATION_PRIMARY_MODEL,
             fallback_models=SUMMARIZATION_FALLBACK_MODELS,
             messages=[
@@ -64,21 +62,21 @@ def map_summarize_chunk(chunk_text: str) -> Optional[str]:
                     "role": "system",
                     "content": (
                         "You are a precise academic summarizer. "
-                        "Summarize the provided research paper excerpt in 3-5 sentences. "
-                        "Preserve key findings, methods, and numbers. Be concise."
+                        "Summarize the provided research paper excerpts into concise, factual section summaries. "
+                        "Preserve key findings, methods, and numerical metrics."
                     ),
                 },
                 {
                     "role": "user",
-                    "content": f"Summarize this excerpt:\n\n{chunk_text}",
+                    "content": f"Summarize these research paper excerpts:\n\n{joined_text}",
                 },
             ],
-            max_tokens=_MAP_MAX_TOKENS,
+            max_tokens=600,
             temperature=0.2,
         )
         return response.choices[0].message.content.strip()
     except Exception as exc:
-        logger.warning("map_summarize_chunk failed: %s", exc)
+        logger.warning("map_summarize_batch failed: %s", exc)
         return None
 
 
@@ -166,13 +164,15 @@ def run_map_reduce_summarization(
         len(sampled),
     )
 
-    # MAP phase (sequential with rate-limit delay to respect Groq free tier)
+    # MAP phase (batched 2 chunks per call to cut API calls from 6 to 3)
+    batch_size = 2
     summaries: list[str] = []
-    for i, chunk in enumerate(sampled):
+    for i in range(0, len(sampled), batch_size):
         if i > 0:
             time.sleep(_MAP_CALL_DELAY_SECS)
 
-        summary = map_summarize_chunk(chunk["text"])
+        batch_texts = [c["text"] for c in sampled[i : i + batch_size]]
+        summary = map_summarize_batch(batch_texts)
         if summary:
             summaries.append(summary)
 

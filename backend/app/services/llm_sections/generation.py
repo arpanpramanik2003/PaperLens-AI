@@ -518,7 +518,7 @@ def generate_citation_recommendations(
 ) -> dict:
 
                 compact_top_cited = []
-                for entry in (top_cited or [])[:35]:
+                for entry in (top_cited or [])[:12]:
                         compact_top_cited.append(
                                 {
                                         "title": entry.get("title"),

@@ -2,6 +2,7 @@ import json
 import logging
 import asyncio
 from typing import Dict, Any, List
+from pydantic import BaseModel, Field
 
 from app.core.database import SessionLocal
 from app.models.agent_task import AgentTask, AgentStep
@@ -17,6 +18,14 @@ from app.services.model_fallback import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class ReActDecision(BaseModel):
+    thought: str = Field(description="Detailed reasoning about user intent, findings so far, and next action")
+    action: str = Field(default="search_papers", description="Selected tool name from registered tools, or 'none' if finished")
+    action_input: Dict[str, Any] = Field(default_factory=dict, description="Dictionary of parameter arguments for the tool action")
+    is_final: bool = Field(default=False, description="Set to true if all research steps are complete")
+    memory_summary: str = Field(default="", description="1-sentence summary of current findings and progress")
 
 AVAILABLE_TOOLS_SCHEMA = [
     {
@@ -95,14 +104,8 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             "   - If user requests a workflow, guide, proposal, how-to, or comprehensive research overview -> call multiple tools ('search_papers', 'generate_problem', 'find_datasets', 'plan_experiment') in logical sequence.\n"
             "3. In each step, inspect Working Memory to pass parameters from earlier tool outputs (e.g. use paper topics found in Step 1 for dataset search in Step 2).\n"
             "4. When all tools necessary to fulfill the request have executed, set \"is_final\": true.\n\n"
-            "Return ONLY a JSON object:\n"
-            "{\n"
-            '  "thought": "Your detailed reasoning about user intent, findings so far, and next action",\n'
-            '  "action": "search_papers",\n'
-            '  "action_input": {"domain": "..."},\n'
-            '  "is_final": false,\n'
-            '  "memory_summary": "1-sentence summary of current findings"\n'
-            "}"
+            f"EXPECTED JSON SCHEMA:\n{json.dumps(ReActDecision.model_json_schema(), indent=2)}\n\n"
+            "Return ONLY valid JSON matching this schema exactly."
         )
 
         step_count = 0
@@ -149,7 +152,8 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                     temperature=0.2,
                 )
                 raw_json = llm_response.choices[0].message.content
-                decision = json.loads(raw_json)
+                validated_decision = ReActDecision.model_validate_json(raw_json)
+                decision = validated_decision.model_dump()
             except Exception as exc:
                 logger.warning("ReAct reasoning fallback at step %s: %s", step_count, exc)
                 decision = _fallback_react_decision(goal, step_count, executed_tools)
@@ -240,12 +244,15 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             _cancelled_tasks.discard(task_id)
             return
 
-        # Critique & Synthesis Phase
+        # Critique & Synthesis Phase (Unified Single Pass)
         trace.emit_event(task_id, {
             "type": "critique_start",
-            "message": "Auditing findings against peer-review citation metrics...",
+            "message": "Auditing findings & synthesizing executive multi-agent proposal...",
         })
-        critique_result = await critique.verify(goal, executed_results)
+
+        from app.services.agents import planner
+        critique_result, final_answer = await planner.synthesize_and_verify(goal, executed_results)
+
         trace.emit_event(task_id, {
             "type": "critique",
             "issues": critique_result.get("issues", []),
@@ -253,14 +260,6 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
             "verdict": critique_result.get("verdict", "Passed with High Confidence"),
             "data": critique_result,
         })
-
-        trace.emit_event(task_id, {
-            "type": "synthesis_start",
-            "message": "Synthesizing executive multi-agent research proposal...",
-        })
-
-        from app.services.agents import planner
-        final_answer = await planner.synthesize(goal, executed_results, critique_result)
 
         task.status = "done"
         db.commit()
