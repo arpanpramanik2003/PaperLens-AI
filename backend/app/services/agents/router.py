@@ -21,11 +21,17 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
     clean_goal = (goal or "").strip()
     lower = clean_goal.lower()
 
-    # Deterministic Fast-Path: Skip LLM call for simple single-intent queries
+    # Deterministic Fast-Path: Skip LLM call for simple strictly SINGLE-INTENT queries
     simple_dataset_keywords = ["dataset", "datasets", "benchmark", "benchmarks", "evaluation metrics"]
     simple_paper_keywords = ["search papers", "literature search", "find papers", "arxiv papers"]
-    
-    if any(k in lower for k in simple_dataset_keywords) and not any(k in lower for k in ["proposal", "workflow", "roadmap", "plan"]):
+    multi_intent_indicators = [
+        "direction", "directions", "unexplored", "gap", "gaps", "problem", "problems",
+        "idea", "ideas", "proposal", "workflow", "roadmap", "plan", "experiment",
+        "identify", "recommend", "find 3", "3 unexplored"
+    ]
+    is_multi_intent = any(k in lower for k in multi_intent_indicators)
+
+    if any(k in lower for k in simple_dataset_keywords) and not is_multi_intent:
         logger.info("Fast-path router selected find_datasets for goal: %s", clean_goal)
         return {
             "selected_tools": [
@@ -38,7 +44,7 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
             "intent_summary": "Fast-path Dataset & Benchmark Router",
         }
 
-    if any(k in lower for k in simple_paper_keywords) and not any(k in lower for k in ["proposal", "workflow", "roadmap", "plan"]):
+    if any(k in lower for k in simple_paper_keywords) and not is_multi_intent:
         logger.info("Fast-path router selected search_papers for goal: %s", clean_goal)
         return {
             "selected_tools": [
@@ -56,16 +62,19 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
 
     system_prompt = (
         "You are an expert AI Research Tool Router.\n"
-        "Your task is to analyze the user's research query and select ONLY the tools from Available Tools "
-        "required to satisfy the user's exact request.\n\n"
+        "Your task is to analyze the user's research query and select ALL tools required to satisfy the user's complete request.\n\n"
         f"Available Tools & Descriptions:\n{available_tools_json}\n\n"
+        "SELECTION RULES:\n"
+        "1. If query asks for literature/background AND research directions/unexplored ideas/gaps -> select BOTH ['search_papers', 'generate_problem']!\n"
+        "2. If query asks for literature AND datasets -> select BOTH ['search_papers', 'find_datasets']!\n"
+        "3. If query asks for a full proposal, plan, or execution roadmap -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment']!\n\n"
         "Return ONLY a JSON object matching this structure:\n"
         "{\n"
         '  "selected_tools": [\n'
         '    {\n'
-        '      "tool": "find_datasets",\n'
-        '      "description": "Recommend SOTA benchmarks and metrics for topic",\n'
-        '      "args": {"topic": "...", "domain": "..."}\n'
+        '      "tool": "search_papers",\n'
+        '      "description": "...",\n'
+        '      "args": {"domain": "...", "topic": "..."}\n'
         '    }\n'
         '  ],\n'
         '  "intent_summary": "Brief summary of query intent"\n'

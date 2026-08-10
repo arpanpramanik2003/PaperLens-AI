@@ -95,6 +95,8 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         router_res = await select_agent_tools(goal, TOOL_REGISTRY)
         selected_tool_names = {t.get("tool") for t in router_res.get("selected_tools", []) if t.get("tool")}
         selected_tool_names.add("search_papers")  # Base capability safety guardrail
+        if any(k in goal.lower() for k in ["direction", "unexplored", "gap", "problem", "idea"]):
+            selected_tool_names.add("generate_problem")
 
         scoped_tools_schema = [t for t in AVAILABLE_TOOLS_SCHEMA if t["name"] in selected_tool_names]
         if not scoped_tools_schema or len(scoped_tools_schema) < 2:
