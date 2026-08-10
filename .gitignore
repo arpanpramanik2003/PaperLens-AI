@@ -1,33 +1,70 @@
-# Python environments
+# =============================================================================
+# PAPERLENS AI - PRODUCTION GITIGNORE
+# =============================================================================
+
+# Python Virtual Environments
 myenv/
 .venv/
 venv/
 env/
-.agents/
-# Python cache
+ENV/
+env.bak/
+venv.bak/
+
+# Python Bytecode & Runtime Cache
+.cache/
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
+*$py.class
+*.so
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 
-# Secrets and local config
+# Environment Variables & Secrets (NEVER commit secrets!)
 .env
-*.env
+.env.*
 !.env.example
+*.pem
+*.key
+*.cert
 
-# Uploads and generated files
+# Local Storage, Database & Temporary Uploads
 uploads/
 backend/uploads/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+logs/
 
-# Frontend build artifacts
+# Benchmark Scripts & Temporary Performance Logs
+benchmark_token_savings.py
+backend/benchmark_token_savings.py
+
+# Frontend Dependencies & Production Build Artifacts
 node_modules/
 frontend/node_modules/
 dist/
 frontend/dist/
+build/
+frontend/build/
+.npm/
+*.tsbuildinfo
 
-# Editors and OS files
+# IDE, Agent Customizations & OS System Files
 .idea/
+.vscode/
+.agents/
+.gemini/
+.antigravity/
 .DS_Store
 Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Test Coverage Reports
+.coverage
+coverage/
+htmlcov/
+.hypothesis/

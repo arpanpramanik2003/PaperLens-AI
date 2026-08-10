@@ -1,0 +1,33 @@
+# =============================================================================
+# BACKEND SPECIFIC GITIGNORE
+# =============================================================================
+
+# Virtual Environments
+myenv/
+.venv/
+venv/
+env/
+
+# Caches & Bytecode
+.cache/
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment Secrets
+.env
+.env.*
+!.env.example
+
+# Uploads, SQLite DBs & Logs
+uploads/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# Benchmark Scripts
+benchmark_token_savings.py
