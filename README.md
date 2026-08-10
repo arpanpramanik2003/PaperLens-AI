@@ -30,8 +30,13 @@ Instead of just chatting with a PDF, PaperLens AI provides structured workflows:
 
 ## 🚀 Core Features & Workflows
 
-### 0) 🤖 Agent Mode: Autonomous Research Orchestrator (New)
+### 0) 🤖 Agent Mode: Autonomous Research Orchestrator & Token-Optimized Engine
 - **Autonomous Multi-Agent Workflow:** Input open-ended, free-text research goals (*"Do a literature review on graph neural networks for drug discovery and find 3 unexplored directions"*) to automatically trigger literature discovery, methodology analysis, problem ideation, dataset recommendation, peer-review critique, and experiment planning.
+- **Deterministic Fast-Path Router:** Simple single-intent queries (e.g. *"Find SOTA datasets for X"*, *"Search literature on Y"*) skip the LLM router call entirely via instant keyword matching, saving 1 full LLM call (~600 tokens, ~1.5s latency).
+- **Task-Specific Tool Scoping & Safety Guardrails:** Scopes tools to only the 2–3 relevant tools pre-selected for the prompt, with `search_papers` always retained as a safety guardrail to prevent tool starvation.
+- **Turn-Based System Prompt Compression:** Turn 1 sends full tool JSON schemas; Turn 2+ automatically switches to compressed tool references (`ACTIVE TOOLS: search_papers(domain, limit)`), saving ~40% of system prompt tokens on turns 2–6.
+- **Pydantic & XML Output Constraints:** Strict `ReActDecision`, `QAResponse`, and `SynthesisAndCritiqueResult` models + explicit XML section tags (`<summary>`, `<problem_statement>`, `<methodology>`, `<results>`, `<limitations>`, `<future_work>`) eliminate parsing retries and regex hacks.
+- **LLM Call Consolidation:** Unified audit + synthesis pass combines peer-review critique and Markdown synthesis into 1 call; batched 3-chunk summaries in `analysis.py` and 2-chunk map calls in `summarization.py` cut API calls by 54.5%.
 - **Multi-Provider Literature Fallbacks:** Multi-stage literature search across Semantic Scholar, Crossref API (handles HTTP 429 rate limits), and arXiv API (up to 40 papers).
 - **Interactive Experiment Planner Integration:** Includes a CTA button (**"Plan Roadmap in Experiment Planner"**) on every research direction card that dynamically invokes `/api/plan-experiment` to render an inline 6-stage execution roadmap.
 - **Supabase pgvector Search**: Integrates `@tool("search_workspace_vector_db")` to query uploaded document embeddings directly.

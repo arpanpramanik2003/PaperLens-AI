@@ -93,6 +93,7 @@ PostgreSQL (Supabase-compatible connection)
 | Citation Intelligence (SSE) | `POST /api/citation-intelligence/stream` | Yes | Writes `activities` | Stable |
 | Citation Recommendations | `POST /api/citation-intelligence/recommendations` | Yes | Writes `activities` | Stable |
 | Citation Discovery | `POST /api/citation-intelligence/discover` | Yes | Writes `activities` | Stable |
+| Agent Mode (Orchestration) | `POST /api/agent/task` | Yes (`/agent`) | Writes `AgentTask` + `AgentStep` in DB | Stable (Token & Call Optimized) |
 
 ---
 

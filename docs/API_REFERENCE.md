@@ -623,6 +623,9 @@ When parsing/size limits are exceeded, endpoints may return 413 with descriptive
 - Auth: Yes (via URL query parameter: `?token=<Clerk JWT>`)
 - Content-Type: `text/event-stream`
 - Description: Streams live SSE events (`plan`, `tool_call`, `tool_result`, `critique`, `synthesis_start`, `final`, `error`) as the agent executes tool calls autonomously.
+- **Fast-Path Router Optimization**: Simple single-intent requests (`"find datasets for X"`, `"search papers on Y"`) bypass the LLM router call entirely via instant keyword matching.
+- **Pydantic Structured Output Enforcement**: All ReAct agent reasoning steps strictly enforce the `ReActDecision` schema (`thought`, `action`, `action_input`, `is_final`, `memory_summary`).
+- **Unified Critique & Synthesis Pass**: Critique verification and report generation are consolidated into a single pass using `SynthesisAndCritiqueResult` (`grounded`, `citation_coverage_score`, `issues`, `strengths`, `verdict`, `synthesis_report`).
 - **SSE `plan` Event**: Emitted immediately after native LLM Tool Routing (`select_agent_tools`):
 ```json
 {
@@ -630,7 +633,7 @@ When parsing/size limits are exceeded, endpoints may return 413 with descriptive
   "steps": [
     { "tool": "plan_experiment", "description": "Generate multi-stage experimental execution roadmap" }
   ],
-  "reason": "LLM Dynamic Router: User is seeking a plan or experimental roadmap"
+  "reason": "Fast-path Dataset & Benchmark Router"
 }
 ```
 
