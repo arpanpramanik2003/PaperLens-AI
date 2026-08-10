@@ -80,16 +80,25 @@ async def test_auth(user_id: str = Depends(get_current_user)):
 @app.get("/api/dashboard")
 async def get_dashboard(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
     papers_count = db.query(Document).filter(Document.user_id == user_id, Document.status == "Analyzed").count()
-    experiments_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "plan_experiment").count()
-    ideas_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "generate_problems").count()
-    gaps_count = db.query(Activity).filter(Activity.user_id == user_id, Activity.action_type == "detect_gaps").count()
+    experiments_count = db.query(Activity).filter(
+        Activity.user_id == user_id,
+        Activity.action_type.in_(["plan_experiment", "experiment_planner"])
+    ).count()
+    ideas_count = db.query(Activity).filter(
+        Activity.user_id == user_id,
+        Activity.action_type.in_(["generate_problems", "generate_problem", "problem_generator"])
+    ).count()
+    gaps_count = db.query(Activity).filter(
+        Activity.user_id == user_id,
+        Activity.action_type.in_(["detect_gaps", "gap_detector"])
+    ).count()
     dataset_benchmark_count = db.query(Activity).filter(
         Activity.user_id == user_id,
-        Activity.action_type.in_(["find_datasets_benchmarks", "dataset_benchmark_finder"])
+        Activity.action_type.in_(["find_datasets_benchmarks", "dataset_benchmark_finder", "find_datasets"])
     ).count()
     citation_count = db.query(Activity).filter(
         Activity.user_id == user_id,
-        Activity.action_type.in_(["citation_intelligence", "citation_discovery"])
+        Activity.action_type.in_(["citation_intelligence", "citation_discovery", "citation_recommendations"])
     ).count()
     
     recent_docs = db.query(Document).filter(Document.user_id == user_id).order_by(Document.created_at.desc()).limit(5).all()
