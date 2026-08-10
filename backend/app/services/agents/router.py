@@ -18,36 +18,61 @@ AVAILABLE_TOOL_DESCRIPTIONS = {
 
 async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[str, Any]:
     """Dynamically analyze user query with an LLM router to select exact tool calls and parameters."""
+    clean_goal = (goal or "").strip()
+    lower = clean_goal.lower()
+
+    # Deterministic Fast-Path: Skip LLM call for simple single-intent queries
+    simple_dataset_keywords = ["dataset", "datasets", "benchmark", "benchmarks", "evaluation metrics"]
+    simple_paper_keywords = ["search papers", "literature search", "find papers", "arxiv papers"]
+    
+    if any(k in lower for k in simple_dataset_keywords) and not any(k in lower for k in ["proposal", "workflow", "roadmap", "plan"]):
+        logger.info("Fast-path router selected find_datasets for goal: %s", clean_goal)
+        return {
+            "selected_tools": [
+                {
+                    "tool": "find_datasets",
+                    "description": "Recommend SOTA datasets and benchmarks",
+                    "args": {"topic": clean_goal, "domain": clean_goal}
+                }
+            ],
+            "intent_summary": "Fast-path Dataset & Benchmark Router",
+        }
+
+    if any(k in lower for k in simple_paper_keywords) and not any(k in lower for k in ["proposal", "workflow", "roadmap", "plan"]):
+        logger.info("Fast-path router selected search_papers for goal: %s", clean_goal)
+        return {
+            "selected_tools": [
+                {
+                    "tool": "search_papers",
+                    "description": "Search literature repository",
+                    "args": {"domain": clean_goal, "topic": clean_goal}
+                }
+            ],
+            "intent_summary": "Fast-path Literature Search Router",
+        }
+
+    # Dynamic LLM Router for multi-intent or complex queries
     available_tools_json = json.dumps(AVAILABLE_TOOL_DESCRIPTIONS, indent=2)
 
     system_prompt = (
         "You are an expert AI Research Tool Router.\n"
-        "Your task is to analyze the user's research query and select ONLY the tools from the Available Tools list "
-        "that are required to satisfy the user's exact request.\n\n"
+        "Your task is to analyze the user's research query and select ONLY the tools from Available Tools "
+        "required to satisfy the user's exact request.\n\n"
         f"Available Tools & Descriptions:\n{available_tools_json}\n\n"
-        "Selection Guidance Rules:\n"
-        "1. If user asks for literature search, background, papers, or literature review -> select ONLY ['search_papers'].\n"
-        "2. If user asks for datasets, benchmarks, evaluation metrics, or baselines -> select ONLY ['find_datasets'].\n"
-        "3. If user asks for a plan, experimental roadmap, execution plan, or direction -> select ['generate_problem', 'plan_experiment'] or ['plan_experiment'].\n"
-        "4. If user asks for research gaps, limitations, or unexplored challenges -> select ['search_papers', 'detect_gaps'].\n"
-        "5. If user asks for a full end-to-end research proposal or comprehensive investigation -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment'].\n\n"
-        "Return ONLY a JSON object with this structure:\n"
+        "Return ONLY a JSON object matching this structure:\n"
         "{\n"
         '  "selected_tools": [\n'
         '    {\n'
         '      "tool": "find_datasets",\n'
         '      "description": "Recommend SOTA benchmarks and metrics for topic",\n'
-        '      "args": {\n'
-        '        "topic": "Brain Tumor Classification",\n'
-        '        "domain": "Brain Tumor Classification"\n'
-        '      }\n'
+        '      "args": {"topic": "...", "domain": "..."}\n'
         '    }\n'
         '  ],\n'
         '  "intent_summary": "Brief summary of query intent"\n'
         "}"
     )
 
-    user_prompt = f"User Research Query: {goal}"
+    user_prompt = f"User Research Query: {clean_goal}"
 
     try:
         response = create_completion_with_fallback(
@@ -72,14 +97,14 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
             if t_name in tools_registry or t_name in AVAILABLE_TOOL_DESCRIPTIONS:
                 item_args = item.get("args") or {}
                 if "domain" not in item_args:
-                    item_args["domain"] = goal.strip()
+                    item_args["domain"] = clean_goal
                 if "topic" not in item_args:
-                    item_args["topic"] = goal.strip()
+                    item_args["topic"] = clean_goal
                 item["args"] = item_args
                 valid_tools.append(item)
 
         if not valid_tools:
-            valid_tools = _fallback_tool_selection(goal)
+            valid_tools = _fallback_tool_selection(clean_goal)
 
         return {
             "selected_tools": valid_tools,
@@ -89,7 +114,7 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
     except Exception as exc:
         logger.warning("LLM Tool selection failed: %s. Using default fallback.", exc)
         return {
-            "selected_tools": _fallback_tool_selection(goal),
+            "selected_tools": _fallback_tool_selection(clean_goal),
             "intent_summary": "Fallback tool selection",
         }
 

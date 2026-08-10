@@ -90,21 +90,37 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         executed_results: List[Dict[str, Any]] = []
         executed_tools: set = set()
 
-        system_prompt = (
+        # Tool Scoping: Pre-filter tools using router + safety guardrails
+        from app.services.agents.router import select_agent_tools
+        router_res = await select_agent_tools(goal, TOOL_REGISTRY)
+        selected_tool_names = {t.get("tool") for t in router_res.get("selected_tools", []) if t.get("tool")}
+        selected_tool_names.add("search_papers")  # Base capability safety guardrail
+
+        scoped_tools_schema = [t for t in AVAILABLE_TOOLS_SCHEMA if t["name"] in selected_tool_names]
+        if not scoped_tools_schema or len(scoped_tools_schema) < 2:
+            scoped_tools_schema = AVAILABLE_TOOLS_SCHEMA
+
+        compact_tool_refs = ", ".join([f"{t['name']}({', '.join(t['parameters'].keys())})" for t in scoped_tools_schema])
+
+        # Turn 1: Detailed schema
+        system_prompt_turn1 = (
             "You are Paperlens Autonomous ReAct AI Research Agent.\n"
             "Your objective is to analyze the user's research request and select the optimal sequence of tools to satisfy it completely.\n\n"
-            f"REGISTERED TOOLS & CAPABILITIES:\n{json.dumps(AVAILABLE_TOOLS_SCHEMA, indent=2)}\n\n"
+            f"SCOPED TOOLS & CAPABILITIES:\n{json.dumps(scoped_tools_schema, indent=2)}\n\n"
             "AUTONOMOUS REASONING PROTOCOL:\n"
-            "1. Carefully analyze the user's research request intent.\n"
-            "2. Decide which tools from REGISTERED TOOLS are required to satisfy the goal:\n"
-            "   - If user needs academic papers, literature, or domain background -> call 'search_papers'.\n"
-            "   - If user needs datasets, benchmark suites, or evaluation metrics -> call 'find_datasets'.\n"
-            "   - If user needs novel research directions, problem statements, or unexplored gaps -> call 'generate_problem'.\n"
-            "   - If user needs an experimental roadmap, implementation steps, or execution guide -> call 'plan_experiment'.\n"
-            "   - If user requests a workflow, guide, proposal, how-to, or comprehensive research overview -> call multiple tools ('search_papers', 'generate_problem', 'find_datasets', 'plan_experiment') in logical sequence.\n"
-            "3. In each step, inspect Working Memory to pass parameters from earlier tool outputs (e.g. use paper topics found in Step 1 for dataset search in Step 2).\n"
-            "4. When all tools necessary to fulfill the request have executed, set \"is_final\": true.\n\n"
+            "1. Carefully analyze user research intent.\n"
+            "2. Select required tools in logical sequence. In each step, pass parameters from earlier tool outputs.\n"
+            "3. When all tools necessary to fulfill the request have executed, set \"is_final\": true.\n\n"
             f"EXPECTED JSON SCHEMA:\n{json.dumps(ReActDecision.model_json_schema(), indent=2)}\n\n"
+            "Return ONLY valid JSON matching this schema exactly."
+        )
+
+        # Turn 2+: Compressed reference schema
+        system_prompt_turn_n = (
+            "You are Paperlens Autonomous ReAct AI Research Agent.\n"
+            f"ACTIVE SCOPED TOOLS: {compact_tool_refs}\n\n"
+            "Inspect Working Memory History, select next tool action, or set \"is_final\": true if finished.\n"
+            f"EXPECTED JSON SCHEMA: {json.dumps(ReActDecision.model_json_schema())}\n"
             "Return ONLY valid JSON matching this schema exactly."
         )
 
@@ -124,6 +140,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 return
 
             step_count += 1
+            active_system_prompt = system_prompt_turn1 if step_count == 1 else system_prompt_turn_n
 
             # Prepare prompt context
             user_prompt = f"User Research Goal: {goal}\nStep #{step_count} of Max {max_steps}.\n"
@@ -145,7 +162,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                     primary_model=FAST_ROUTER_MODEL,
                     fallback_models=DEFAULT_FALLBACK_MODELS,
                     messages=[
-                        {"role": "system", "content": system_prompt},
+                        {"role": "system", "content": active_system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
