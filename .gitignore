@@ -10,6 +10,8 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.vscode/
+.claude
 
 # Python Bytecode & Runtime Cache
 .cache/
