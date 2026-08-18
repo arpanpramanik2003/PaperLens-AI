@@ -21,17 +21,32 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
     clean_goal = (goal or "").strip()
     lower = clean_goal.lower()
 
-    # Deterministic Fast-Path: Skip LLM call for simple strictly SINGLE-INTENT queries
-    simple_dataset_keywords = ["dataset", "datasets", "benchmark", "benchmarks", "evaluation metrics"]
-    simple_paper_keywords = ["search papers", "literature search", "find papers", "arxiv papers"]
-    multi_intent_indicators = [
-        "direction", "directions", "unexplored", "gap", "gaps", "problem", "problems",
-        "idea", "ideas", "proposal", "workflow", "roadmap", "plan", "experiment",
-        "identify", "recommend", "find 3", "3 unexplored"
-    ]
-    is_multi_intent = any(k in lower for k in multi_intent_indicators)
+    # Deterministic Fast-Path: Skip LLM call for explicit combination patterns
+    has_dataset = any(k in lower for k in ["dataset", "datasets", "benchmark", "benchmarks", "evaluation metrics"])
+    has_problem = any(k in lower for k in ["problem statement", "problem", "problems", "direction", "directions", "unexplored", "gap", "gaps"])
+    has_papers = any(k in lower for k in ["search papers", "literature search", "find papers", "arxiv papers", "literature"])
+    has_plan = any(k in lower for k in ["roadmap", "experiment plan", "full proposal", "execution plan"])
 
-    if any(k in lower for k in simple_dataset_keywords) and not is_multi_intent:
+    # Problem Statement + Dataset combination fast-path
+    if has_problem and has_dataset and not has_papers and not has_plan:
+        logger.info("Fast-path router selected generate_problem + find_datasets for goal: %s", clean_goal)
+        return {
+            "selected_tools": [
+                {
+                    "tool": "generate_problem",
+                    "description": "Formulate problem statements and research directions",
+                    "args": {"domain": clean_goal, "topic": clean_goal}
+                },
+                {
+                    "tool": "find_datasets",
+                    "description": "Recommend SOTA datasets and benchmarks",
+                    "args": {"topic": clean_goal, "domain": clean_goal}
+                }
+            ],
+            "intent_summary": "Fast-path Problem Statement + Dataset Router",
+        }
+
+    if has_dataset and not (has_problem or has_papers or has_plan):
         logger.info("Fast-path router selected find_datasets for goal: %s", clean_goal)
         return {
             "selected_tools": [
@@ -44,7 +59,7 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
             "intent_summary": "Fast-path Dataset & Benchmark Router",
         }
 
-    if any(k in lower for k in simple_paper_keywords) and not is_multi_intent:
+    if has_papers and not (has_problem or has_dataset or has_plan):
         logger.info("Fast-path router selected search_papers for goal: %s", clean_goal)
         return {
             "selected_tools": [
@@ -62,17 +77,19 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
 
     system_prompt = (
         "You are an expert AI Research Tool Router.\n"
-        "Your task is to analyze the user's research query and select ALL tools required to satisfy the user's complete request.\n\n"
+        "Your task is to analyze the user's research query and select ONLY the tools specifically required to satisfy the user's request.\n\n"
         f"Available Tools & Descriptions:\n{available_tools_json}\n\n"
         "SELECTION RULES:\n"
-        "1. If query asks for literature/background AND research directions/unexplored ideas/gaps -> select BOTH ['search_papers', 'generate_problem']!\n"
-        "2. If query asks for literature AND datasets -> select BOTH ['search_papers', 'find_datasets']!\n"
-        "3. If query asks for a full proposal, plan, or execution roadmap -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment']!\n\n"
+        "1. If query asks ONLY for datasets or benchmarks -> select ONLY ['find_datasets']!\n"
+        "2. If query asks for problem statements, research directions, or unexplored ideas AND datasets -> select BOTH ['generate_problem', 'find_datasets']!\n"
+        "3. If query asks for literature/background AND research directions/unexplored ideas/gaps -> select BOTH ['search_papers', 'generate_problem']!\n"
+        "4. If query asks for literature AND datasets -> select BOTH ['search_papers', 'find_datasets']!\n"
+        "5. If query asks for a full proposal, plan, or end-to-end execution roadmap -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment']!\n\n"
         "Return ONLY a JSON object matching this structure:\n"
         "{\n"
         '  "selected_tools": [\n'
         '    {\n'
-        '      "tool": "search_papers",\n'
+        '      "tool": "generate_problem",\n'
         '      "description": "...",\n'
         '      "args": {"domain": "...", "topic": "..."}\n'
         '    }\n'

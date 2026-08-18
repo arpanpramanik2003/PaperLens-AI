@@ -424,6 +424,9 @@ Paper Summary:
 
 def generate_dataset_benchmark_finder(project_title: str, project_plan: str) -> dict:
 
+        clean_title = (project_title or "").strip()[:300]
+        clean_plan = (project_plan or "").strip()[:2500]
+
         prompt = f"""
 You are an expert AI research advisor.
 
@@ -487,10 +490,10 @@ Rules:
 - No markdown, no prose outside JSON.
 
 Project title:
-{project_title}
+{clean_title}
 
 Project plan:
-{project_plan}
+{clean_plan}
 """
 
         response = create_completion_with_fallback(
@@ -502,7 +505,8 @@ Project plan:
                 {"role": "system", "content": "You return strictly valid JSON for AI project dataset and benchmark recommendations."},
                 {"role": "user", "content": prompt}
             ],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            max_tokens=1500,
         )
 
         return json.loads(response.choices[0].message.content)

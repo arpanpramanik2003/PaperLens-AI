@@ -10,8 +10,8 @@ from .client import client
 
 
 logger = logging.getLogger(__name__)
-PAPER_ANALYZER_PRIMARY_MODEL = "llama-3.3-70b-versatile"
-PAPER_ANALYZER_FALLBACK_MODELS = "llama-3.1-8b-instant,llama3-70b-8192,llama3-8b-8192"
+PAPER_ANALYZER_PRIMARY_MODEL = "openai/gpt-oss-120b"
+PAPER_ANALYZER_FALLBACK_MODELS = "openai/gpt-oss-20b,qwen/qwen3.6-27b"
 PAPER_ANALYZER_MAX_TOKENS = 1200
 PAPER_ANALYZER_SUMMARY_MAX_TOKENS = 320
 

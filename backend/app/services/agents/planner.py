@@ -82,14 +82,14 @@ def compact_results_for_llm(results: List[Dict[str, Any]]) -> List[Dict[str, Any
             if "papers" in raw_res:
                 papers = raw_res.get("papers") or []
                 compact_papers = []
-                for p in papers[:6]:
+                for p in papers[:5]:
                     if isinstance(p, dict):
                         abstract = p.get("abstract") or p.get("summary") or ""
                         compact_papers.append({
                             "title": p.get("title"),
                             "year": p.get("year"),
                             "authors": (p.get("authors") or [])[:3],
-                            "abstract": abstract[:250] + "..." if len(abstract) > 250 else abstract,
+                            "abstract": abstract[:180] + "..." if len(abstract) > 180 else abstract,
                         })
                 compact_item["result"] = {
                     "total_found": raw_res.get("total_found", len(papers)),
@@ -98,7 +98,7 @@ def compact_results_for_llm(results: List[Dict[str, Any]]) -> List[Dict[str, Any
             elif "gaps" in raw_res:
                 gaps = raw_res.get("gaps") or []
                 compact_item["result"] = {
-                    "gaps": [g if isinstance(g, str) else str(g)[:200] for g in gaps[:5]]
+                    "gaps": [g if isinstance(g, str) else str(g)[:150] for g in gaps[:4]]
                 }
             elif "problems" in raw_res or "ideas" in raw_res:
                 items = raw_res.get("problems") or raw_res.get("ideas") or []
@@ -114,15 +114,15 @@ def compact_results_for_llm(results: List[Dict[str, Any]]) -> List[Dict[str, Any
                             "type": d.get("type", "") if isinstance(d, dict) else "",
                             "metrics": d.get("metrics", "") if isinstance(d, dict) else "",
                         }
-                        for d in ds[:5]
+                        for d in ds[:4]
                     ]
                 }
             else:
                 res_str = json.dumps(raw_res)
-                compact_item["result"] = res_str[:600] + "..." if len(res_str) > 600 else raw_res
+                compact_item["result"] = res_str[:400] + "..." if len(res_str) > 400 else raw_res
         else:
             res_str = str(raw_res)
-            compact_item["result"] = res_str[:600] + "..." if len(res_str) > 600 else raw_res
+            compact_item["result"] = res_str[:400] + "..." if len(res_str) > 400 else raw_res
 
         compacted.append(compact_item)
     return compacted

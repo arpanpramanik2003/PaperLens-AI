@@ -90,16 +90,15 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         executed_results: List[Dict[str, Any]] = []
         executed_tools: set = set()
 
-        # Tool Scoping: Pre-filter tools using router + safety guardrails
+        # Tool Scoping: Pre-filter tools strictly using router selected tools
         from app.services.agents.router import select_agent_tools
         router_res = await select_agent_tools(goal, TOOL_REGISTRY)
         selected_tool_names = {t.get("tool") for t in router_res.get("selected_tools", []) if t.get("tool")}
-        selected_tool_names.add("search_papers")  # Base capability safety guardrail
-        if any(k in goal.lower() for k in ["direction", "unexplored", "gap", "problem", "idea"]):
-            selected_tool_names.add("generate_problem")
+        if not selected_tool_names:
+            selected_tool_names = {"search_papers"}
 
         scoped_tools_schema = [t for t in AVAILABLE_TOOLS_SCHEMA if t["name"] in selected_tool_names]
-        if not scoped_tools_schema or len(scoped_tools_schema) < 2:
+        if not scoped_tools_schema:
             scoped_tools_schema = AVAILABLE_TOOLS_SCHEMA
 
         compact_tool_refs = ", ".join([f"{t['name']}({', '.join(t['parameters'].keys())})" for t in scoped_tools_schema])
@@ -130,7 +129,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         )
 
         step_count = 0
-        max_steps = 6
+        max_steps = min(6, max(2, len(selected_tool_names) + 1))
 
         while step_count < max_steps:
             if task_id in _cancelled_tasks:
@@ -154,7 +153,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                     {
                         "step": idx + 1,
                         "tool": item["tool"],
-                        "summary": summarize_result(item["result"]),
+                        "summary": str(summarize_result(item["result"]))[:150],
                     }
                     for idx, item in enumerate(executed_results)
                 ]
@@ -178,7 +177,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 decision = validated_decision.model_dump()
             except Exception as exc:
                 logger.warning("ReAct reasoning fallback at step %s: %s", step_count, exc)
-                decision = _fallback_react_decision(goal, step_count, executed_tools)
+                decision = _fallback_react_decision(goal, step_count, executed_tools, selected_tool_names)
 
             thought = decision.get("thought", f"Analyzing step #{step_count} requirements...")
             action_tool = decision.get("action", "search_papers")
@@ -195,7 +194,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 "is_final": is_final,
             })
 
-            if is_final or action_tool == "none" or step_count >= max_steps:
+            if is_final or action_tool == "none":
                 logger.info("ReAct agent reached final state at step %s", step_count)
                 break
 
@@ -260,6 +259,14 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
                 "active_memory_summary": f"Collected findings from {len(executed_results)} action cycles.",
             })
 
+            # Early exit if all target tools selected by router have completed
+            if selected_tool_names.issubset(executed_tools):
+                logger.info("All selected target tools (%s) executed. Completing ReAct loop.", selected_tool_names)
+                break
+
+            # Token Pacing Delay between agent reasoning cycles to prevent Groq TPM limit spikes
+            await asyncio.sleep(1.5)
+
         if task_id in _cancelled_tasks:
             task.status = "cancelled"
             db.commit()
@@ -310,9 +317,11 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         db.close()
 
 
-def _fallback_react_decision(goal: str, step: int, executed: set) -> Dict[str, Any]:
-    """Autonomous ReAct step decision fallback using un-executed tools in logical pipeline sequence."""
-    pipeline = ["search_papers", "generate_problem", "find_datasets", "plan_experiment"]
+def _fallback_react_decision(goal: str, step: int, executed: set, target_tools: set | None = None) -> Dict[str, Any]:
+    """Autonomous ReAct step decision fallback using un-executed tools from scoped target tools."""
+    pipeline = ["find_datasets", "search_papers", "generate_problem", "plan_experiment"]
+    if target_tools:
+        pipeline = [t for t in pipeline if t in target_tools]
 
     for tool_name in pipeline:
         if tool_name not in executed:
@@ -332,7 +341,7 @@ def _fallback_react_decision(goal: str, step: int, executed: set) -> Dict[str, A
             }
 
     return {
-        "thought": "All research tool steps completed. Proceeding to final synthesis.",
+        "thought": "All targeted research tools completed. Proceeding to final synthesis.",
         "action": "none",
         "action_input": {},
         "is_final": True,
