@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { Search, LayoutDashboard, FileText, FlaskConical, Lightbulb, ScanSearch, Database, BarChart3, Settings, LogOut, Menu, X, Sun, Moon, User, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { UserButton, SignOutButton, SignedIn, SignedOut, SignInButton, useAuth } from "@clerk/clerk-react";
@@ -341,13 +342,31 @@ export default function DashboardLayout() {
 
           <div className="flex items-center gap-3">
             <Link to="/agent">
-              <Button
-                size="sm"
-                className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-medium text-xs shadow-md shadow-purple-500/20 border border-purple-400/30 flex items-center gap-1.5 transition-all hover:scale-105"
+              <motion.div
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                className="relative group p-[1px] rounded-xl overflow-hidden shadow-md shadow-emerald-950/20"
               >
-                <Sparkles className="w-3.5 h-3.5 text-purple-200 animate-pulse" />
-                <span>Agent Mode</span>
-              </Button>
+                {/* Continuous Spinning Border Beam */}
+                <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,#10b981_0%,#3b82f6_50%,#10b981_100%)] animate-[spin_4s_linear_infinite] opacity-80 group-hover:opacity-100 transition-opacity" />
+                
+                {/* Dark Glass Inner Pill */}
+                <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-[11px] bg-zinc-950/90 backdrop-blur-xl transition-all group-hover:bg-zinc-900/90">
+                  {/* Live Radar Pulse Dot + Icon */}
+                  <div className="relative flex items-center justify-center">
+                    <span className="absolute -inset-0.5 rounded-full bg-emerald-400/40 animate-ping" />
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
+                  </div>
+
+                  <span className="bg-gradient-to-r from-zinc-100 via-emerald-200 to-teal-300 bg-clip-text text-transparent font-bold text-xs tracking-wide">
+                    Agent Mode
+                  </span>
+
+                  <span className="px-1.5 py-0.2 text-[9px] font-mono font-extrabold uppercase rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 tracking-wider">
+                    PRO
+                  </span>
+                </div>
+              </motion.div>
             </Link>
 
             <div className="relative hidden md:block" ref={searchContainerRef}>
