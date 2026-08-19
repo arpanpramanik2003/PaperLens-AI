@@ -59,7 +59,7 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
         </Badge>
       </div>
 
-      {/* Gradient Progress Bar */}
+      {/* Functional Progress Bar */}
       <div className="space-y-2">
         <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
           <span className="flex items-center gap-1.5 font-semibold">
@@ -79,32 +79,32 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
           </span>
           <span>Step {currentStepIndex} of {steps.length}</span>
         </div>
-        <div className="w-full bg-secondary/60 rounded-full h-3 overflow-hidden border border-border/40 p-0.5 shadow-inner">
+        <div className="w-full bg-secondary/60 rounded-full h-2 overflow-hidden border border-border/40 p-0.5">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 h-full rounded-full transition-all duration-500 ease-out shadow-md"
+            className="bg-indigo-500 h-full rounded-full transition-all duration-500 ease-out"
           />
         </div>
       </div>
 
       {/* Live ReAct Working Memory Scratchpad */}
-      <div className="p-4 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent space-y-2.5 shadow-sm">
+      <div className="p-4 rounded-2xl border border-border/70 bg-secondary/30 space-y-2.5 shadow-sm">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono uppercase tracking-wider font-bold text-indigo-400 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
             Agent Working Memory Scratchpad:
           </span>
-          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-semibold">
-            Turn-Based Compressed State
+          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-secondary text-foreground/80 border border-border/60 font-semibold">
+            Structured Context State
           </span>
         </div>
         <p className="text-xs md:text-sm text-foreground/90 font-medium leading-relaxed italic">
           "{latestThought || (steps.length === 0 ? "Direct chat session active. No academic tools required." : "Reasoning about research objective...")}"
         </p>
         {memorySummary && (
-          <p className="text-[11px] font-mono text-muted-foreground pt-2 border-t border-indigo-500/20">
+          <p className="text-[11px] font-mono text-muted-foreground pt-2 border-t border-border/40">
             Memory Status: {memorySummary}
           </p>
         )}

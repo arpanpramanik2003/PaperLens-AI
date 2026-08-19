@@ -24,6 +24,9 @@ import {
   UploadCloud,
   X,
   RefreshCw,
+  Layers,
+  Code2,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +38,8 @@ import remarkGfm from "remark-gfm";
 
 import { AgentHeaderBanner } from "@/components/agent/AgentHeaderBanner";
 import { AgentStepperView, StepItem } from "@/components/agent/AgentStepperView";
+import { AgentInlineTrace, TraceData, ToolReceipt } from "@/components/agent/AgentInlineTrace";
+import { CardProvenanceBadge } from "@/components/agent/CardProvenanceBadge";
 import { LiteratureReviewCard } from "@/components/agent/LiteratureReviewCard";
 import { ProposedDirectionsCard } from "@/components/agent/ProposedDirectionsCard";
 import { ExperimentPlanCard } from "@/components/agent/ExperimentPlanCard";
@@ -97,10 +102,11 @@ interface EventStep {
 interface ChatMessage {
   id: string;
   sender: "user" | "agent";
-  text: string;
+  text?: string;
   timestamp: string;
   paperInfo?: { filename: string; pages: number };
   task_id?: string;
+  trace?: TraceData;
 }
 
 const renderTextOrObject = (val: any): string => {
@@ -135,15 +141,6 @@ const TOOL_META: Record<string, { name: string; desc: string; icon: any }> = {
   plan_experiment: { name: "Experimental Roadmap Design", desc: "Designing multi-stage experimental execution roadmap", icon: FlaskConical },
 };
 
-const RESEARCH_STEPS: StepItem[] = [
-  { id: 1, name: "Literature Repository Search", desc: "Searching global paper repositories & workspace index", icon: Search },
-  { id: 2, name: "Methodology & Insights Analysis", desc: "Extracting paper abstractions & technical insights", icon: BookOpen },
-  { id: 3, name: "Novel Research Directions", desc: "Formulating research directions & core bottlenecks", icon: Target },
-  { id: 4, name: "Dataset & Benchmark Selection", desc: "Evaluating SOTA datasets & metrics", icon: Database },
-  { id: 5, name: "Peer-Review Self-Critique", desc: "Verifying claims & citation coverage against sources", icon: ShieldCheck },
-  { id: 6, name: "Report Synthesis", desc: "Synthesizing executive literature review proposal", icon: FileText },
-];
-
 const PROMPT_SUGGESTIONS = [
   "Find out research gaps and limitations in my uploaded paper",
   "Formulate novel problem statements and research directions for Breast cancer detection",
@@ -156,7 +153,6 @@ export default function AgentMode() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  // Chatbot State
   // Multi-Turn Session State
   const [sessionId, setSessionId] = useState<string>(() => {
     return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}`;
@@ -167,7 +163,7 @@ export default function AgentMode() {
     {
       id: "welcome-1",
       sender: "agent",
-      text: "Welcome to **PaperLens Continuous Autonomous Agent Workspace**!\n\nYou can chat with me, ask complex research questions, or attach a PDF paper to detect research gaps and generate novel solution roadmaps.",
+      text: "Welcome to **PaperLens Autonomous Agent Workbench**!\n\nAsk research questions, compare datasets, design experimental roadmaps, or attach a PDF paper to detect unexplored research gaps.",
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);
@@ -180,19 +176,24 @@ export default function AgentMode() {
   const [isRunning, setIsRunning] = useState(false);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [events, setEvents] = useState<EventStep[]>([]);
-  const [plannedSteps, setPlannedSteps] = useState<any[]>([]);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [dynamicSteps, setDynamicSteps] = useState<StepItem[]>([]);
   const [finalAnswer, setFinalAnswer] = useState<string | null>(null);
   const [resultsData, setResultsData] = useState<any[]>([]);
   const [critiqueData, setCritiqueData] = useState<any | null>(null);
   const [latestThought, setLatestThought] = useState<string | null>(null);
   const [memorySummary, setMemorySummary] = useState<string | null>(null);
-  const [dynamicSteps, setDynamicSteps] = useState<StepItem[]>([]);
   const [activeExecutingTool, setActiveExecutingTool] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"cards" | "stepper" | "raw">("cards");
+  const [activeTab, setActiveTab] = useState<"artifacts" | "report" | "trace" | "json">("artifacts");
   const [copied, setCopied] = useState(false);
+  const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
+
+  // Paper Search / Filter State for Literature Review Card
+  const [paperSearchQuery, setPaperSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
+  const [selectedYear, setSelectedYear] = useState<string>("all");
 
   const sseRef = useRef<EventSource | null>(null);
+  const taskStartTimeRef = useRef<number>(0);
 
   const handleNewSession = () => {
     if (isRunning) return;
@@ -211,9 +212,7 @@ export default function AgentMode() {
       },
     ]);
     setEvents([]);
-    setPlannedSteps([]);
     setDynamicSteps([]);
-    setCurrentStepIndex(0);
     setFinalAnswer(null);
     setResultsData([]);
     setCritiqueData(null);
@@ -233,11 +232,6 @@ export default function AgentMode() {
     };
   }, []);
 
-  const activeResearchSteps = useMemo<StepItem[]>(() => {
-    return dynamicSteps;
-  }, [dynamicSteps]);
-
-  // Upload Paper PDF Handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -276,7 +270,6 @@ export default function AgentMode() {
 
       toast.success(`Paper '${data.filename}' indexed for Agent Mode!`, { id: "upload-paper" });
 
-      // Add system chat message for paper upload
       setChatMessages((prev) => [
         ...prev,
         {
@@ -295,7 +288,6 @@ export default function AgentMode() {
     }
   };
 
-  // Start Agent Task Handler
   const handleSendMessage = async (promptGoal?: string) => {
     const textGoal = promptGoal || inputQuery;
     if (!textGoal.trim()) {
@@ -304,6 +296,10 @@ export default function AgentMode() {
     }
 
     const userMsgId = `user-${Date.now()}`;
+    const agentMsgId = `agent-${Date.now() + 1}`;
+    const startTime = Date.now();
+    taskStartTimeRef.current = startTime;
+
     const userMsg: ChatMessage = {
       id: userMsgId,
       sender: "user",
@@ -311,27 +307,38 @@ export default function AgentMode() {
       timestamp: new Date().toLocaleTimeString(),
     };
 
-    // Prepare conversation history (last 4 turns) before appending the current message
+    const initialAgentMsg: ChatMessage = {
+      id: agentMsgId,
+      sender: "agent",
+      text: "",
+      timestamp: new Date().toLocaleTimeString(),
+      trace: {
+        thoughts: [],
+        activeThought: "Analyzing user intent and selecting optimal research tools...",
+        receipts: [],
+        isExecuting: true,
+        startTime,
+      },
+    };
+
     const priorHistory = chatMessages.slice(-4).map((m) => ({
       role: m.sender,
-      text: m.text,
+      text: m.text || "",
     }));
 
-    setChatMessages((prev) => [...prev, userMsg]);
+    setChatMessages((prev) => [...prev, userMsg, initialAgentMsg]);
     setInputQuery("");
     setIsRunning(true);
 
     setEvents([]);
-    setPlannedSteps([]);
     setDynamicSteps([]);
-    setCurrentStepIndex(1);
     setFinalAnswer(null);
     setResultsData([]);
     setCritiqueData(null);
     setLatestThought(null);
     setMemorySummary(null);
     setActiveExecutingTool(null);
-    setActiveTab("cards");
+    setActiveTab("artifacts");
 
     try {
       const token = await getToken();
@@ -357,14 +364,14 @@ export default function AgentMode() {
       const newTaskId = data.task_id;
       setTaskId(newTaskId);
 
-      connectSSE(newTaskId, token);
+      connectSSE(newTaskId, agentMsgId, token);
     } catch (err: any) {
       toast.error(err.message || "Could not launch agent task.");
       setIsRunning(false);
     }
   };
 
-  const connectSSE = (tId: string, token: string | null) => {
+  const connectSSE = (tId: string, agentMsgId: string, token: string | null) => {
     if (sseRef.current) sseRef.current.close();
 
     const encodedToken = encodeURIComponent(token || "");
@@ -372,37 +379,7 @@ export default function AgentMode() {
     const eventSource = new EventSource(url);
     sseRef.current = eventSource;
 
-    const pollInterval = window.setInterval(async () => {
-      try {
-        const curToken = await getToken();
-        const checkRes = await fetch(`${API_BASE_URL}/api/agent/task/${tId}`, {
-          headers: { Authorization: `Bearer ${curToken}` },
-        });
-        if (checkRes.ok) {
-          const taskData = await checkRes.json();
-          if (taskData.status === "done") {
-            window.clearInterval(pollInterval);
-            setIsRunning(false);
-            if (taskData.live_history) {
-              const finalEvt = taskData.live_history.find((e: any) => e.type === "final");
-              if (finalEvt && finalEvt.answer) {
-                setFinalAnswer(finalEvt.answer);
-                setResultsData(finalEvt.results || []);
-                setCritiqueData(finalEvt.critique || null);
-                setActiveTab("cards");
-                appendAgentChatResponse(finalEvt.answer, tId);
-              }
-            }
-          } else if (taskData.status === "cancelled") {
-            window.clearInterval(pollInterval);
-            setIsRunning(false);
-            eventSource.close();
-          }
-        }
-      } catch (err) {
-        // ignore polling error
-      }
-    }, 3500);
+    const toolStartTimes: Record<string, number> = {};
 
     eventSource.onmessage = (e) => {
       try {
@@ -410,55 +387,116 @@ export default function AgentMode() {
         payload.timestamp = new Date().toLocaleTimeString();
         setEvents((prev) => [...prev, payload]);
 
-        if (payload.type === "thought" && (payload as any).thought) {
-          setLatestThought((payload as any).thought);
-        } else if ((payload.type === "action" || payload.type === "tool_call") && payload.tool) {
-          const tMeta = TOOL_META[payload.tool];
-          setActiveExecutingTool(tMeta?.name || payload.tool);
-          pushDynamicStep(payload.tool, (payload as any).description);
-          setActiveTab("stepper");
-        } else if (payload.type === "final" || payload.type === "error") {
-          window.clearInterval(pollInterval);
-          setIsRunning(false);
-          setActiveExecutingTool(null);
-          setFinalAnswer(payload.answer || null);
-          setResultsData(payload.results || []);
-          setCritiqueData((payload as any).critique || null);
-          setActiveTab("cards");
-          appendAgentChatResponse(payload.answer || "Agent task completed.", tId);
-        }
+        // Real-time Chat Inline Trace Updates
+        setChatMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id !== agentMsgId) return msg;
+
+            const curTrace = msg.trace || {
+              thoughts: [],
+              receipts: [],
+              isExecuting: true,
+              startTime: taskStartTimeRef.current,
+            };
+
+            if (payload.type === "thought") {
+              const th = (payload as any).thought;
+              setLatestThought(th);
+              return {
+                ...msg,
+                trace: {
+                  ...curTrace,
+                  thoughts: th ? [...curTrace.thoughts, th] : curTrace.thoughts,
+                  activeThought: th,
+                },
+              };
+            }
+
+            if (payload.type === "action" && payload.tool) {
+              const toolName = payload.tool;
+              toolStartTimes[toolName] = Date.now();
+              const tMeta = TOOL_META[toolName];
+              setActiveExecutingTool(tMeta?.name || toolName);
+
+              const newReceipt: ToolReceipt = {
+                id: `rcpt-${Date.now()}`,
+                tool: toolName,
+                toolName: tMeta?.name || toolName,
+                args: payload.args,
+                summary: payload.description || `Executing ${toolName}`,
+                status: "running",
+                timestamp: new Date().toLocaleTimeString(),
+              };
+
+              return {
+                ...msg,
+                trace: {
+                  ...curTrace,
+                  activeThought: `Executing ${tMeta?.name || toolName}...`,
+                  receipts: [...curTrace.receipts.filter((r) => r.tool !== toolName), newReceipt],
+                },
+              };
+            }
+
+            if (payload.type === "observation" && payload.tool) {
+              const toolName = payload.tool;
+              const startTime = toolStartTimes[toolName] || Date.now();
+              const durationMs = Date.now() - startTime;
+              const isUnavail = (payload.data as any)?.status === "unavailable";
+
+              return {
+                ...msg,
+                trace: {
+                  ...curTrace,
+                  receipts: curTrace.receipts.map((r) => {
+                    if (r.tool === toolName) {
+                      return {
+                        ...r,
+                        status: isUnavail ? "unavailable" : "completed",
+                        summary: payload.summary || r.summary,
+                        data: payload.data,
+                        durationMs,
+                      };
+                    }
+                    return r;
+                  }),
+                },
+              };
+            }
+
+            if (payload.type === "memory_update") {
+              setMemorySummary((payload as any).active_memory_summary || null);
+            }
+
+            if (payload.type === "final" || payload.type === "error") {
+              setIsRunning(false);
+              setActiveExecutingTool(null);
+              setFinalAnswer(payload.answer || null);
+              setResultsData(payload.results || []);
+              setCritiqueData((payload as any).critique || null);
+
+              const totalDurationSec = (Date.now() - (curTrace.startTime || Date.now())) / 1000;
+
+              return {
+                ...msg,
+                text: payload.answer || "Agent task completed.",
+                task_id: tId,
+                trace: {
+                  ...curTrace,
+                  activeThought: null,
+                  isExecuting: false,
+                  totalDurationSec,
+                },
+              };
+            }
+
+            return msg;
+          })
+        );
       } catch (err) {
         console.error("Failed to parse SSE payload", err);
       }
     };
-  };
-
-  const appendAgentChatResponse = (text: string, tId: string) => {
-    setChatMessages((prev) => {
-      if (prev.some((m) => m.task_id === tId)) return prev;
-      return [
-        ...prev,
-        {
-          id: `agent-reply-${Date.now()}`,
-          sender: "agent",
-          text: text.slice(0, 400) + (text.length > 400 ? "...\n\n*(Full report synthesized on right panel)*" : ""),
-          timestamp: new Date().toLocaleTimeString(),
-          task_id: tId,
-        },
-      ];
-    });
-  };
-
-  const pushDynamicStep = (toolName: string, customDesc?: string) => {
-    setDynamicSteps((prev) => {
-      if (prev.some((s) => (s as any).tool === toolName)) return prev;
-      const meta = TOOL_META[toolName] || {
-        name: customDesc || `Tool: ${toolName}`,
-        desc: customDesc || `Executing ${toolName}`,
-        icon: Zap,
-      };
-      return [...prev, { id: prev.length + 1, name: meta.name, desc: meta.desc, icon: meta.icon, tool: toolName } as any];
-    });
   };
 
   const handleStopAgent = async () => {
@@ -489,6 +527,28 @@ export default function AgentMode() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const downloadMarkdownReport = () => {
+    if (!finalAnswer) return;
+    const blob = new Blob([finalAnswer], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `PaperLens-Agent-Report-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Report downloaded as Markdown file.");
+  };
+
+  const handleInspectToolCard = (toolName: string) => {
+    setActiveTab("artifacts");
+    setHighlightedCard(toolName);
+    const el = document.getElementById(`card-${toolName}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    setTimeout(() => setHighlightedCard(null), 3000);
+  };
+
   return (
     <div className="space-y-6 pb-12">
       <AgentHeaderBanner
@@ -496,24 +556,24 @@ export default function AgentMode() {
         onSelectPreset={(preset) => handleSendMessage(preset)}
       />
 
-      {/* Split-Screen SaaS Agent Workspace Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[750px]">
-        {/* LEFT PANEL: Continuous Interactive Agent Chatbot */}
-        <Card className="flex flex-col border border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden h-[750px]">
-          {/* Chatbot Header */}
-          <div className="p-4 border-b border-border/50 bg-secondary/30 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                <BrainCircuit className="w-5 h-5 animate-pulse" />
+      {/* Split-Screen Workbench Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[780px]">
+        {/* LEFT PANEL: Interactive Agent Chat & Inline Step-Trace */}
+        <Card className="flex flex-col border border-border/80 bg-card/95 shadow-xl rounded-2xl overflow-hidden h-[780px]">
+          {/* Chat Header */}
+          <div className="p-3.5 border-b border-border/50 bg-secondary/30 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                <BrainCircuit className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  PaperLens Agent Assistant
-                  <Badge variant="outline" className="text-[10px] text-emerald-400 bg-emerald-500/10 border-emerald-500/30">
-                    SaaS Mode
+                <h2 className="text-xs font-bold text-foreground flex items-center gap-2">
+                  PaperLens Research Workbench
+                  <Badge variant="outline" className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border-emerald-500/30">
+                    Two-Tier Agent
                   </Badge>
                 </h2>
-                <p className="text-[11px] text-muted-foreground">Continuous research chatbot & tool executor</p>
+                <p className="text-[10px] text-muted-foreground">Autonomous Reasoning & Empirical Evidence</p>
               </div>
             </div>
 
@@ -524,17 +584,16 @@ export default function AgentMode() {
                 onClick={handleNewSession}
                 disabled={isRunning}
                 title="Start a fresh conversation session"
-                className="h-7 text-[11px] rounded-xl border-border/60 hover:bg-indigo-500/10 hover:text-indigo-300 gap-1"
+                className="h-7 text-[11px] rounded-lg border-border/60 hover:bg-indigo-500/10 hover:text-indigo-300 gap-1"
               >
                 <RefreshCw className="w-3 h-3" />
                 New Chat
               </Button>
 
-              {/* Active Paper Context Badge */}
               {activePaper && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span className="max-w-[120px] truncate font-medium">{activePaper.filename}</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs">
+                  <FileText className="w-3 h-3" />
+                  <span className="max-w-[110px] truncate font-medium">{activePaper.filename}</span>
                   <button onClick={() => setActivePaper(null)} className="hover:text-red-400 ml-1">
                     <X className="w-3 h-3" />
                   </button>
@@ -543,7 +602,7 @@ export default function AgentMode() {
             </div>
           </div>
 
-          {/* Chat Thread Messages */}
+          {/* Chat Messages & Inline Receipts */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs">
             {chatMessages.map((msg) => (
               <div
@@ -551,72 +610,67 @@ export default function AgentMode() {
                 className={`flex gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.sender === "agent" && (
-                  <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-lg bg-secondary border border-border/60 flex items-center justify-center text-indigo-400 shrink-0 mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3.5 shadow-lg ${
+                  className={`max-w-[90%] rounded-2xl p-4 shadow-sm space-y-2 ${
                     msg.sender === "user"
                       ? "bg-indigo-600 text-white rounded-tr-none"
-                      : "bg-secondary/70 border border-border/60 text-foreground rounded-tl-none"
+                      : "bg-secondary/40 border border-border/70 text-foreground rounded-tl-none"
                   }`}
                 >
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                    {msg.text}
-                  </ReactMarkdown>
-                  <span className="block text-[10px] opacity-60 text-right mt-1.5 font-mono">
+                  {/* Inline Step-Trace Accordion & Tool Receipts */}
+                  {msg.sender === "agent" && msg.trace && (
+                    <AgentInlineTrace
+                      trace={msg.trace}
+                      onInspectTool={handleInspectToolCard}
+                    />
+                  )}
+
+                  {/* Clean Markdown Response */}
+                  {msg.text && (
+                    <div className="prose-xs text-foreground/90 leading-relaxed pt-1">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                        {normalizeMarkdown(msg.text)}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+
+                  <span className="block text-[9px] opacity-60 text-right font-mono pt-1">
                     {msg.timestamp}
                   </span>
                 </div>
 
                 {msg.sender === "user" && (
-                  <div className="w-7 h-7 rounded-xl bg-foreground/10 border border-border/40 flex items-center justify-center text-foreground shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-lg bg-foreground/10 border border-border/40 flex items-center justify-center text-foreground shrink-0 mt-0.5">
                     <User className="w-4 h-4" />
                   </div>
                 )}
               </div>
             ))}
-
-            {isRunning && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                </div>
-                {activeExecutingTool ? (
-                  <div className="bg-secondary/70 border border-indigo-500/30 rounded-2xl p-3 text-xs text-indigo-300 flex items-center gap-2">
-                    <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                    <span>Executing tool: <strong className="font-semibold text-indigo-200">{activeExecutingTool}</strong>...</span>
-                  </div>
-                ) : (
-                  <div className="bg-secondary/70 border border-border/40 rounded-2xl p-3 text-xs text-muted-foreground flex items-center gap-2">
-                    <Bot className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                    <span>PaperLens AI is typing...</span>
-                  </div>
-                )}
-              </div>
-            )}
             <div ref={chatScrollRef} />
           </div>
 
-          {/* Quick Prompt Suggestions */}
+          {/* Quick Suggestions */}
           <div className="px-4 py-2 bg-secondary/20 border-t border-border/30 overflow-x-auto flex items-center gap-2 scrollbar-none">
-            <span className="text-[10px] text-muted-foreground shrink-0 font-medium">Suggestions:</span>
+            <span className="text-[10px] text-muted-foreground shrink-0 font-semibold font-mono">Suggestions:</span>
             {PROMPT_SUGGESTIONS.map((sug, i) => (
               <button
                 key={i}
                 onClick={() => handleSendMessage(sug)}
                 disabled={isRunning}
-                className="px-2.5 py-1 rounded-lg bg-secondary/60 hover:bg-indigo-500/20 border border-border/40 hover:border-indigo-500/40 text-[11px] text-foreground/80 hover:text-indigo-300 transition-all shrink-0 whitespace-nowrap"
+                className="px-2.5 py-1 rounded-lg bg-secondary/60 hover:bg-indigo-500/10 border border-border/40 hover:border-indigo-500/40 text-[11px] text-foreground/80 hover:text-indigo-300 transition-all shrink-0 whitespace-nowrap"
               >
                 {sug}
               </button>
             ))}
           </div>
 
-          {/* Chatbot Input Dock */}
-          <div className="p-3 border-t border-border/50 bg-secondary/40 flex items-center gap-2">
+          {/* Chat Input Dock */}
+          <div className="p-3 border-t border-border/50 bg-secondary/30 flex items-center gap-2">
             <input
               type="file"
               ref={fileInputRef}
@@ -630,7 +684,7 @@ export default function AgentMode() {
               size="icon"
               disabled={isUploadingPaper || isRunning}
               onClick={() => fileInputRef.current?.click()}
-              title="Attach PDF Paper to Agent Context"
+              title="Attach PDF Paper"
               className="rounded-xl border-border/60 hover:bg-indigo-500/10 hover:text-indigo-300 shrink-0"
             >
               {isUploadingPaper ? (
@@ -648,10 +702,10 @@ export default function AgentMode() {
               placeholder={
                 activePaper
                   ? `Ask agent about '${activePaper.filename}'...`
-                  : "Ask research prompt or request datasets/problems..."
+                  : "Ask research query or request datasets/problem statements..."
               }
               disabled={isRunning}
-              className="flex-1 bg-background/80 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-indigo-500/60"
+              className="flex-1 bg-background/90 border border-border/70 rounded-xl px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-indigo-500/60"
             />
 
             {isRunning ? (
@@ -677,136 +731,248 @@ export default function AgentMode() {
           </div>
         </Card>
 
-        {/* RIGHT PANEL: Live Agent Tool Inspector & Synthesis Canvas */}
-        <Card className="flex flex-col border border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden h-[750px]">
-          {/* Inspector Header & Navigation Tabs */}
-          <div className="p-4 border-b border-border/50 bg-secondary/30 flex items-center justify-between">
+        {/* RIGHT PANEL: Dynamic Artifact Workspace Feed */}
+        <Card className="flex flex-col border border-border/80 bg-card/95 shadow-xl rounded-2xl overflow-hidden h-[780px]">
+          {/* Workspace Header & Views Switcher */}
+          <div className="p-3.5 border-b border-border/50 bg-secondary/30 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-foreground">Agent Execution Inspector</span>
+              <Layers className="w-4 h-4 text-indigo-400" />
+              <span className="text-xs font-bold text-foreground">Artifact Workspace</span>
               {isRunning && (
                 <Badge variant="outline" className="text-[10px] text-amber-400 bg-amber-500/10 border-amber-500/30 animate-pulse">
-                  Executing Tools
+                  Streaming Artifacts
                 </Badge>
               )}
             </div>
 
-            {/* View Switcher Tabs */}
-            <div className="flex items-center gap-1.5 bg-background/60 p-1 rounded-xl border border-border/40 text-xs">
+            {/* Navigation Tabs */}
+            <div className="flex items-center gap-1 bg-background/80 p-1 rounded-xl border border-border/50 text-xs">
               <button
-                onClick={() => setActiveTab("cards")}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  activeTab === "cards" ? "bg-indigo-600 text-white font-medium" : "text-muted-foreground hover:text-foreground"
+                onClick={() => setActiveTab("artifacts")}
+                className={`px-3 py-1 rounded-lg transition-all text-xs ${
+                  activeTab === "artifacts" ? "bg-indigo-600 text-white font-semibold" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Artefacts
+                Artifacts
               </button>
               <button
-                onClick={() => setActiveTab("stepper")}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  activeTab === "stepper" ? "bg-indigo-600 text-white font-medium" : "text-muted-foreground hover:text-foreground"
+                onClick={() => setActiveTab("report")}
+                className={`px-3 py-1 rounded-lg transition-all text-xs ${
+                  activeTab === "report" ? "bg-indigo-600 text-white font-semibold" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Live Trace
+                Executive Report
               </button>
               <button
-                onClick={() => setActiveTab("raw")}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  activeTab === "raw" ? "bg-indigo-600 text-white font-medium" : "text-muted-foreground hover:text-foreground"
+                onClick={() => setActiveTab("trace")}
+                className={`px-3 py-1 rounded-lg transition-all text-xs ${
+                  activeTab === "trace" ? "bg-indigo-600 text-white font-semibold" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Markdown
+                Execution Trace
+              </button>
+              <button
+                onClick={() => setActiveTab("json")}
+                className={`px-3 py-1 rounded-lg transition-all text-xs ${
+                  activeTab === "json" ? "bg-indigo-600 text-white font-semibold" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                JSON
               </button>
             </div>
           </div>
 
-          {/* Inspector Main Content Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {activeTab === "cards" && (
-              <>
+          {/* Main Workspace Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans">
+            {/* VIEW 1: Chronological Dynamic Artifacts */}
+            {activeTab === "artifacts" && (
+              <div className="space-y-4">
                 {!finalAnswer && !isRunning && resultsData.length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground space-y-3">
-                    <BrainCircuit className="w-12 h-12 text-indigo-400/40 animate-bounce" />
+                  <div className="h-full flex flex-col items-center justify-center text-center p-12 text-muted-foreground space-y-3">
+                    <BrainCircuit className="w-12 h-12 text-indigo-400/30 animate-pulse" />
                     <p className="text-xs max-w-sm">
-                      Submit a research prompt or upload a paper on the left chatbot to see live tool results and synthesized cards.
+                      Submit a research prompt on the left to see live structured artifact cards rendered in execution order.
                     </p>
                   </div>
                 )}
 
-                {/* Render Tool Results Cards */}
-                {(() => {
-                  let litItem = resultsData.find((r) => r.tool === "search_papers" || r.papers);
-                  let litPapers = litItem?.result?.papers || litItem?.result?.top_papers || [];
+                {/* Render Cards Dynamically in Execution Order */}
+                {resultsData.map((item, idx) => {
+                  const toolName = item.tool;
+                  const res = item.result || {};
+                  const isHighlighted = highlightedCard === toolName;
 
-                  let probItem = resultsData.find((r) => r.tool === "generate_problem" || r.problems);
-                  let problemsList = probItem?.result?.problems || probItem?.result?.ideas || [];
-
-                  let expItem = resultsData.find((r) => r.tool === "plan_experiment" || r.steps);
-                  let experimentPlanSteps = expItem?.result?.steps || [];
-
-                  let datasetItem = resultsData.find((r) => r.tool === "find_datasets" || r.datasets);
-                  let datasetsList = datasetItem?.result?.datasets || [];
-
-                  return (
-                    <div className="space-y-4">
-                      {litPapers.length > 0 && (
+                  if (toolName === "search_papers") {
+                    const papers = res.papers || res.top_papers || [];
+                    if (!papers.length) return null;
+                    return (
+                      <div
+                        id={`card-${toolName}`}
+                        key={idx}
+                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                      >
                         <LiteratureReviewCard
-                          papers={litPapers}
-                          sortOrder="newest"
-                          selectedYear="all"
-                          searchQuery=""
-                          onSortChange={() => {}}
-                          onYearChange={() => {}}
-                          onSearchChange={() => {}}
+                          papers={papers}
+                          filteredPapers={papers}
+                          paperSearchQuery={paperSearchQuery}
+                          setPaperSearchQuery={setPaperSearchQuery}
+                          sortOrder={sortOrder}
+                          setSortOrder={setSortOrder}
+                          selectedYear={selectedYear}
+                          setSelectedYear={setSelectedYear}
+                          yearwiseCounts={[]}
                           renderTextOrObject={renderTextOrObject}
-                          sectionIndex={1}
+                          sectionIndex={idx + 1}
                         />
-                      )}
+                        <CardProvenanceBadge
+                          toolName={toolName}
+                          qualitySignal="Semantic Scholar + arXiv verified"
+                          className="px-2"
+                        />
+                      </div>
+                    );
+                  }
 
-                      {problemsList.length > 0 && (
+                  if (toolName === "detect_gaps" || toolName === "generate_problem") {
+                    const problems = res.problems || res.problem_statements || res.ideas || [];
+                    if (!problems.length) return null;
+                    return (
+                      <div
+                        id={`card-${toolName}`}
+                        key={idx}
+                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                      >
                         <ProposedDirectionsCard
-                          problems={problemsList}
+                          problems={problems}
                           loadingPlanIndex={null}
                           directionPlans={{}}
                           onGeneratePlan={() => {}}
                           renderTextOrObject={renderTextOrObject}
-                          sectionIndex={2}
+                          sectionIndex={idx + 1}
                         />
-                      )}
+                        <CardProvenanceBadge
+                          toolName={toolName}
+                          qualitySignal="Attributed Gaps"
+                          className="px-2"
+                        />
+                      </div>
+                    );
+                  }
 
-                      {datasetsList.length > 0 && (
+                  if (toolName === "find_datasets") {
+                    const datasets = res.datasets || [];
+                    if (!datasets.length) return null;
+                    return (
+                      <div
+                        id={`card-${toolName}`}
+                        key={idx}
+                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                      >
                         <DatasetsBenchmarksCard
-                          datasetsList={datasetsList}
+                          datasetsList={datasets}
                           renderTextOrObject={renderTextOrObject}
-                          sectionIndex={3}
+                          sectionIndex={idx + 1}
                         />
-                      )}
+                        <CardProvenanceBadge
+                          toolName={toolName}
+                          qualitySignal="SOTA Benchmarks"
+                          className="px-2"
+                        />
+                      </div>
+                    );
+                  }
 
-                      {experimentPlanSteps.length > 0 && (
+                  if (toolName === "plan_experiment") {
+                    const steps = res.steps || res.stages || [];
+                    if (!steps.length) return null;
+                    return (
+                      <div
+                        id={`card-${toolName}`}
+                        key={idx}
+                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                      >
                         <ExperimentPlanCard
-                          steps={experimentPlanSteps}
+                          steps={steps}
                           renderTextOrObject={renderTextOrObject}
-                          sectionIndex={4}
+                          sectionIndex={idx + 1}
                         />
-                      )}
+                        <CardProvenanceBadge
+                          toolName={toolName}
+                          qualitySignal="Execution Roadmap"
+                          className="px-2"
+                        />
+                      </div>
+                    );
+                  }
 
-                      {critiqueData && (
-                        <SelfCritiqueCard
-                          critiqueData={critiqueData}
-                          renderTextOrObject={renderTextOrObject}
-                          sectionIndex={5}
-                        />
-                      )}
-                    </div>
-                  );
-                })()}
-              </>
+                  return null;
+                })}
+
+                {/* Self-Critique Audit Card */}
+                {critiqueData && (
+                  <div>
+                    <SelfCritiqueCard
+                      critiqueData={critiqueData}
+                      renderTextOrObject={renderTextOrObject}
+                      sectionIndex={resultsData.length + 1}
+                    />
+                    <CardProvenanceBadge
+                      toolName="synthesize_and_verify"
+                      qualitySignal={critiqueData.verdict || "Audited"}
+                      className="px-2"
+                    />
+                  </div>
+                )}
+              </div>
             )}
 
-            {activeTab === "stepper" && (
+            {/* VIEW 2: Full Synthesized Executive Report */}
+            {activeTab === "report" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                  <span className="text-xs font-semibold text-foreground">Synthesized Research Document</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="h-7 text-xs rounded-lg gap-1 border-border/60"
+                    >
+                      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copied ? "Copied" : "Copy Markdown"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={downloadMarkdownReport}
+                      className="h-7 text-xs rounded-lg gap-1 border-border/60"
+                    >
+                      <Download className="w-3 h-3" />
+                      Download .md
+                    </Button>
+                  </div>
+                </div>
+
+                {finalAnswer ? (
+                  <div className="p-6 rounded-2xl border border-border/70 bg-card/80 text-foreground text-xs leading-relaxed shadow-sm">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                      {normalizeMarkdown(finalAnswer)}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic text-center py-12">
+                    Synthesis report will appear once agent research execution completes.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* VIEW 3: Live Stepper & Reasoning Trace */}
+            {activeTab === "trace" && (
               <AgentStepperView
-                steps={activeResearchSteps}
-                currentStepIndex={currentStepIndex}
-                progressPercent={(currentStepIndex / Math.max(activeResearchSteps.length, 1)) * 100}
+                steps={dynamicSteps}
+                currentStepIndex={dynamicSteps.length}
+                progressPercent={isRunning ? 60 : finalAnswer ? 100 : 0}
                 isRunning={isRunning}
                 finalAnswer={finalAnswer}
                 latestThought={latestThought}
@@ -814,20 +980,15 @@ export default function AgentMode() {
               />
             )}
 
-            {activeTab === "raw" && finalAnswer && (
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-xl backdrop-blur-xl space-y-3">
-                <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                  <h3 className="text-xs font-bold text-foreground">Markdown Synthesized Report</h3>
-                  <Button variant="outline" size="sm" onClick={copyToClipboard} className="h-7 text-[11px] rounded-lg">
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? "Copied" : "Copy"}
-                  </Button>
+            {/* VIEW 4: Raw Structured Entities Inspector */}
+            {activeTab === "json" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs font-mono text-muted-foreground pb-2 border-b border-border/50">
+                  <span>Structured Results Payload ({resultsData.length} records)</span>
                 </div>
-                <div className="prose prose-invert max-w-none text-xs leading-relaxed font-sans">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                    {normalizeMarkdown(finalAnswer)}
-                  </ReactMarkdown>
-                </div>
+                <pre className="p-4 rounded-xl border border-border/60 bg-secondary/20 text-foreground font-mono text-[11px] overflow-x-auto max-h-[600px] leading-relaxed">
+                  {JSON.stringify(resultsData, null, 2)}
+                </pre>
               </div>
             )}
           </div>
