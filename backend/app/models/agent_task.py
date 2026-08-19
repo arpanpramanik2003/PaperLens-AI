@@ -8,9 +8,11 @@ class AgentTask(Base):
     __tablename__ = "agent_tasks"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String, index=True, nullable=True)
     user_id = Column(String, index=True, nullable=False)
     goal = Column(String, nullable=False)
     status = Column(String, nullable=False, default="running")  # running | done | failed
+    context_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     steps = relationship("AgentStep", back_populates="task", cascade="all, delete-orphan")

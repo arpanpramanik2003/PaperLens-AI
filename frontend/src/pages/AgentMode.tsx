@@ -157,6 +157,11 @@ export default function AgentMode() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Chatbot State
+  // Multi-Turn Session State
+  const [sessionId, setSessionId] = useState<string>(() => {
+    return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}`;
+  });
+
   const [inputQuery, setInputQuery] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -188,6 +193,35 @@ export default function AgentMode() {
   const [copied, setCopied] = useState(false);
 
   const sseRef = useRef<EventSource | null>(null);
+
+  const handleNewSession = () => {
+    if (isRunning) return;
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+    const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}`;
+    setSessionId(newId);
+    setChatMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        sender: "agent",
+        text: "Started a fresh research session! Ask me about datasets, literature, problem formulations, or attach a new paper.",
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
+    setEvents([]);
+    setPlannedSteps([]);
+    setDynamicSteps([]);
+    setCurrentStepIndex(0);
+    setFinalAnswer(null);
+    setResultsData([]);
+    setCritiqueData(null);
+    setLatestThought(null);
+    setMemorySummary(null);
+    setActiveExecutingTool(null);
+    toast.success("New research session initialized.");
+  };
 
   useEffect(() => {
     chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -277,6 +311,12 @@ export default function AgentMode() {
       timestamp: new Date().toLocaleTimeString(),
     };
 
+    // Prepare conversation history (last 4 turns) before appending the current message
+    const priorHistory = chatMessages.slice(-4).map((m) => ({
+      role: m.sender,
+      text: m.text,
+    }));
+
     setChatMessages((prev) => [...prev, userMsg]);
     setInputQuery("");
     setIsRunning(true);
@@ -304,6 +344,8 @@ export default function AgentMode() {
         body: JSON.stringify({
           goal: textGoal.trim(),
           paper_id: activePaper?.id || null,
+          session_id: sessionId,
+          conversation_history: priorHistory,
         }),
       });
 
@@ -475,16 +517,30 @@ export default function AgentMode() {
               </div>
             </div>
 
-            {/* Active Paper Context Badge */}
-            {activePaper && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs">
-                <FileText className="w-3.5 h-3.5" />
-                <span className="max-w-[120px] truncate font-medium">{activePaper.filename}</span>
-                <button onClick={() => setActivePaper(null)} className="hover:text-red-400 ml-1">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNewSession}
+                disabled={isRunning}
+                title="Start a fresh conversation session"
+                className="h-7 text-[11px] rounded-xl border-border/60 hover:bg-indigo-500/10 hover:text-indigo-300 gap-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                New Chat
+              </Button>
+
+              {/* Active Paper Context Badge */}
+              {activePaper && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="max-w-[120px] truncate font-medium">{activePaper.filename}</span>
+                  <button onClick={() => setActivePaper(null)} className="hover:text-red-400 ml-1">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Chat Thread Messages */}

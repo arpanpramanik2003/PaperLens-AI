@@ -84,8 +84,15 @@ AVAILABLE_TOOLS_SCHEMA = [
 ]
 
 
-async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: str = ""):
-    """Iterative Autonomous ReAct (Reasoning + Acting) Agent Execution Loop with live memory scratchpad."""
+async def run_react_agent_loop(
+    task_id: str,
+    user_id: str,
+    goal: str,
+    paper_id: str = "",
+    session_id: str = "",
+    conversation_history: List[Dict[str, Any]] = None,
+):
+    """Iterative Autonomous ReAct Agent Execution Loop with multi-turn session context and robust error recovery."""
     db = SessionLocal()
     try:
         task = db.query(AgentTask).filter(AgentTask.id == task_id).first()
@@ -98,24 +105,33 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
         executed_results: List[Dict[str, Any]] = []
         executed_tools: set = set()
 
-        # Tool Scoping & Intent Check
+        # Tool Scoping & Intent Check with Multi-Turn Context
         from app.services.agents.router import select_agent_tools
-        router_res = await select_agent_tools(goal, TOOL_REGISTRY)
+        router_res = await select_agent_tools(goal, TOOL_REGISTRY, conversation_history=conversation_history or [])
         intent_type = router_res.get("intent_type", "research_tools")
         selected_tool_names = {t.get("tool") for t in router_res.get("selected_tools", []) if t.get("tool")}
 
         # DIRECT CHAT FAST-PATH: Bypasses academic research tool execution entirely!
         if intent_type == "direct_chat" or not selected_tool_names:
-            logger.info("Direct chat fast-path triggered for goal: '%s'", goal)
+            logger.info("Direct chat fast-path triggered for goal: '%s' (session=%s)", goal, session_id)
             trace.emit_event(task_id, {
                 "type": "thought",
                 "thought": "Direct conversational query detected. Generating conversational response without tools...",
             })
 
+            # Include previous context in chat prompt if present
+            context_snippet = ""
+            if conversation_history:
+                prior_exchanges = [
+                    f"{t.get('role', 'user').upper()}: {t.get('text', '')[:200]}"
+                    for t in conversation_history[-3:]
+                ]
+                context_snippet = "Prior Conversation:\n" + "\n".join(prior_exchanges) + "\n\n"
+
             chat_prompt = (
                 "You are PaperLens AI, an intelligent, friendly, and helpful AI research assistant.\n"
                 "Answer the user's conversational query in a clear, friendly, and well-structured Markdown response.\n\n"
-                f"User Query: {goal}"
+                f"{context_snippet}User Query: {goal}"
             )
 
             from app.services.model_fallback import create_completion_with_fallback, DEFAULT_PRIMARY_MODEL, DEFAULT_FALLBACK_MODELS
@@ -140,6 +156,12 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
                 conversational_answer = "Hello! I am PaperLens AI, your intelligent research assistant. How can I help you with your literature or paper analysis today?"
 
             task.status = "done"
+            task.context_data = {
+                "goal": goal,
+                "session_id": session_id,
+                "intent_type": "direct_chat",
+                "summary": conversational_answer[:300],
+            }
             db.commit()
 
             trace.emit_event(task_id, {
@@ -206,7 +228,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
                     {
                         "step": idx + 1,
                         "tool": item["tool"],
-                        "summary": str(summarize_result(item["result"]))[:150],
+                        "summary": str(summarize_result(item["result"]))[:180],
                     }
                     for idx, item in enumerate(executed_results)
                 ]
@@ -238,6 +260,47 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
             is_final = decision.get("is_final", False)
             memory_summary = decision.get("memory_summary", f"Step {step_count} reasoning active.")
 
+            # SELF-HEALING: Check for hallucinated / unregistered tool names
+            if action_tool not in TOOL_REGISTRY and action_tool != "none" and not is_final:
+                logger.warning("ReAct LLM selected unregistered tool '%s'. Initiating self-correction re-prompt.", action_tool)
+                trace.emit_event(task_id, {
+                    "type": "thought",
+                    "step_index": step_count,
+                    "thought": f"Tool '{action_tool}' is not recognized. Re-evaluating against registered tools: {list(TOOL_REGISTRY.keys())}...",
+                })
+                try:
+                    re_prompt = (
+                        f"CORRECTION REQUIRED: Tool '{action_tool}' is not registered in TOOL_REGISTRY.\n"
+                        f"Available valid tools are: {list(TOOL_REGISTRY.keys())}\n"
+                        f"Target query: {goal}\n"
+                        f"Please select a valid tool name from the available list, or set action='none' / is_final=true."
+                    )
+                    re_response = create_completion_with_fallback(
+                        llm_client=client,
+                        task_name="react_agent_tool_self_correction",
+                        primary_model=FAST_ROUTER_MODEL,
+                        fallback_models=DEFAULT_FALLBACK_MODELS,
+                        messages=[
+                            {"role": "system", "content": active_system_prompt},
+                            {"role": "user", "content": re_prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.0,
+                    )
+                    re_raw_json = re_response.choices[0].message.content
+                    re_decision = ReActDecision.model_validate_json(re_raw_json).model_dump()
+                    if re_decision.get("action") in TOOL_REGISTRY or re_decision.get("action") == "none":
+                        action_tool = re_decision.get("action")
+                        action_args = re_decision.get("action_input") or action_args
+                        thought = re_decision.get("thought", thought)
+                        is_final = re_decision.get("is_final", is_final)
+                        logger.info("Tool self-correction succeeded -> selected '%s'", action_tool)
+                except Exception as re_exc:
+                    logger.warning("Tool self-correction failed: %s. Using fallback.", re_exc)
+                    fallback_d = _fallback_react_decision(goal, step_count, executed_tools, selected_tool_names)
+                    action_tool = fallback_d.get("action", "search_papers")
+                    action_args = fallback_d.get("action_input") or action_args
+
             # Emit ReAct Thought SSE Event
             trace.emit_event(task_id, {
                 "type": "thought",
@@ -257,7 +320,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
                 _cancelled_tasks.discard(task_id)
                 return
 
-            # Execute Tool Action
+            # Execute Tool Action with Error Recovery & Retry Handling
             trace.emit_event(task_id, {
                 "type": "action",
                 "step_index": step_count,
@@ -271,10 +334,32 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
                 try:
                     result = await fn(**action_args)
                 except Exception as exc:
-                    logger.error("ReAct Tool %s failed: %s", action_tool, exc)
-                    result = {"error": str(exc)}
+                    logger.error("ReAct Tool %s initial execution failed: %s. Attempting parameter relaxation retry...", action_tool, exc)
+                    trace.emit_event(task_id, {
+                        "type": "thought",
+                        "step_index": step_count,
+                        "thought": f"Tool '{action_tool}' encountered an error ({str(exc)[:100]}). Retrying with relaxed search parameters...",
+                    })
+                    # Attempt retry with simplified domain/topic keyword arguments
+                    try:
+                        simplified_args = {
+                            "domain": (action_args.get("domain") or goal)[:80].strip(),
+                            "topic": (action_args.get("topic") or goal)[:80].strip(),
+                        }
+                        result = await fn(**simplified_args)
+                    except Exception as retry_exc:
+                        logger.error("ReAct Tool %s retry failed: %s", action_tool, retry_exc)
+                        result = {
+                            "status": "unavailable",
+                            "error": str(exc),
+                            "message": f"Data source for {action_tool} was temporarily unavailable or timed out.",
+                        }
             else:
-                result = {"error": f"Tool {action_tool} not registered"}
+                result = {
+                    "status": "unavailable",
+                    "error": f"Tool {action_tool} not registered",
+                    "message": f"Requested tool '{action_tool}' could not be executed.",
+                }
 
             executed_tools.add(action_tool)
             executed_results.append({"tool": action_tool, "args": action_args, "result": result})
@@ -326,7 +411,7 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
             _cancelled_tasks.discard(task_id)
             return
 
-        # Critique & Synthesis Phase (Unified Single Pass)
+        # Critique & Synthesis Phase (Unified Single Pass with Anti-Hallucination Directives)
         trace.emit_event(task_id, {
             "type": "critique_start",
             "message": "Auditing findings & synthesizing executive multi-agent proposal...",
@@ -344,6 +429,12 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: 
         })
 
         task.status = "done"
+        task.context_data = {
+            "goal": goal,
+            "session_id": session_id,
+            "executed_tools": list(executed_tools),
+            "summary": final_answer[:400] if final_answer else "",
+        }
         db.commit()
 
         trace.emit_event(task_id, {

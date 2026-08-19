@@ -21,6 +21,8 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 class CreateTaskRequest(BaseModel):
     goal: str
     paper_id: Optional[str] = None
+    session_id: Optional[str] = None
+    conversation_history: Optional[list] = None
 
 
 @router.post("/upload-paper")
@@ -103,6 +105,7 @@ async def create_task(
 
     task = AgentTask(
         user_id=user_id,
+        session_id=req.session_id,
         goal=req.goal.strip(),
         status="running",
     )
@@ -110,10 +113,25 @@ async def create_task(
     db.commit()
     db.refresh(task)
 
-    # Launch background agent orchestrator task with optional paper_id context
-    asyncio.create_task(run_research_task(task_id=task.id, user_id=user_id, goal=task.goal, paper_id=req.paper_id or ""))
+    # Launch background agent orchestrator task with optional paper_id and session context
+    asyncio.create_task(
+        run_research_task(
+            task_id=task.id,
+            user_id=user_id,
+            goal=task.goal,
+            paper_id=req.paper_id or "",
+            session_id=req.session_id or "",
+            conversation_history=req.conversation_history or [],
+        )
+    )
 
-    return {"task_id": task.id, "status": "running", "goal": task.goal, "paper_id": req.paper_id}
+    return {
+        "task_id": task.id,
+        "session_id": task.session_id,
+        "status": "running",
+        "goal": task.goal,
+        "paper_id": req.paper_id,
+    }
 
 
 @router.post("/task/{task_id}/cancel")
@@ -172,8 +190,10 @@ async def get_task_details(
 
     return {
         "id": task.id,
+        "session_id": task.session_id,
         "goal": task.goal,
         "status": task.status,
+        "context_data": task.context_data,
         "created_at": task.created_at.isoformat() if task.created_at else None,
         "steps": [
             {
@@ -192,13 +212,18 @@ async def get_task_details(
 @router.get("/tasks")
 async def list_agent_tasks(
     user_id: str = Depends(get_current_user),
+    session_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """List all past agent research tasks for the authenticated user."""
-    tasks = db.query(AgentTask).filter(AgentTask.user_id == user_id).order_by(AgentTask.created_at.desc()).limit(20).all()
+    """List past agent research tasks for the authenticated user, optionally scoped to a session."""
+    query = db.query(AgentTask).filter(AgentTask.user_id == user_id)
+    if session_id:
+        query = query.filter(AgentTask.session_id == session_id)
+    tasks = query.order_by(AgentTask.created_at.desc()).limit(20).all()
     return [
         {
             "id": t.id,
+            "session_id": t.session_id,
             "goal": t.goal,
             "status": t.status,
             "created_at": t.created_at.isoformat() if t.created_at else None,

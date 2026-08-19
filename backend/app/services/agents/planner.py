@@ -79,7 +79,12 @@ def compact_results_for_llm(results: List[Dict[str, Any]]) -> List[Dict[str, Any
         compact_item: Dict[str, Any] = {"tool": tool, "args": args}
 
         if isinstance(raw_res, dict):
-            if "papers" in raw_res:
+            if raw_res.get("status") == "unavailable" or "error" in raw_res:
+                compact_item["result"] = {
+                    "status": "unavailable",
+                    "error": raw_res.get("error") or raw_res.get("message") or "Tool execution unavailable",
+                }
+            elif "papers" in raw_res:
                 papers = raw_res.get("papers") or []
                 compact_papers = []
                 for p in papers[:5]:
@@ -94,6 +99,7 @@ def compact_results_for_llm(results: List[Dict[str, Any]]) -> List[Dict[str, Any
                 compact_item["result"] = {
                     "total_found": raw_res.get("total_found", len(papers)),
                     "top_papers": compact_papers,
+                    "status": "success" if papers else "empty",
                 }
             elif "gaps" in raw_res:
                 gaps = raw_res.get("gaps") or []
@@ -126,6 +132,32 @@ def compact_results_for_llm(results: List[Dict[str, Any]]) -> List[Dict[str, Any
 
         compacted.append(compact_item)
     return compacted
+
+
+def _build_unavailability_directive(results: List[Dict[str, Any]]) -> str:
+    """Detect empty or failed tool executions and construct strict anti-hallucination directive."""
+    unavailable_tools = []
+    for item in results:
+        tool = item.get("tool", "tool")
+        res = item.get("result") or {}
+        if isinstance(res, dict):
+            if res.get("status") == "unavailable" or "error" in res:
+                unavailable_tools.append(tool)
+            elif tool == "search_papers" and (res.get("total_found") == 0 or not res.get("papers")):
+                unavailable_tools.append("search_papers (0 papers found / repository timeout)")
+            elif tool == "find_datasets" and not res.get("datasets"):
+                unavailable_tools.append("find_datasets (no benchmarks found)")
+
+    if not unavailable_tools:
+        return ""
+
+    tools_str = ", ".join(unavailable_tools)
+    return (
+        f"\n\nCRITICAL DATA UNAVAILABILITY DIRECTIVE:\n"
+        f"The following data sources returned no data or were unavailable: [{tools_str}].\n"
+        f"You MUST explicitly disclose in the relevant section that data from these sources was unavailable or timed out.\n"
+        f"DO NOT invent, fabricate, or hallucinate citations, paper titles, authors, or benchmarks that are not present in Execution Results!"
+    )
 
 
 async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[str, Any]) -> str:
@@ -161,6 +193,8 @@ async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[st
             "  ## 6. Critical Self-Evaluation & Source Citations\n"
         )
 
+    unavail_directive = _build_unavailability_directive(results)
+
     system_prompt = (
         "You are a distinguished senior researcher. Synthesize a comprehensive, beautifully formatted Markdown "
         "report based on the research goal, retrieved data, and step execution results.\n\n"
@@ -168,7 +202,7 @@ async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[st
         "1. Tailor your section headers dynamically based ONLY on the data present in Execution Results.\n"
         "2. Do NOT output empty, blank, or placeholder sections for tools that were not executed.\n"
         "3. When generating Markdown tables, output every row on its own line with explicit newline breaks (e.g. '| Col 1 | Col 2 |\\n|---|---|\\n| Val 1 | Val 2 |\\n'). Never collapse table rows onto a single line!\n\n"
-        f"{header_guidelines}"
+        f"{header_guidelines}{unavail_directive}"
     )
 
     model_context_results = compact_results_for_llm(results)
@@ -245,6 +279,8 @@ async def synthesize_and_verify(goal: str, results: List[Dict[str, Any]]) -> Tup
             "  ## 6. Critical Self-Evaluation & Source Citations\n"
         )
 
+    unavail_directive = _build_unavailability_directive(results)
+
     system_prompt = (
         "You are a distinguished senior researcher and peer-review auditor.\n"
         "Your task is to analyze the research goal and tool execution results, conduct a rigorous peer-review verification, "
@@ -254,7 +290,7 @@ async def synthesize_and_verify(goal: str, results: List[Dict[str, Any]]) -> Tup
         "1. Tailor your section headers dynamically based ONLY on the data present in Execution Results.\n"
         "2. Do NOT output empty, blank, or placeholder sections for tools that were not executed.\n"
         "3. When generating Markdown tables, output every row on its own line with explicit newline breaks.\n\n"
-        f"{header_guidelines}"
+        f"{header_guidelines}{unavail_directive}"
     )
 
     model_context_results = compact_results_for_llm(results)

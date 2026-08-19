@@ -23,9 +23,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger("paper_explainer")
 
-# Database DDL managed via Alembic migrations
+# Database DDL managed via Alembic migrations & startup verification
+Base.metadata.create_all(bind=engine, checkfirst=True)
 
 app = FastAPI(title="Paper Explainer API")
+
+@app.on_event("startup")
+async def ensure_db_schema():
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS session_id VARCHAR;"))
+                conn.execute(text("ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS context_data JSONB;"))
+                conn.commit()
+            except Exception:
+                try:
+                    conn.execute(text("ALTER TABLE agent_tasks ADD COLUMN session_id VARCHAR;"))
+                    conn.commit()
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE agent_tasks ADD COLUMN context_data JSON;"))
+                    conn.commit()
+                except Exception:
+                    pass
+    except Exception as exc:
+        logger.warning("DB schema initialization check: %s", exc)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
