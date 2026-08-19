@@ -1017,8 +1017,8 @@ export default function CitationIntelligence() {
                 </section>
               )}
 
-              <section className="rounded-2xl border border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.96)_100%)] p-4 premium-shadow min-w-0 overflow-hidden">
-                <div className="flex items-center gap-2 mb-3">
+              <section className="rounded-2xl border border-border/60 bg-[linear-gradient(180deg,hsl(var(--card))_0%,hsl(var(--card)/0.96)_100%)] p-4 premium-shadow min-w-0 flex flex-col h-[430px]">
+                <div className="flex items-center gap-2 mb-3 shrink-0">
                   <BookOpen className="w-4 h-4 text-accent" />
                   <h2 className="text-sm font-semibold">AI Recommendations</h2>
                 </div>
@@ -1038,7 +1038,7 @@ export default function CitationIntelligence() {
                 {recommendationError && <p className="text-sm text-destructive">{recommendationError}</p>}
 
                 {!recommendationLoading && !recommendationError && recommendations && (
-                  <div className="space-y-3.5">
+                  <div className="space-y-3.5 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-accent/20 hover:scrollbar-thumb-accent/40">
                     {(recommendations.paper_focus || (recommendations as any).topic_focus) && (
                       <div>
                         <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{resultMode === "discover" ? "Topic Focus" : "Paper Focus"}</p>
@@ -1054,7 +1054,7 @@ export default function CitationIntelligence() {
                             <div key={`${item.title || "must-read"}-${index}`} className="rounded-lg border border-border/50 px-2.5 py-2">
                               <div className="flex items-start justify-between gap-2">
                                 <p className="text-xs font-medium leading-snug">{item.title || "Untitled"}</p>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-border/60 bg-secondary/30 text-foreground/85 uppercase">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-border/60 bg-secondary/30 text-foreground/85 uppercase shrink-0">
                                   {item.priority || "medium"}
                                 </span>
                               </div>
@@ -1110,19 +1110,19 @@ export default function CitationIntelligence() {
               </section>
             </aside>
 
-            <div className="space-y-6 min-w-0">
-              <section className="min-w-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="space-y-4 min-w-0">
+              <section className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 premium-shadow">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-accent" />
-                    <h2 className="text-base sm:text-lg font-semibold">Live Citation Stream</h2>
+                    <h2 className="text-base font-semibold">Live Citation Stream</h2>
                   </div>
                   <span className="text-[11px] px-2.5 py-1 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground font-mono uppercase tracking-widest">
                     {sortedTopCited.length} entries
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="h-[460px] overflow-y-auto pr-2 space-y-3 scrollbar-thin scrollbar-thumb-accent/20 hover:scrollbar-thumb-accent/40 rounded-xl border border-border/40 bg-secondary/10 p-3">
                   {sortedTopCited.length === 0 && (
                     <div className="rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
                       No matched references found.
@@ -1134,50 +1134,50 @@ export default function CitationIntelligence() {
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25, delay: index * 0.03 }}
-                      className="rounded-xl border border-border/60 bg-card p-4 overflow-hidden hover:border-accent/30 transition-colors"
+                      className="rounded-xl border border-border/60 bg-card p-3.5 overflow-hidden hover:border-accent/30 transition-colors shadow-sm"
                     >
-                      <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center justify-between gap-3 mb-1.5">
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary/50 text-muted-foreground font-mono">
                           #{index + 1}
                         </span>
-                        <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent w-fit">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
                           {entry.citation_count} citations
                         </span>
                       </div>
 
                       <h3 className="text-sm font-semibold text-foreground leading-snug break-words mb-1">{entry.title || "Unknown title"}</h3>
-                      <p className="text-xs text-muted-foreground mb-2 break-words">{entry.authors?.slice(0, 5).join(", ") || "Unknown authors"}</p>
-                      <p className="text-xs text-muted-foreground mb-3">{entry.venue || "Unknown venue"}{entry.year ? ` • ${entry.year}` : ""}</p>
+                      <p className="text-xs text-muted-foreground mb-1.5 break-words">{entry.authors?.slice(0, 5).join(", ") || "Unknown authors"}</p>
+                      <p className="text-xs text-muted-foreground mb-2">{entry.venue || "Unknown venue"}{entry.year ? ` • ${entry.year}` : ""}</p>
                       {entry.url && (
                         <a href={entry.url} target="_blank" rel="noreferrer" className="text-xs text-accent inline-flex items-center gap-1 hover:underline break-all">
                           Open in Semantic Scholar <ExternalLink className="w-3 h-3 flex-shrink-0" />
                         </a>
                       )}
-                      <p className="text-xs text-foreground/80 mt-3 leading-relaxed break-words">{entry.reference_text}</p>
+                      <p className="text-xs text-foreground/80 mt-2 leading-relaxed break-words">{entry.reference_text}</p>
                     </motion.div>
                   ))}
                 </div>
               </section>
 
-              <section>
-                <div className="flex items-center justify-between gap-3 mb-4">
+              <section className="rounded-2xl border border-border/60 bg-card p-4 premium-shadow">
+                <div className="flex items-center justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2">
                     <SearchX className="w-4 h-4 text-accent" />
-                    <h2 className="text-base sm:text-lg font-semibold">Unmatched References</h2>
+                    <h2 className="text-sm font-semibold">Unmatched References</h2>
                   </div>
-                  <span className="text-[11px] px-2.5 py-1 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground font-mono uppercase tracking-widest">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full border border-border/60 bg-secondary/30 text-muted-foreground font-mono uppercase tracking-widest">
                     {missingReferences.length}
                   </span>
                 </div>
-                <div className="space-y-2">
+                <div className="max-h-[140px] overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-accent/20 hover:scrollbar-thumb-accent/40 rounded-xl border border-border/40 bg-secondary/10 p-2.5">
                   {missingReferences.length === 0 && (
-                    <div className="rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
+                    <div className="rounded-xl border border-border/50 bg-card p-3 text-xs text-muted-foreground">
                       All processed references were matched.
                     </div>
                   )}
                   {missingReferences.map((entry) => (
-                    <div key={`missing-${entry.reference_index}`} className="rounded-xl border border-border/60 bg-card p-3 flex items-start gap-3">
-                      <FileText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div key={`missing-${entry.reference_index}`} className="rounded-xl border border-border/60 bg-card p-2.5 flex items-start gap-2.5">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-foreground/80 leading-relaxed break-all whitespace-normal">{entry.reference_text}</p>
                     </div>
                   ))}
