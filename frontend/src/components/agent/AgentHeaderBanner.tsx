@@ -31,8 +31,12 @@ const PRESET_META = [
 ];
 
 export const AgentHeaderBanner: React.FC<AgentHeaderBannerProps> = ({
-  presetPrompts,
-  isRunning,
+  presetPrompts = [
+    "Graph neural networks for drug discovery: do a literature review and identify 3 unexplored directions.",
+    "I want to work on brain tumor. Do a literature review, then tell me which dataset and benchmark I should use.",
+    "Diffusion models for medical imaging segmentation: literature review and benchmark datasets.",
+  ],
+  isRunning = false,
   onSelectPreset,
 }) => {
   return (
@@ -129,7 +133,7 @@ export const AgentHeaderBanner: React.FC<AgentHeaderBannerProps> = ({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={isRunning}
-                onClick={() => onSelectPreset(preset)}
+                onClick={() => onSelectPreset?.(preset)}
                 className={`group relative text-left p-4 rounded-2xl border bg-gradient-to-br transition-all duration-300 shadow-md ${meta.color} ${
                   isRunning ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                 }`}

@@ -8,8 +8,9 @@ logger = logging.getLogger(__name__)
 
 AVAILABLE_TOOL_DESCRIPTIONS = {
     "search_papers": "Search literature databases (arXiv, Semantic Scholar, Crossref) for papers, prior work, background, or literature reviews.",
-    "analyze_insights": "Extract methodology, technical insights, and paper abstractions from literature.",
-    "detect_gaps": "Identify unexplored research gaps, limitations, and open challenges in a domain.",
+    "search_workspace_vector_db": "Search uploaded PDF research paper chunks in the vector database for paper-specific content.",
+    "analyze_paper": "Extract methodology, technical insights, and paper abstractions from literature or uploaded paper.",
+    "detect_gaps": "Identify unexplored research gaps, limitations, and open challenges in a domain or uploaded paper.",
     "generate_problem": "Formulate novel research directions, problem statements, and core technical bottlenecks.",
     "find_datasets": "Recommend SOTA datasets, benchmark suites, evaluation metrics, and baselines.",
     "plan_experiment": "Design a detailed multi-stage experimental execution roadmap with parameters, configs, and risks.",
@@ -17,11 +18,22 @@ AVAILABLE_TOOL_DESCRIPTIONS = {
 
 
 async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[str, Any]:
-    """Dynamically analyze user query with an LLM router to select exact tool calls and parameters."""
+    """Dynamically analyze user query with an LLM router to select exact tool calls or direct chat."""
     clean_goal = (goal or "").strip()
     lower = clean_goal.lower()
 
-    # Deterministic Fast-Path: Skip LLM call for explicit combination patterns
+    # Deterministic Fast-Path 0: Greetings, Identity & General Chat Queries
+    chat_greetings = ["hi", "hello", "hey", "who are you", "what is your name", "what's your name", "help", "thanks", "thank you"]
+    if lower in chat_greetings or any(lower.startswith(g) for g in ["hi ", "hello ", "hey ", "who are you", "what is your name"]):
+        if not any(k in lower for k in ["paper", "dataset", "benchmark", "gaps", "problem", "experiment", "literature"]):
+            logger.info("Fast-path router selected direct_chat (0 tools) for goal: %s", clean_goal)
+            return {
+                "selected_tools": [],
+                "intent_type": "direct_chat",
+                "intent_summary": "Direct Conversation",
+            }
+
+    # Deterministic Fast-Path 1: Explicit combination patterns
     has_dataset = any(k in lower for k in ["dataset", "datasets", "benchmark", "benchmarks", "evaluation metrics"])
     has_problem = any(k in lower for k in ["problem statement", "problem", "problems", "direction", "directions", "unexplored", "gap", "gaps"])
     has_papers = any(k in lower for k in ["search papers", "literature search", "find papers", "arxiv papers", "literature"])
@@ -43,6 +55,7 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
                     "args": {"topic": clean_goal, "domain": clean_goal}
                 }
             ],
+            "intent_type": "research_tools",
             "intent_summary": "Fast-path Problem Statement + Dataset Router",
         }
 
@@ -56,6 +69,7 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
                     "args": {"topic": clean_goal, "domain": clean_goal}
                 }
             ],
+            "intent_type": "research_tools",
             "intent_summary": "Fast-path Dataset & Benchmark Router",
         }
 
@@ -69,6 +83,7 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
                     "args": {"domain": clean_goal, "topic": clean_goal}
                 }
             ],
+            "intent_type": "research_tools",
             "intent_summary": "Fast-path Literature Search Router",
         }
 
@@ -76,17 +91,19 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
     available_tools_json = json.dumps(AVAILABLE_TOOL_DESCRIPTIONS, indent=2)
 
     system_prompt = (
-        "You are an expert AI Research Tool Router.\n"
-        "Your task is to analyze the user's research query and select ONLY the tools specifically required to satisfy the user's request.\n\n"
+        "You are an expert AI Research Tool Router & Intent Classifier.\n"
+        "Your task is to analyze the user's query and decide whether it requires ACADEMIC RESEARCH TOOLS or DIRECT CONVERSATIONAL RESPONSE.\n\n"
         f"Available Tools & Descriptions:\n{available_tools_json}\n\n"
         "SELECTION RULES:\n"
-        "1. If query asks ONLY for datasets or benchmarks -> select ONLY ['find_datasets']!\n"
-        "2. If query asks for problem statements, research directions, or unexplored ideas AND datasets -> select BOTH ['generate_problem', 'find_datasets']!\n"
-        "3. If query asks for literature/background AND research directions/unexplored ideas/gaps -> select BOTH ['search_papers', 'generate_problem']!\n"
-        "4. If query asks for literature AND datasets -> select BOTH ['search_papers', 'find_datasets']!\n"
-        "5. If query asks for a full proposal, plan, or end-to-end execution roadmap -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment']!\n\n"
+        "1. If the query is a greeting, identity question (e.g., 'What is your name?'), general conversation, or general knowledge prompt NOT requiring specialized academic database tools -> return \"selected_tools\": [] and \"intent_type\": \"direct_chat\"!\n"
+        "2. If query asks ONLY for datasets or benchmarks -> select ONLY ['find_datasets']!\n"
+        "3. If query asks for problem statements, research directions, or unexplored ideas AND datasets -> select BOTH ['generate_problem', 'find_datasets']!\n"
+        "4. If query asks for literature/background AND research directions/unexplored ideas/gaps -> select BOTH ['search_papers', 'generate_problem']!\n"
+        "5. If query asks for literature AND datasets -> select BOTH ['search_papers', 'find_datasets']!\n"
+        "6. If query asks for a full proposal, plan, or end-to-end execution roadmap -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment']!\n\n"
         "Return ONLY a JSON object matching this structure:\n"
         "{\n"
+        '  "intent_type": "direct_chat" | "research_tools",\n'
         '  "selected_tools": [\n'
         '    {\n'
         '      "tool": "generate_problem",\n'
@@ -98,7 +115,7 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
         "}"
     )
 
-    user_prompt = f"User Research Query: {clean_goal}"
+    user_prompt = f"User Query: {clean_goal}"
 
     try:
         response = create_completion_with_fallback(
@@ -115,7 +132,15 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
         )
         content = response.choices[0].message.content
         data = json.loads(content)
+        intent_type = data.get("intent_type", "research_tools")
         raw_selected = data.get("selected_tools", [])
+
+        if intent_type == "direct_chat" or not raw_selected:
+            return {
+                "selected_tools": [],
+                "intent_type": "direct_chat",
+                "intent_summary": data.get("intent_summary", "Direct Conversation"),
+            }
 
         valid_tools = []
         for item in raw_selected:
@@ -129,11 +154,9 @@ async def select_agent_tools(goal: str, tools_registry: Dict[str, Any]) -> Dict[
                 item["args"] = item_args
                 valid_tools.append(item)
 
-        if not valid_tools:
-            valid_tools = _fallback_tool_selection(clean_goal)
-
         return {
             "selected_tools": valid_tools,
+            "intent_type": "research_tools" if valid_tools else "direct_chat",
             "intent_summary": data.get("intent_summary", "Dynamic LLM Tool Selection"),
         }
 

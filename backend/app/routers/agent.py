@@ -2,7 +2,7 @@ import json
 import asyncio
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, File, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -20,6 +20,75 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 
 class CreateTaskRequest(BaseModel):
     goal: str
+    paper_id: Optional[str] = None
+
+
+@router.post("/upload-paper")
+async def upload_agent_paper(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a research paper PDF for Agent Mode context, parse text, and embed chunks into vector DB."""
+    import os, uuid
+    from app.models.domain import Document
+    from app.services.parsing import parse_pdf_bytes
+    from app.services.embedding import embed_chunks_and_store
+
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        parsed_doc = parse_pdf_bytes(content, filename=file.filename)
+        doc_id = str(uuid.uuid4())
+
+        # Store Document Record in DB
+        db_doc = db.query(Document).filter(Document.id == doc_id).first()
+        if not db_doc:
+            db_doc = Document(
+                id=doc_id,
+                user_id=user_id,
+                filename=file.filename,
+                title=file.filename,
+                status="Analyzed",
+            )
+            db.add(db_doc)
+            db.commit()
+
+        # Store in shared memory cache for instant search & analysis
+        chunks = parsed_doc.get("chunks", [])
+        try:
+            from app.services.cache import store_doc, set_active_doc
+            store_doc(doc_id, {
+                "chunks": chunks,
+                "filename": file.filename,
+                "page_count": parsed_doc.get("total_pages", 1),
+            })
+            set_active_doc(doc_id)
+        except Exception as e:
+            logger.warning("Cache store warning: %s", e)
+
+        # Embed chunks into pgvector storage asynchronously if available
+        if chunks:
+            try:
+                embed_chunks_and_store(doc_id, chunks, user_id=user_id)
+            except Exception as e:
+                logger.warning("Agent paper embedding warning: %s", e)
+
+        return {
+            "paper_id": doc_id,
+            "filename": file.filename,
+            "total_pages": parsed_doc.get("total_pages", 1),
+            "status": "ready",
+            "message": f"Paper '{file.filename}' uploaded and indexed for Agent Mode.",
+        }
+    except Exception as exc:
+        logger.error("Failed to process agent paper upload: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to process PDF paper: {str(exc)}")
 
 
 @router.post("/task")
@@ -41,10 +110,10 @@ async def create_task(
     db.commit()
     db.refresh(task)
 
-    # Launch background agent orchestrator task
-    asyncio.create_task(run_research_task(task_id=task.id, user_id=user_id, goal=task.goal))
+    # Launch background agent orchestrator task with optional paper_id context
+    asyncio.create_task(run_research_task(task_id=task.id, user_id=user_id, goal=task.goal, paper_id=req.paper_id or ""))
 
-    return {"task_id": task.id, "status": "running", "goal": task.goal}
+    return {"task_id": task.id, "status": "running", "goal": task.goal, "paper_id": req.paper_id}
 
 
 @router.post("/task/{task_id}/cancel")

@@ -10,9 +10,20 @@ import {
   ShieldCheck,
   Zap,
   FlaskConical,
-  Award,
+  Paperclip,
+  Send,
+  Loader2,
+  CheckCircle2,
+  Trash2,
+  Bot,
+  User,
+  Sparkles,
+  ArrowRight,
   Copy,
   Check,
+  UploadCloud,
+  X,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +34,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { AgentHeaderBanner } from "@/components/agent/AgentHeaderBanner";
-import { AgentGoalInput } from "@/components/agent/AgentGoalInput";
 import { AgentStepperView, StepItem } from "@/components/agent/AgentStepperView";
 import { LiteratureReviewCard } from "@/components/agent/LiteratureReviewCard";
 import { ProposedDirectionsCard } from "@/components/agent/ProposedDirectionsCard";
@@ -61,14 +71,9 @@ const MarkdownComponents: any = {
 const normalizeMarkdown = (value: string) => {
   if (!value) return "";
   let norm = value.replace(/\r\n/g, "\n");
-
-  // Reformat collapsed inline markdown table rows separated by `| |` or `|  |`
   norm = norm.replace(/\|\s*\|\s*(?=[A-Za-z0-9\-–\s—\[\*\<])/g, "|\n|");
-
-  // Fix missing newlines before markdown headings
   norm = norm.replace(/([^\n])\s*(#{1,6})(?!#)\s*/g, "$1\n\n$2 ");
   norm = norm.replace(/^(\s*#{1,6})([^\s#])/gm, "$1 $2");
-
   return norm;
 };
 
@@ -87,6 +92,15 @@ interface EventStep {
   verdict?: string;
   reason?: string;
   timestamp?: string;
+}
+
+interface ChatMessage {
+  id: string;
+  sender: "user" | "agent";
+  text: string;
+  timestamp: string;
+  paperInfo?: { filename: string; pages: number };
+  task_id?: string;
 }
 
 const renderTextOrObject = (val: any): string => {
@@ -109,18 +123,11 @@ const renderTextOrObject = (val: any): string => {
   return String(val);
 };
 
-const PRESET_PROMPTS = [
-  "Graph neural networks for drug discovery: do a literature review and identify 3 unexplored directions.",
-  "I want to work on brain tumor. Do a literature review, then tell me which dataset and benchmark I should use.",
-  "Diffusion models for medical imaging segmentation: literature review and benchmark datasets.",
-];
-
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const TOOL_META: Record<string, { name: string; desc: string; icon: any }> = {
   search_papers: { name: "Literature Repository Search", desc: "Searching academic publication repositories", icon: Search },
   search_workspace_vector_db: { name: "Workspace Paper Index", desc: "Searching indexed papers in workspace", icon: Database },
-  analyze_insights: { name: "Methodology & Insights Analysis", desc: "Extracting paper abstractions & technical insights", icon: BookOpen },
   analyze_paper: { name: "Paper Analysis", desc: "Extracting methodology and key assertions", icon: BookOpen },
   detect_gaps: { name: "Research Gap Detection", desc: "Identifying unexplored research gaps & limitations", icon: Zap },
   generate_problem: { name: "Novel Research Directions", desc: "Formulating research directions & core bottlenecks", icon: Target },
@@ -137,9 +144,34 @@ const RESEARCH_STEPS: StepItem[] = [
   { id: 6, name: "Report Synthesis", desc: "Synthesizing executive literature review proposal", icon: FileText },
 ];
 
+const PROMPT_SUGGESTIONS = [
+  "Find out research gaps and limitations in my uploaded paper",
+  "Formulate novel problem statements and research directions for Breast cancer detection",
+  "Recommend SOTA datasets and benchmarks for GNN molecular property prediction",
+  "Design a multi-stage experimental execution roadmap for medical image segmentation",
+];
+
 export default function AgentMode() {
   const { getToken } = useAuth();
-  const [goal, setGoal] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  // Chatbot State
+  const [inputQuery, setInputQuery] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome-1",
+      sender: "agent",
+      text: "Welcome to **PaperLens Continuous Autonomous Agent Workspace**!\n\nYou can chat with me, ask complex research questions, or attach a PDF paper to detect research gaps and generate novel solution roadmaps.",
+      timestamp: new Date().toLocaleTimeString(),
+    },
+  ]);
+
+  // Paper Upload Context State
+  const [activePaper, setActivePaper] = useState<{ id: string; filename: string; pages: number } | null>(null);
+  const [isUploadingPaper, setIsUploadingPaper] = useState(false);
+
+  // Agent Task & Inspector State
   const [isRunning, setIsRunning] = useState(false);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [events, setEvents] = useState<EventStep[]>([]);
@@ -151,53 +183,104 @@ export default function AgentMode() {
   const [latestThought, setLatestThought] = useState<string | null>(null);
   const [memorySummary, setMemorySummary] = useState<string | null>(null);
   const [dynamicSteps, setDynamicSteps] = useState<StepItem[]>([]);
-  const [copied, setCopied] = useState(false);
+  const [activeExecutingTool, setActiveExecutingTool] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"cards" | "stepper" | "raw">("cards");
-
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
-  const [selectedYear, setSelectedYear] = useState<string>("all");
-  const [paperSearchQuery, setPaperSearchQuery] = useState("");
-
-  const [loadingPlanIndex, setLoadingPlanIndex] = useState<number | null>(null);
-  const [directionPlans, setDirectionPlans] = useState<Record<number, any[]>>({});
+  const [copied, setCopied] = useState(false);
 
   const sseRef = useRef<EventSource | null>(null);
 
-  const activeResearchSteps = useMemo<StepItem[]>(() => {
-    if (dynamicSteps.length > 0) {
-      return dynamicSteps;
-    }
-
-    if (isRunning) {
-      return [
-        {
-          id: 1,
-          name: "Agent Reasoning & Tool Selection",
-          desc: "Analyzing request intent and selecting dynamic tools...",
-          icon: Zap,
-        },
-      ];
-    }
-
-    return RESEARCH_STEPS;
-  }, [dynamicSteps, isRunning]);
+  useEffect(() => {
+    chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, events]);
 
   useEffect(() => {
     return () => {
-      if (sseRef.current) {
-        sseRef.current.close();
-      }
+      if (sseRef.current) sseRef.current.close();
     };
   }, []);
 
-  const handleStartAgent = async (promptGoal?: string) => {
-    const targetGoal = promptGoal || goal;
-    if (!targetGoal.trim()) {
-      toast.error("Please enter a research goal first.");
+  const activeResearchSteps = useMemo<StepItem[]>(() => {
+    return dynamicSteps;
+  }, [dynamicSteps]);
+
+  // Upload Paper PDF Handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Please upload a PDF file (.pdf)");
       return;
     }
 
+    setIsUploadingPaper(true);
+    toast.loading("Uploading and indexing paper for Agent Mode...", { id: "upload-paper" });
+
+    try {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`${API_BASE_URL}/api/agent/upload-paper`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(`Upload failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      setActivePaper({
+        id: data.paper_id,
+        filename: data.filename,
+        pages: data.total_pages || 1,
+      });
+
+      toast.success(`Paper '${data.filename}' indexed for Agent Mode!`, { id: "upload-paper" });
+
+      // Add system chat message for paper upload
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `paper-${Date.now()}`,
+          sender: "agent",
+          text: `Paper **${data.filename}** (${data.total_pages} pages) attached to context. Ask me to detect gaps, search text, or formulate problem statements!`,
+          timestamp: new Date().toLocaleTimeString(),
+          paperInfo: { filename: data.filename, pages: data.total_pages },
+        },
+      ]);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload paper.", { id: "upload-paper" });
+    } finally {
+      setIsUploadingPaper(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // Start Agent Task Handler
+  const handleSendMessage = async (promptGoal?: string) => {
+    const textGoal = promptGoal || inputQuery;
+    if (!textGoal.trim()) {
+      toast.error("Please enter a research prompt.");
+      return;
+    }
+
+    const userMsgId = `user-${Date.now()}`;
+    const userMsg: ChatMessage = {
+      id: userMsgId,
+      sender: "user",
+      text: textGoal.trim(),
+      timestamp: new Date().toLocaleTimeString(),
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setInputQuery("");
     setIsRunning(true);
+
     setEvents([]);
     setPlannedSteps([]);
     setDynamicSteps([]);
@@ -207,8 +290,8 @@ export default function AgentMode() {
     setCritiqueData(null);
     setLatestThought(null);
     setMemorySummary(null);
-    setDirectionPlans({});
-    setActiveTab("stepper");
+    setActiveExecutingTool(null);
+    setActiveTab("cards");
 
     try {
       const token = await getToken();
@@ -218,11 +301,14 @@ export default function AgentMode() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ goal: targetGoal.trim() }),
+        body: JSON.stringify({
+          goal: textGoal.trim(),
+          paper_id: activePaper?.id || null,
+        }),
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to start agent task (${res.status})`);
+        throw new Error(`Failed to initialize agent task (${res.status})`);
       }
 
       const data = await res.json();
@@ -231,93 +317,16 @@ export default function AgentMode() {
 
       connectSSE(newTaskId, token);
     } catch (err: any) {
-      toast.error(err.message || "Could not start research task.");
+      toast.error(err.message || "Could not launch agent task.");
       setIsRunning(false);
     }
   };
 
-  const pushDynamicStep = (toolName: string, customDesc?: string) => {
-    setDynamicSteps((prev) => {
-      if (prev.some((s) => (s as any).tool === toolName)) return prev;
-      const meta = TOOL_META[toolName] || {
-        name: customDesc || `Tool execution: ${toolName}`,
-        desc: customDesc || `Executing tool ${toolName}`,
-        icon: Zap,
-      };
-      const newStep: StepItem = {
-        id: prev.length + 1,
-        name: meta.name,
-        desc: meta.desc,
-        icon: meta.icon,
-        tool: toolName,
-      } as any;
-      return [...prev, newStep];
-    });
-  };
-
-  const pushCritiqueStep = () => {
-    setDynamicSteps((prev) => {
-      if (prev.some((s) => s.name === "Peer-Review Self-Critique")) return prev;
-      return [
-        ...prev,
-        {
-          id: prev.length + 1,
-          name: "Peer-Review Self-Critique",
-          desc: "Verifying claims & citation coverage against sources",
-          icon: ShieldCheck,
-        },
-      ];
-    });
-  };
-
-  const pushSynthesisStep = () => {
-    setDynamicSteps((prev) => {
-      if (prev.some((s) => s.name === "Report Synthesis")) return prev;
-      return [
-        ...prev,
-        {
-          id: prev.length + 1,
-          name: "Report Synthesis",
-          desc: "Synthesizing executive literature report",
-          icon: FileText,
-        },
-      ];
-    });
-  };
-
-  const handleStopAgent = async () => {
-    if (sseRef.current) {
-      sseRef.current.close();
-      sseRef.current = null;
-    }
-
-    setIsRunning(false);
-
-    if (taskId) {
-      try {
-        const token = await getToken();
-        await fetch(`${API_BASE_URL}/api/agent/task/${taskId}/cancel`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      } catch (err) {
-        console.error("Failed to cancel agent task on backend", err);
-      }
-    }
-
-    toast.info("Autonomous research process terminated by user.");
-  };
-
   const connectSSE = (tId: string, token: string | null) => {
-    if (sseRef.current) {
-      sseRef.current.close();
-    }
+    if (sseRef.current) sseRef.current.close();
 
     const encodedToken = encodeURIComponent(token || "");
     const url = `${API_BASE_URL}/api/agent/task/${tId}/stream?token=${encodedToken}`;
-
     const eventSource = new EventSource(url);
     sseRef.current = eventSource;
 
@@ -339,6 +348,7 @@ export default function AgentMode() {
                 setResultsData(finalEvt.results || []);
                 setCritiqueData(finalEvt.critique || null);
                 setActiveTab("cards");
+                appendAgentChatResponse(finalEvt.answer, tId);
               }
             }
           } else if (taskData.status === "cancelled") {
@@ -348,412 +358,425 @@ export default function AgentMode() {
           }
         }
       } catch (err) {
-        // ignore polling errors
+        // ignore polling error
       }
-    }, 4000);
+    }, 3500);
 
     eventSource.onmessage = (e) => {
       try {
         const payload: EventStep = JSON.parse(e.data);
         payload.timestamp = new Date().toLocaleTimeString();
-
         setEvents((prev) => [...prev, payload]);
 
-        if (payload.type === "plan" && (payload as any).steps) {
-          setPlannedSteps((payload as any).steps);
-        }
-
-        if (payload.type === "thought") {
-          if ((payload as any).thought) setLatestThought((payload as any).thought);
-          if ((payload as any).memory_summary) setMemorySummary((payload as any).memory_summary);
-        } else if (payload.type === "action" || payload.type === "observation" || payload.type === "tool_call" || payload.type === "tool_result") {
-          if (payload.tool) {
-            pushDynamicStep(payload.tool, (payload as any).description);
-            setDynamicSteps((current) => {
-              const idx = current.findIndex((s) => (s as any).tool === payload.tool);
-              if (idx !== -1) setCurrentStepIndex(idx + 1);
-              return current;
-            });
-          }
-        } else if (payload.type === "memory_update") {
-          if ((payload as any).active_memory_summary) setMemorySummary((payload as any).active_memory_summary);
-        } else if (payload.type === "critique" || payload.type === "critique_start") {
-          pushCritiqueStep();
-          setDynamicSteps((current) => {
-            const idx = current.findIndex((s) => s.name === "Peer-Review Self-Critique");
-            if (idx !== -1) setCurrentStepIndex(idx + 1);
-            return current;
-          });
-        } else if (payload.type === "synthesis_start") {
-          pushSynthesisStep();
-          setDynamicSteps((current) => {
-            const idx = current.findIndex((s) => s.name === "Report Synthesis");
-            if (idx !== -1) setCurrentStepIndex(idx + 1);
-            return current;
-          });
-        }
-
-        if (payload.type === "final") {
+        if (payload.type === "thought" && (payload as any).thought) {
+          setLatestThought((payload as any).thought);
+        } else if ((payload.type === "action" || payload.type === "tool_call") && payload.tool) {
+          const tMeta = TOOL_META[payload.tool];
+          setActiveExecutingTool(tMeta?.name || payload.tool);
+          pushDynamicStep(payload.tool, (payload as any).description);
+          setActiveTab("stepper");
+        } else if (payload.type === "final" || payload.type === "error") {
           window.clearInterval(pollInterval);
-          setCurrentStepIndex(activeResearchSteps.length);
+          setIsRunning(false);
+          setActiveExecutingTool(null);
           setFinalAnswer(payload.answer || null);
           setResultsData(payload.results || []);
-          setCritiqueData(payload.critique || null);
-          setIsRunning(false);
+          setCritiqueData((payload as any).critique || null);
           setActiveTab("cards");
-          toast.success("Autonomous research workflow complete!");
-          eventSource.close();
-        } else if (payload.type === "cancelled") {
-          window.clearInterval(pollInterval);
-          setIsRunning(false);
-          toast.info(payload.message || "Process terminated by user.");
-          eventSource.close();
-        } else if (payload.type === "error") {
-          window.clearInterval(pollInterval);
-          setIsRunning(false);
-          toast.error(payload.message || "Agent task error.");
-          eventSource.close();
+          appendAgentChatResponse(payload.answer || "Agent task completed.", tId);
         }
       } catch (err) {
-        console.error("SSE parse error", err);
+        console.error("Failed to parse SSE payload", err);
       }
-    };
-
-    eventSource.onerror = () => {
-      // Keep SSE open for automatic reconnects
     };
   };
 
-  const handleCopyReport = () => {
+  const appendAgentChatResponse = (text: string, tId: string) => {
+    setChatMessages((prev) => {
+      if (prev.some((m) => m.task_id === tId)) return prev;
+      return [
+        ...prev,
+        {
+          id: `agent-reply-${Date.now()}`,
+          sender: "agent",
+          text: text.slice(0, 400) + (text.length > 400 ? "...\n\n*(Full report synthesized on right panel)*" : ""),
+          timestamp: new Date().toLocaleTimeString(),
+          task_id: tId,
+        },
+      ];
+    });
+  };
+
+  const pushDynamicStep = (toolName: string, customDesc?: string) => {
+    setDynamicSteps((prev) => {
+      if (prev.some((s) => (s as any).tool === toolName)) return prev;
+      const meta = TOOL_META[toolName] || {
+        name: customDesc || `Tool: ${toolName}`,
+        desc: customDesc || `Executing ${toolName}`,
+        icon: Zap,
+      };
+      return [...prev, { id: prev.length + 1, name: meta.name, desc: meta.desc, icon: meta.icon, tool: toolName } as any];
+    });
+  };
+
+  const handleStopAgent = async () => {
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+    setIsRunning(false);
+    if (taskId) {
+      try {
+        const token = await getToken();
+        await fetch(`${API_BASE_URL}/api/agent/task/${taskId}/cancel`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (err) {
+        console.error("Cancel failed", err);
+      }
+    }
+    toast.info("Agent process terminated.");
+  };
+
+  const copyToClipboard = () => {
     if (!finalAnswer) return;
     navigator.clipboard.writeText(finalAnswer);
     setCopied(true);
-    toast.success("Report copied to clipboard.");
+    toast.success("Markdown report copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handlePlanExperimentRoadmap = async (idx: number, title: string) => {
-    if (directionPlans[idx]) {
-      setDirectionPlans((prev) => {
-        const next = { ...prev };
-        delete next[idx];
-        return next;
-      });
-      return;
-    }
-
-    setLoadingPlanIndex(idx);
-    try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE_URL}/api/plan-experiment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ topic: title, difficulty: "advanced" }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to generate experiment plan");
-      }
-
-      const data = await res.json();
-      const steps = data.steps || [];
-
-      setDirectionPlans((prev) => ({ ...prev, [idx]: steps }));
-      toast.success(`Generated experiment plan for Direction #${idx + 1}`);
-    } catch (err: any) {
-      toast.error(err.message || "Could not fetch experiment roadmap.");
-    } finally {
-      setLoadingPlanIndex(null);
-    }
-  };
-
-  const paperSearchResults = resultsData.find((r) => r.tool === "search_papers")?.result;
-  const rawPapersList: any[] = paperSearchResults?.papers || [];
-
-  const yearwiseCounts = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const p of rawPapersList) {
-      const y = typeof p.year === "number" ? p.year : null;
-      if (y) {
-        counts.set(y, (counts.get(y) || 0) + 1);
-      }
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[0] - a[0])
-      .map(([year, count]) => ({ year, count }));
-  }, [rawPapersList]);
-
-  const filteredAndSortedPapers = useMemo(() => {
-    let items = [...rawPapersList];
-
-    if (selectedYear !== "all") {
-      const targetY = parseInt(selectedYear, 10);
-      items = items.filter((p) => p.year === targetY);
-    }
-
-    if (paperSearchQuery.trim()) {
-      const q = paperSearchQuery.toLowerCase().trim();
-      items = items.filter((p) => {
-        const title = renderTextOrObject(p.title).toLowerCase();
-        const venue = renderTextOrObject(p.venue).toLowerCase();
-        const summary = renderTextOrObject(p.summary).toLowerCase();
-        return title.includes(q) || venue.includes(q) || summary.includes(q);
-      });
-    }
-
-    items.sort((a, b) => {
-      const citeA = a.citation_count || 0;
-      const citeB = b.citation_count || 0;
-      const yearA = a.year || 0;
-      const yearB = b.year || 0;
-
-      if (sortOrder === "highest") return citeB - citeA;
-      if (sortOrder === "lowest") return citeA - citeB;
-      if (sortOrder === "oldest") return yearA - yearB;
-      if (yearA !== yearB) return yearB - yearA;
-      return citeB - citeA;
-    });
-
-    return items;
-  }, [rawPapersList, selectedYear, paperSearchQuery, sortOrder]);
-
-  const problemResult = resultsData.find((r) => r.tool === "generate_problem")?.result;
-  const proposedProblems: any[] = problemResult?.problems || problemResult?.ideas || [];
-
-  const experimentResult = resultsData.find((r) => r.tool === "plan_experiment")?.result;
-  const experimentPlanSteps: any[] = experimentResult?.steps || [];
-
-  const datasetResult = resultsData.find((r) => r.tool === "find_datasets")?.result;
-  const datasetsList: any[] = datasetResult?.datasets || [];
-
-  const hasDatasets = datasetsList.length > 0;
-  const topDatasetName = hasDatasets ? datasetsList[0]?.name : "Domain Literature Synthesis";
-  const topDatasetType = hasDatasets ? datasetsList[0]?.type : `${rawPapersList.length} Peer-Reviewed Papers Indexed`;
-  const topDatasetTasks = hasDatasets ? datasetsList[0]?.tasks : "Literature Survey & Method Taxonomy";
-  const topDatasetMetrics = hasDatasets ? datasetsList[0]?.metrics : "Citation Coverage & Methodological Rigor";
-
-  const totalStepCount = activeResearchSteps.length;
-  const progressPercent = Math.min(Math.round((currentStepIndex / totalStepCount) * 100), 100);
-
   return (
-    <div className="w-full space-y-6 text-foreground font-sans">
+    <div className="space-y-6 pb-12">
       <AgentHeaderBanner
-        presetPrompts={PRESET_PROMPTS}
         isRunning={isRunning}
-        onSelectPreset={(preset) => {
-          setGoal(preset);
-          handleStartAgent(preset);
-        }}
+        onSelectPreset={(preset) => handleSendMessage(preset)}
       />
 
-      <AgentGoalInput
-        goal={goal}
-        setGoal={setGoal}
-        isRunning={isRunning}
-        onStartAgent={() => handleStartAgent()}
-        onStopAgent={handleStopAgent}
-      />
-
-      {(events.length > 0 || isRunning || finalAnswer) && (
-        <div className="space-y-6 pt-2">
-          {/* Workspace Navigation Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/40 pb-4">
-            <div className="flex items-center gap-1.5 bg-secondary/50 p-1.5 rounded-2xl border border-border/60 backdrop-blur-md">
-              <button
-                onClick={() => setActiveTab("cards")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === "cards"
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Award className="w-3.5 h-3.5" />
-                Structured Findings ({resultsData.length} Tools)
-              </button>
-
-              <button
-                onClick={() => setActiveTab("stepper")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === "stepper"
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <BrainCircuit className="w-3.5 h-3.5" />
-                Live Execution Stream ({activeResearchSteps.length} Steps)
-              </button>
-
-              {finalAnswer && (
-                <button
-                  onClick={() => setActiveTab("raw")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    activeTab === "raw"
-                      ? "bg-background text-foreground border border-border shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                  Full Markdown Synthesis
-                </button>
-              )}
+      {/* Split-Screen SaaS Agent Workspace Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[750px]">
+        {/* LEFT PANEL: Continuous Interactive Agent Chatbot */}
+        <Card className="flex flex-col border border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden h-[750px]">
+          {/* Chatbot Header */}
+          <div className="p-4 border-b border-border/50 bg-secondary/30 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                <BrainCircuit className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  PaperLens Agent Assistant
+                  <Badge variant="outline" className="text-[10px] text-emerald-400 bg-emerald-500/10 border-emerald-500/30">
+                    SaaS Mode
+                  </Badge>
+                </h2>
+                <p className="text-[11px] text-muted-foreground">Continuous research chatbot & tool executor</p>
+              </div>
             </div>
 
-            {finalAnswer && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyReport}
-                className="h-9 px-4 text-xs font-semibold border-border/80 rounded-xl hover:bg-secondary transition-all"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> Copied Report
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy Complete Report
-                  </>
-                )}
-              </Button>
+            {/* Active Paper Context Badge */}
+            {activePaper && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs">
+                <FileText className="w-3.5 h-3.5" />
+                <span className="max-w-[120px] truncate font-medium">{activePaper.filename}</span>
+                <button onClick={() => setActivePaper(null)} className="hover:text-red-400 ml-1">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             )}
           </div>
 
-          {activeTab === "cards" && (
-            <div className="space-y-6">
-              {/* Executive Insights & Recommendation Card */}
-              <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-card/90 p-6 shadow-xl backdrop-blur-xl space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <Award className="w-4 h-4" />
-                    </div>
-                    <h3 className="text-sm font-bold tracking-tight text-foreground">Executive Domain Summary & Recommendations</h3>
+          {/* Chat Thread Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs">
+            {chatMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.sender === "agent" && (
+                  <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mt-0.5">
+                    <Bot className="w-4 h-4" />
                   </div>
-                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs font-mono px-3 py-1">
-                    Dynamic Domain Alignment
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                  <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-1.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono tracking-wider">Top Benchmark Focus</span>
-                    <p className="font-bold text-sm text-foreground line-clamp-1">{topDatasetName}</p>
-                    <p className="text-muted-foreground text-xs line-clamp-2">{topDatasetType}</p>
-                  </div>
+                )}
 
-                  <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-1.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono tracking-wider">Primary Tasks & Metrics</span>
-                    <p className="font-bold text-sm text-foreground line-clamp-1">{topDatasetTasks}</p>
-                    <p className="text-muted-foreground text-xs line-clamp-2">Metrics: {topDatasetMetrics}</p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-1.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono tracking-wider">Self-Critique Audit</span>
-                    <p className="font-bold text-sm text-emerald-400">
-                      {renderTextOrObject(critiqueData?.verdict) || "Passed with High Confidence"}
-                    </p>
-                    <p className="text-muted-foreground text-xs">Citation Coverage: {renderTextOrObject(critiqueData?.citation_coverage_score) || "0.95"} (Verified)</p>
-                  </div>
+                <div
+                  className={`max-w-[85%] rounded-2xl p-3.5 shadow-lg ${
+                    msg.sender === "user"
+                      ? "bg-indigo-600 text-white rounded-tr-none"
+                      : "bg-secondary/70 border border-border/60 text-foreground rounded-tl-none"
+                  }`}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                    {msg.text}
+                  </ReactMarkdown>
+                  <span className="block text-[10px] opacity-60 text-right mt-1.5 font-mono">
+                    {msg.timestamp}
+                  </span>
                 </div>
+
+                {msg.sender === "user" && (
+                  <div className="w-7 h-7 rounded-xl bg-foreground/10 border border-border/40 flex items-center justify-center text-foreground shrink-0 mt-0.5">
+                    <User className="w-4 h-4" />
+                  </div>
+                )}
               </div>
+            ))}
 
-              {(() => {
-                let cardCounter = 0;
-                const litIndex = rawPapersList.length > 0 ? ++cardCounter : 0;
-                const probIndex = proposedProblems.length > 0 ? ++cardCounter : 0;
-                const expIndex = experimentPlanSteps.length > 0 ? ++cardCounter : 0;
-                const datasetIndex = datasetsList.length > 0 ? ++cardCounter : 0;
-                const critiqueIndex = critiqueData ? ++cardCounter : 0;
+            {isRunning && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </div>
+                {activeExecutingTool ? (
+                  <div className="bg-secondary/70 border border-indigo-500/30 rounded-2xl p-3 text-xs text-indigo-300 flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span>Executing tool: <strong className="font-semibold text-indigo-200">{activeExecutingTool}</strong>...</span>
+                  </div>
+                ) : (
+                  <div className="bg-secondary/70 border border-border/40 rounded-2xl p-3 text-xs text-muted-foreground flex items-center gap-2">
+                    <Bot className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                    <span>PaperLens AI is typing...</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <div ref={chatScrollRef} />
+          </div>
 
-                return (
-                  <>
-                    {rawPapersList.length > 0 && (
-                      <LiteratureReviewCard
-                        papers={rawPapersList}
-                        filteredPapers={filteredAndSortedPapers}
-                        paperSearchQuery={paperSearchQuery}
-                        setPaperSearchQuery={setPaperSearchQuery}
-                        sortOrder={sortOrder}
-                        setSortOrder={setSortOrder}
-                        selectedYear={selectedYear}
-                        setSelectedYear={setSelectedYear}
-                        yearwiseCounts={yearwiseCounts}
-                        renderTextOrObject={renderTextOrObject}
-                        sectionIndex={litIndex}
-                      />
-                    )}
+          {/* Quick Prompt Suggestions */}
+          <div className="px-4 py-2 bg-secondary/20 border-t border-border/30 overflow-x-auto flex items-center gap-2 scrollbar-none">
+            <span className="text-[10px] text-muted-foreground shrink-0 font-medium">Suggestions:</span>
+            {PROMPT_SUGGESTIONS.map((sug, i) => (
+              <button
+                key={i}
+                onClick={() => handleSendMessage(sug)}
+                disabled={isRunning}
+                className="px-2.5 py-1 rounded-lg bg-secondary/60 hover:bg-indigo-500/20 border border-border/40 hover:border-indigo-500/40 text-[11px] text-foreground/80 hover:text-indigo-300 transition-all shrink-0 whitespace-nowrap"
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
 
-                    {proposedProblems.length > 0 && (
-                      <ProposedDirectionsCard
-                        proposedProblems={proposedProblems}
-                        directionPlans={directionPlans}
-                        loadingPlanIndex={loadingPlanIndex}
-                        onPlanExperimentRoadmap={handlePlanExperimentRoadmap}
-                        renderTextOrObject={renderTextOrObject}
-                        sectionIndex={probIndex}
-                      />
-                    )}
-
-                    {experimentPlanSteps.length > 0 && (
-                      <ExperimentPlanCard
-                        steps={experimentPlanSteps}
-                        renderTextOrObject={renderTextOrObject}
-                        sectionIndex={expIndex}
-                      />
-                    )}
-
-                    {datasetsList.length > 0 && (
-                      <DatasetsBenchmarksCard
-                        datasetsList={datasetsList}
-                        renderTextOrObject={renderTextOrObject}
-                        sectionIndex={datasetIndex}
-                      />
-                    )}
-
-                    {critiqueData && (
-                      <SelfCritiqueCard
-                        critiqueData={critiqueData}
-                        renderTextOrObject={renderTextOrObject}
-                        sectionIndex={critiqueIndex}
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          )}
-
-          {activeTab === "stepper" && (
-            <AgentStepperView
-              steps={activeResearchSteps}
-              currentStepIndex={currentStepIndex}
-              progressPercent={progressPercent}
-              isRunning={isRunning}
-              finalAnswer={finalAnswer}
-              latestThought={latestThought}
-              memorySummary={memorySummary}
+          {/* Chatbot Input Dock */}
+          <div className="p-3 border-t border-border/50 bg-secondary/40 flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".pdf"
+              className="hidden"
             />
-          )}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={isUploadingPaper || isRunning}
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach PDF Paper to Agent Context"
+              className="rounded-xl border-border/60 hover:bg-indigo-500/10 hover:text-indigo-300 shrink-0"
+            >
+              {isUploadingPaper ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Paperclip className="w-4 h-4" />
+              )}
+            </Button>
 
-          {activeTab === "raw" && finalAnswer && (
-            <div className="rounded-2xl border border-border/80 bg-card/90 p-6 md:p-8 shadow-xl backdrop-blur-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-border/40 pb-4">
-                <h3 className="text-base font-bold text-foreground">Full Markdown Synthesized Report</h3>
-                <Badge variant="outline" className="text-xs font-mono">
-                  Synthesized Output
+            <input
+              type="text"
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+              placeholder={
+                activePaper
+                  ? `Ask agent about '${activePaper.filename}'...`
+                  : "Ask research prompt or request datasets/problems..."
+              }
+              disabled={isRunning}
+              className="flex-1 bg-background/80 border border-border/60 rounded-xl px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-indigo-500/60"
+            />
+
+            {isRunning ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={handleStopAgent}
+                className="rounded-xl px-3"
+              >
+                Stop
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={!inputQuery.trim()}
+                onClick={() => handleSendMessage()}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-4"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </Card>
+
+        {/* RIGHT PANEL: Live Agent Tool Inspector & Synthesis Canvas */}
+        <Card className="flex flex-col border border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden h-[750px]">
+          {/* Inspector Header & Navigation Tabs */}
+          <div className="p-4 border-b border-border/50 bg-secondary/30 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-foreground">Agent Execution Inspector</span>
+              {isRunning && (
+                <Badge variant="outline" className="text-[10px] text-amber-400 bg-amber-500/10 border-amber-500/30 animate-pulse">
+                  Executing Tools
                 </Badge>
-              </div>
-              <div className="prose prose-invert max-w-none text-xs md:text-sm leading-relaxed font-sans">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                  {normalizeMarkdown(finalAnswer)}
-                </ReactMarkdown>
-              </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* View Switcher Tabs */}
+            <div className="flex items-center gap-1.5 bg-background/60 p-1 rounded-xl border border-border/40 text-xs">
+              <button
+                onClick={() => setActiveTab("cards")}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  activeTab === "cards" ? "bg-indigo-600 text-white font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Artefacts
+              </button>
+              <button
+                onClick={() => setActiveTab("stepper")}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  activeTab === "stepper" ? "bg-indigo-600 text-white font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Live Trace
+              </button>
+              <button
+                onClick={() => setActiveTab("raw")}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  activeTab === "raw" ? "bg-indigo-600 text-white font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Markdown
+              </button>
+            </div>
+          </div>
+
+          {/* Inspector Main Content Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {activeTab === "cards" && (
+              <>
+                {!finalAnswer && !isRunning && resultsData.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground space-y-3">
+                    <BrainCircuit className="w-12 h-12 text-indigo-400/40 animate-bounce" />
+                    <p className="text-xs max-w-sm">
+                      Submit a research prompt or upload a paper on the left chatbot to see live tool results and synthesized cards.
+                    </p>
+                  </div>
+                )}
+
+                {/* Render Tool Results Cards */}
+                {(() => {
+                  let litItem = resultsData.find((r) => r.tool === "search_papers" || r.papers);
+                  let litPapers = litItem?.result?.papers || litItem?.result?.top_papers || [];
+
+                  let probItem = resultsData.find((r) => r.tool === "generate_problem" || r.problems);
+                  let problemsList = probItem?.result?.problems || probItem?.result?.ideas || [];
+
+                  let expItem = resultsData.find((r) => r.tool === "plan_experiment" || r.steps);
+                  let experimentPlanSteps = expItem?.result?.steps || [];
+
+                  let datasetItem = resultsData.find((r) => r.tool === "find_datasets" || r.datasets);
+                  let datasetsList = datasetItem?.result?.datasets || [];
+
+                  return (
+                    <div className="space-y-4">
+                      {litPapers.length > 0 && (
+                        <LiteratureReviewCard
+                          papers={litPapers}
+                          sortOrder="newest"
+                          selectedYear="all"
+                          searchQuery=""
+                          onSortChange={() => {}}
+                          onYearChange={() => {}}
+                          onSearchChange={() => {}}
+                          renderTextOrObject={renderTextOrObject}
+                          sectionIndex={1}
+                        />
+                      )}
+
+                      {problemsList.length > 0 && (
+                        <ProposedDirectionsCard
+                          problems={problemsList}
+                          loadingPlanIndex={null}
+                          directionPlans={{}}
+                          onGeneratePlan={() => {}}
+                          renderTextOrObject={renderTextOrObject}
+                          sectionIndex={2}
+                        />
+                      )}
+
+                      {datasetsList.length > 0 && (
+                        <DatasetsBenchmarksCard
+                          datasetsList={datasetsList}
+                          renderTextOrObject={renderTextOrObject}
+                          sectionIndex={3}
+                        />
+                      )}
+
+                      {experimentPlanSteps.length > 0 && (
+                        <ExperimentPlanCard
+                          steps={experimentPlanSteps}
+                          renderTextOrObject={renderTextOrObject}
+                          sectionIndex={4}
+                        />
+                      )}
+
+                      {critiqueData && (
+                        <SelfCritiqueCard
+                          critiqueData={critiqueData}
+                          renderTextOrObject={renderTextOrObject}
+                          sectionIndex={5}
+                        />
+                      )}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+
+            {activeTab === "stepper" && (
+              <AgentStepperView
+                steps={activeResearchSteps}
+                currentStepIndex={currentStepIndex}
+                progressPercent={(currentStepIndex / Math.max(activeResearchSteps.length, 1)) * 100}
+                isRunning={isRunning}
+                finalAnswer={finalAnswer}
+                latestThought={latestThought}
+                memorySummary={memorySummary}
+              />
+            )}
+
+            {activeTab === "raw" && finalAnswer && (
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-xl backdrop-blur-xl space-y-3">
+                <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <h3 className="text-xs font-bold text-foreground">Markdown Synthesized Report</h3>
+                  <Button variant="outline" size="sm" onClick={copyToClipboard} className="h-7 text-[11px] rounded-lg">
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <div className="prose prose-invert max-w-none text-xs leading-relaxed font-sans">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                    {normalizeMarkdown(finalAnswer)}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

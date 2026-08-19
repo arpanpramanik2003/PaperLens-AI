@@ -101,7 +101,7 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
           </span>
         </div>
         <p className="text-xs md:text-sm text-foreground/90 font-medium leading-relaxed italic">
-          "{latestThought || "Reasoning about research objective and dynamically constructing task execution steps..."}"
+          "{latestThought || (steps.length === 0 ? "Direct chat session active. No academic tools required." : "Reasoning about research objective...")}"
         </p>
         {memorySummary && (
           <p className="text-[11px] font-mono text-muted-foreground pt-2 border-t border-indigo-500/20">
@@ -111,61 +111,70 @@ export const AgentStepperView: React.FC<AgentStepperViewProps> = ({
       </div>
 
       {/* Stepper Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
-        {steps.map((st) => {
-          const isDone = currentStepIndex > st.id || (!isRunning && finalAnswer !== null && currentStepIndex >= st.id);
-          const isCurrent = isRunning && currentStepIndex === st.id;
-          const IconComp = st.icon;
+      {steps.length === 0 ? (
+        <div className="p-6 rounded-2xl border border-border/60 bg-secondary/20 text-center space-y-2">
+          <BrainCircuit className="w-8 h-8 text-indigo-400/60 mx-auto animate-pulse" />
+          <p className="text-xs text-muted-foreground font-medium">
+            Direct Chat Session Active. Academic tools (literature search, dataset recommendations, gap detection) are only invoked for specialized research queries.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
+          {steps.map((st) => {
+            const isDone = currentStepIndex > st.id || (!isRunning && finalAnswer !== null && currentStepIndex >= st.id);
+            const isCurrent = isRunning && currentStepIndex === st.id;
+            const IconComp = st.icon;
 
-          return (
-            <motion.div
-              key={st.id}
-              whileHover={{ scale: 1.02 }}
-              className={`relative p-4 rounded-2xl border transition-all duration-300 space-y-2.5 shadow-sm ${
-                isCurrent
-                  ? "bg-indigo-500/10 border-indigo-500/60 shadow-lg shadow-indigo-500/15 scale-[1.01]"
-                  : isDone
-                  ? "bg-emerald-500/5 border-emerald-500/30"
-                  : "bg-secondary/20 border-border/40 opacity-60"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className={`p-2 rounded-xl transition-all ${
-                      isCurrent
-                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
-                        : isDone
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                        : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    <IconComp className="w-4 h-4" />
+            return (
+              <motion.div
+                key={st.id}
+                whileHover={{ scale: 1.02 }}
+                className={`relative p-4 rounded-2xl border transition-all duration-300 space-y-2.5 shadow-sm ${
+                  isCurrent
+                    ? "bg-indigo-500/10 border-indigo-500/60 shadow-lg shadow-indigo-500/15 scale-[1.01]"
+                    : isDone
+                    ? "bg-emerald-500/5 border-emerald-500/30"
+                    : "bg-secondary/20 border-border/40 opacity-60"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`p-2 rounded-xl transition-all ${
+                        isCurrent
+                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
+                          : isDone
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      <IconComp className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
+                        Step {st.id}
+                      </span>
+                      <span className="text-xs font-bold text-foreground line-clamp-1">
+                        {st.name}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
-                      Step {st.id}
-                    </span>
-                    <span className="text-xs font-bold text-foreground line-clamp-1">
-                      {st.name}
-                    </span>
-                  </div>
+
+                  {isCurrent && (
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                  )}
+                  {isDone && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  )}
                 </div>
-
-                {isCurrent && (
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                )}
-                {isDone && (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                {st.desc}
-              </p>
-            </motion.div>
-          );
-        })}
-      </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+                  {st.desc}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 };

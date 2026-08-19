@@ -52,6 +52,14 @@ AVAILABLE_TOOLS_SCHEMA = [
         },
     },
     {
+        "name": "detect_gaps",
+        "description": "Identify unexplored research gaps, limitations, and open challenges in a domain or uploaded paper.",
+        "parameters": {
+            "domain": "Target research domain",
+            "paper_id": "Optional paper ID filter",
+        },
+    },
+    {
         "name": "generate_problem",
         "description": "Formulate novel research directions, problem statements, and roadmaps.",
         "parameters": {
@@ -76,7 +84,7 @@ AVAILABLE_TOOLS_SCHEMA = [
 ]
 
 
-async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
+async def run_react_agent_loop(task_id: str, user_id: str, goal: str, paper_id: str = ""):
     """Iterative Autonomous ReAct (Reasoning + Acting) Agent Execution Loop with live memory scratchpad."""
     db = SessionLocal()
     try:
@@ -90,12 +98,57 @@ async def run_react_agent_loop(task_id: str, user_id: str, goal: str):
         executed_results: List[Dict[str, Any]] = []
         executed_tools: set = set()
 
-        # Tool Scoping: Pre-filter tools strictly using router selected tools
+        # Tool Scoping & Intent Check
         from app.services.agents.router import select_agent_tools
         router_res = await select_agent_tools(goal, TOOL_REGISTRY)
+        intent_type = router_res.get("intent_type", "research_tools")
         selected_tool_names = {t.get("tool") for t in router_res.get("selected_tools", []) if t.get("tool")}
-        if not selected_tool_names:
-            selected_tool_names = {"search_papers"}
+
+        # DIRECT CHAT FAST-PATH: Bypasses academic research tool execution entirely!
+        if intent_type == "direct_chat" or not selected_tool_names:
+            logger.info("Direct chat fast-path triggered for goal: '%s'", goal)
+            trace.emit_event(task_id, {
+                "type": "thought",
+                "thought": "Direct conversational query detected. Generating conversational response without tools...",
+            })
+
+            chat_prompt = (
+                "You are PaperLens AI, an intelligent, friendly, and helpful AI research assistant.\n"
+                "Answer the user's conversational query in a clear, friendly, and well-structured Markdown response.\n\n"
+                f"User Query: {goal}"
+            )
+
+            from app.services.model_fallback import create_completion_with_fallback, DEFAULT_PRIMARY_MODEL, DEFAULT_FALLBACK_MODELS
+            from app.services.llm_sections.client import client
+
+            try:
+                response = create_completion_with_fallback(
+                    llm_client=client,
+                    task_name="agent_direct_chat",
+                    primary_model=DEFAULT_PRIMARY_MODEL,
+                    fallback_models=DEFAULT_FALLBACK_MODELS,
+                    messages=[
+                        {"role": "system", "content": "You are PaperLens AI, a friendly, articulate AI assistant. Respond warmly and naturally in markdown."},
+                        {"role": "user", "content": chat_prompt},
+                    ],
+                    temperature=0.6,
+                    max_tokens=1000,
+                )
+                conversational_answer = response.choices[0].message.content or "Hello! I am PaperLens AI, your autonomous research assistant. How can I help you today?"
+            except Exception as e:
+                logger.warning("Direct chat completion fallback: %s", e)
+                conversational_answer = "Hello! I am PaperLens AI, your intelligent research assistant. How can I help you with your literature or paper analysis today?"
+
+            task.status = "done"
+            db.commit()
+
+            trace.emit_event(task_id, {
+                "type": "final",
+                "answer": conversational_answer,
+                "results": [],
+                "critique": None,
+            })
+            return
 
         scoped_tools_schema = [t for t in AVAILABLE_TOOLS_SCHEMA if t["name"] in selected_tool_names]
         if not scoped_tools_schema:

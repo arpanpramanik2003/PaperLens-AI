@@ -207,3 +207,19 @@ def fetch_all_chunks_from_pgvector(paper_id: str) -> list[dict]:
     except Exception as exc:
         logger.error("fetch_all_chunks_from_pgvector failed: %s", exc)
         return []
+
+
+def embed_chunks_and_store(paper_id: str, chunks: list[dict], user_id: str = "") -> int:
+    """Helper to generate embeddings and store chunks in pgvector."""
+    if not chunks:
+        return 0
+    try:
+        texts = [c.get("text", "") for c in chunks if c.get("text")]
+        if not texts:
+            return 0
+        embeddings = embed_texts(texts)
+        return store_chunks_in_pgvector(paper_id=paper_id, user_id=user_id, chunks=chunks, embeddings=embeddings)
+    except Exception as exc:
+        logger.error("embed_chunks_and_store failed: %s", exc)
+        return 0
+

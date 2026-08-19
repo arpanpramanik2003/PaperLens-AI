@@ -140,3 +140,7 @@ def chunk_text_by_tokens(
             pos += step
 
     return chunks
+
+
+# Alias for backward compatibility across modules
+chunk_text = chunk_text_semantic

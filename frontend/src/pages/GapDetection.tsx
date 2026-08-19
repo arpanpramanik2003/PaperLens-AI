@@ -64,6 +64,17 @@ export default function GapDetection() {
     if (activeTab === "text" && !inputText.trim()) return;
     if (activeTab === "file" && !selectedFile) return;
 
+    if (activeTab === "text") {
+      const cleanText = inputText.trim();
+      const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
+      if (cleanText.length < 70 || wordCount < 12) {
+        toast.warning("Insufficient Context for Gap Analysis", {
+          description: "A paper title alone is too brief to detect research gaps. Please provide an abstract, summary, or methodology text (at least 15-20 words), or upload a PDF file.",
+        });
+        return;
+      }
+    }
+
     setDetected(false);
     setGaps([]);
 
@@ -217,13 +228,19 @@ export default function GapDetection() {
           </div>
 
           {activeTab === "text" ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Textarea
-                placeholder="Paste your project plan or research idea here..."
-                className="min-h-[220px] bg-secondary/30 border-border/50 resize-none rounded-2xl"
+                placeholder="Paste your project plan, paper abstract, or methodology summary here..."
+                className="min-h-[200px] bg-secondary/30 border-border/50 resize-none rounded-2xl"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
               />
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+                <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <span>
+                  <strong>Tip for Accurate Gap Analysis:</strong> Please provide at least a paper abstract, problem summary, or methodology text (minimum 15-20 words). A paper title alone does not contain sufficient technical context to analyze research gaps.
+                </span>
+              </div>
             </div>
           ) : (
             <div className="relative overflow-hidden border border-border/60 rounded-2xl p-10 sm:p-12 text-center hover:border-accent/30 transition-colors bg-secondary/10">

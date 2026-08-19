@@ -689,12 +689,26 @@ async def detect_gaps(
             if not pages:
                 return JSONResponse({"error": "Could not extract text"}, status_code=400)
             
-            chunks = chunk_text_semantic(pages)
-            content_to_analyze = summarize_chunks(chunks)
-        elif payload.text:
-            content_to_analyze = payload.text
+        elif text and text.strip():
+            raw_text = text.strip()
+            word_count = len(raw_text.split())
+            if len(raw_text) < 70 or word_count < 12:
+                return JSONResponse(
+                    {
+                        "error": (
+                            "Insufficient context provided for gap analysis. A paper title alone is too brief to detect meaningful research gaps. "
+                            "Please provide an abstract, paper summary, or methodology description (at least 15-20 words), or upload a PDF paper."
+                        )
+                    },
+                    status_code=400
+                )
+            content_to_analyze = raw_text
+        elif doc_id and has_doc(doc_id):
+            cached = get_doc(doc_id)
+            chunks = cached.get("chunks", [])
+            content_to_analyze = summarize_chunks(chunks) if chunks else ""
         else:
-            return JSONResponse({"error": "No file or text provided"}, status_code=400)
+            return JSONResponse({"error": "No file, text, or document provided"}, status_code=400)
 
         from app.services.llm import detect_research_gaps
         gaps = detect_research_gaps(content_to_analyze)

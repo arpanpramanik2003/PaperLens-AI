@@ -111,3 +111,28 @@ def extract_docx_pages(
         )
 
     return [{"page": 1, "text": text}]
+
+
+def parse_pdf_bytes(pdf_bytes: bytes, filename: str = "") -> dict:
+    """Parse PDF bytes in memory and return extracted pages, chunks, and metadata."""
+    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+        num_pages = len(doc)
+        pages = []
+        total_chars = 0
+        for i, page in enumerate(doc):
+            t = page.get_text("text").strip()
+            if t:
+                pages.append({"page": i + 1, "text": t})
+                total_chars += len(t)
+
+    # Chunk text
+    from app.services.chunking import chunk_text_semantic
+    chunks = chunk_text_semantic(pages)
+
+    return {
+        "filename": filename,
+        "total_pages": num_pages,
+        "total_chars": total_chars,
+        "pages": pages,
+        "chunks": chunks,
+    }

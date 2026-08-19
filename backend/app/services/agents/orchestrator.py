@@ -41,7 +41,7 @@ def summarize_result(result: Any) -> str:
     return str(result)[:150] + "..."
 
 
-async def run_research_task(task_id: str, user_id: str, goal: str):
+async def run_research_task(task_id: str, user_id: str, goal: str, paper_id: str = ""):
     """Execute the full autonomous ReAct memory agent loop."""
     from app.services.agents.react_agent import run_react_agent_loop
-    await run_react_agent_loop(task_id=task_id, user_id=user_id, goal=goal)
+    await run_react_agent_loop(task_id=task_id, user_id=user_id, goal=goal, paper_id=paper_id)
