@@ -12,6 +12,196 @@ logger = logging.getLogger(__name__)
 
 TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {}
 
+NATIVE_TOOLS_SCHEMA = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_papers",
+            "description": "Search literature across Semantic Scholar, Crossref, and arXiv for academic papers in a given domain.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "domain": {"type": "string", "description": "Research domain or topic string to query"},
+                    "limit": {"type": "integer", "description": "Max paper count to retrieve (default 35)"},
+                },
+                "required": ["domain"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_workspace_vector_db",
+            "description": "Search local Supabase pgvector database for uploaded PDF paper embeddings.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query text"},
+                    "paper_id": {"type": "string", "description": "Optional paper ID filter"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyze_paper",
+            "description": "Extract methodology, technical insights, and limitations from text or abstract.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Paper text or abstract content to analyze"},
+                },
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "detect_gaps",
+            "description": "Identify unexplored research gaps, limitations, and open challenges in a domain or uploaded paper.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "domain": {"type": "string", "description": "Target research domain"},
+                    "paper_id": {"type": "string", "description": "Optional paper ID filter"},
+                },
+                "required": ["domain"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_problem",
+            "description": "Formulate novel research directions, problem statements, and roadmaps.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "domain": {"type": "string", "description": "Target research domain"},
+                    "gap_summary": {"type": "string", "description": "Summary of research gaps to address"},
+                },
+                "required": ["domain"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_datasets",
+            "description": "Recommend SOTA datasets, benchmark suites, and evaluation metrics.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string", "description": "Research topic or focus area"},
+                },
+                "required": ["topic"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "plan_experiment",
+            "description": "Generate multi-stage experimental execution roadmap with parameters and risks.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string", "description": "Research direction or topic title"},
+                    "difficulty": {"type": "string", "description": "Experiment complexity: beginner, intermediate, or advanced"},
+                },
+                "required": ["topic"],
+            },
+        },
+    },
+]
+
+
+def validate_and_normalize_tool_args(
+    tool_name: str,
+    raw_args: Dict[str, Any] | None,
+    goal: str,
+    paper_id: str = "",
+    structured_context: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Type-safe parameter validation and normalization against tool signatures with structured memory inheritance."""
+    args = dict(raw_args or {})
+    clean_goal = (goal or "").strip()
+    ctx = structured_context or {}
+
+    if tool_name == "search_papers":
+        domain = args.get("domain") or args.get("topic") or args.get("query") or clean_goal
+        limit = args.get("limit")
+        try:
+            limit = int(limit) if limit is not None else 35
+        except (ValueError, TypeError):
+            limit = 35
+        return {"domain": str(domain).strip(), "limit": max(5, min(limit, 50))}
+
+    elif tool_name == "find_datasets":
+        topic = args.get("topic") or args.get("domain")
+        if not topic and ctx.get("formulated_problems"):
+            top_prob = ctx["formulated_problems"][0]
+            topic = top_prob.get("title") or top_prob.get("description")
+        if not topic and ctx.get("identified_gaps"):
+            top_gap = ctx["identified_gaps"][0]
+            topic = f"{clean_goal} focusing on {top_gap.get('gap')}"
+        if not topic:
+            topic = clean_goal
+        return {"topic": str(topic).strip()}
+
+    elif tool_name == "generate_problem":
+        domain = args.get("domain") or args.get("topic") or clean_goal
+        gap_summary = args.get("gap_summary") or args.get("gaps") or args.get("subdomain")
+        if not gap_summary and ctx.get("identified_gaps"):
+            gaps = ctx["identified_gaps"]
+            gap_summary = " | ".join([f"{g.get('gap')}: {g.get('description')}" for g in gaps[:3]])
+        elif not gap_summary and ctx.get("primary_papers"):
+            papers = ctx["primary_papers"]
+            gap_summary = "State of literature: " + ", ".join([f"'{p.get('title')}' ({p.get('year')})" for p in papers[:3]])
+        return {"domain": str(domain).strip(), "gap_summary": str(gap_summary or "").strip()}
+
+    elif tool_name == "detect_gaps":
+        domain = args.get("domain") or args.get("topic")
+        if not domain and ctx.get("primary_papers"):
+            papers = ctx["primary_papers"]
+            domain = f"{clean_goal} (In context of: {', '.join([p.get('title', '') for p in papers[:2]])})"
+        if not domain:
+            domain = clean_goal
+        pid = args.get("paper_id") or paper_id
+        return {"domain": str(domain).strip(), "paper_id": str(pid or "").strip()}
+
+    elif tool_name == "plan_experiment":
+        topic = args.get("topic") or args.get("title") or args.get("domain")
+        if not topic and ctx.get("formulated_problems"):
+            top_p = ctx["formulated_problems"][0]
+            topic = f"{top_p.get('title')}: {top_p.get('description')}"
+        elif not topic and ctx.get("identified_gaps"):
+            top_g = ctx["identified_gaps"][0]
+            topic = f"{clean_goal} - Solution for {top_g.get('gap')}"
+        if not topic:
+            topic = clean_goal
+        difficulty = args.get("difficulty") or "advanced"
+        return {"topic": str(topic).strip(), "difficulty": str(difficulty).strip()}
+
+    elif tool_name == "analyze_paper":
+        text = args.get("text") or args.get("paper_content") or args.get("content")
+        if not text and ctx.get("primary_papers"):
+            top_p = ctx["primary_papers"][0]
+            text = f"Title: {top_p.get('title')}\nSummary: {top_p.get('summary')}"
+        if not text:
+            text = clean_goal
+        return {"text": str(text).strip()}
+
+    elif tool_name == "search_workspace_vector_db":
+        query = args.get("query") or args.get("text") or clean_goal
+        pid = args.get("paper_id") or paper_id
+        return {"query": str(query).strip(), "paper_id": str(pid or "").strip()}
+
+    return args
+
 
 def tool(name: str, description: str):
     def decorator(fn: Callable):

@@ -62,6 +62,7 @@ async def select_agent_tools(
             return {
                 "selected_tools": [],
                 "intent_type": "direct_chat",
+                "execution_mode": "direct",
                 "intent_summary": "Direct Conversation",
             }
 
@@ -89,6 +90,7 @@ async def select_agent_tools(
                     }
                 ],
                 "intent_type": "research_tools",
+                "execution_mode": "direct",
                 "intent_summary": "Fast-path Problem Statement + Dataset Router",
             }
 
@@ -103,6 +105,7 @@ async def select_agent_tools(
                     }
                 ],
                 "intent_type": "research_tools",
+                "execution_mode": "direct",
                 "intent_summary": "Fast-path Dataset & Benchmark Router",
             }
 
@@ -117,6 +120,7 @@ async def select_agent_tools(
                     }
                 ],
                 "intent_type": "research_tools",
+                "execution_mode": "direct",
                 "intent_summary": "Fast-path Literature Search Router",
             }
 
@@ -139,15 +143,17 @@ async def select_agent_tools(
         "Your task is to analyze the user's query (and any multi-turn context) and decide whether it requires ACADEMIC RESEARCH TOOLS or DIRECT CONVERSATIONAL RESPONSE.\n\n"
         f"Available Tools & Descriptions:\n{available_tools_json}{history_instruction}\n\n"
         "SELECTION RULES:\n"
-        "1. If the query is a greeting, identity question (e.g., 'What is your name?'), general conversation, or general conversational follow-up NOT requiring specialized academic database tools -> return \"selected_tools\": [] and \"intent_type\": \"direct_chat\"!\n"
-        "2. If query asks for or compares datasets/benchmarks -> select ['find_datasets'] with resolved topic/domain in args!\n"
-        "3. If query asks for problem statements, research directions, or unexplored ideas AND datasets -> select BOTH ['generate_problem', 'find_datasets']!\n"
-        "4. If query asks for literature/background AND research directions/unexplored ideas/gaps -> select BOTH ['search_papers', 'generate_problem']!\n"
-        "5. If query asks for literature AND datasets -> select BOTH ['search_papers', 'find_datasets']!\n"
-        "6. If query asks for a full proposal, plan, or end-to-end execution roadmap -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment']!\n\n"
+        "1. If the query is a greeting, identity question (e.g., 'What is your name?'), general conversation, or general conversational follow-up NOT requiring specialized academic database tools -> return \"selected_tools\": [] and \"intent_type\": \"direct_chat\" and \"execution_mode\": \"direct\"!\n"
+        "2. If query asks for or compares datasets/benchmarks -> select ['find_datasets'] with resolved topic/domain in args and \"execution_mode\": \"direct\"!\n"
+        "3. If query asks for problem statements, research directions, or unexplored ideas AND datasets -> select BOTH ['generate_problem', 'find_datasets'] with \"execution_mode\": \"direct\"!\n"
+        "4. If query asks for literature/background AND research directions/unexplored ideas/gaps -> select BOTH ['search_papers', 'generate_problem'] with \"execution_mode\": \"direct\"!\n"
+        "5. If query asks for literature AND datasets -> select BOTH ['search_papers', 'find_datasets'] with \"execution_mode\": \"direct\"!\n"
+        "6. If query asks for a full proposal, plan, or end-to-end execution roadmap -> select ['search_papers', 'generate_problem', 'find_datasets', 'plan_experiment'] with \"execution_mode\": \"direct\"!\n"
+        "7. If query is open-ended, ambiguous, or requires exploratory step-by-step reasoning where next tool depends on prior tool output -> return \"execution_mode\": \"react_loop\".\n\n"
         "Return ONLY a JSON object matching this structure:\n"
         "{\n"
         '  "intent_type": "direct_chat" | "research_tools",\n'
+        '  "execution_mode": "direct" | "react_loop",\n'
         '  "selected_tools": [\n'
         '    {\n'
         '      "tool": "generate_problem",\n'
@@ -177,12 +183,14 @@ async def select_agent_tools(
         content = response.choices[0].message.content
         data = json.loads(content)
         intent_type = data.get("intent_type", "research_tools")
+        execution_mode = data.get("execution_mode", "direct" if intent_type == "research_tools" else "direct")
         raw_selected = data.get("selected_tools", [])
 
         if intent_type == "direct_chat" or not raw_selected:
             return {
                 "selected_tools": [],
                 "intent_type": "direct_chat",
+                "execution_mode": "direct",
                 "intent_summary": data.get("intent_summary", "Direct Conversation"),
             }
 
@@ -201,6 +209,7 @@ async def select_agent_tools(
         return {
             "selected_tools": valid_tools,
             "intent_type": "research_tools" if valid_tools else "direct_chat",
+            "execution_mode": execution_mode,
             "intent_summary": data.get("intent_summary", "Dynamic LLM Tool Selection"),
         }
 
@@ -208,6 +217,8 @@ async def select_agent_tools(
         logger.warning("LLM Tool selection failed: %s. Using default fallback.", exc)
         return {
             "selected_tools": _fallback_tool_selection(clean_goal),
+            "intent_type": "research_tools",
+            "execution_mode": "direct",
             "intent_summary": "Fallback tool selection",
         }
 

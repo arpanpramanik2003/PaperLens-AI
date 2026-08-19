@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.database import SessionLocal
 from app.models.agent_task import AgentTask, AgentStep
-from app.services.agents.tools import TOOL_REGISTRY
+from app.services.agents.tools import TOOL_REGISTRY, NATIVE_TOOLS_SCHEMA, validate_and_normalize_tool_args
 from app.services.agents import critique, trace
 from app.services.agents.orchestrator import _cancelled_tasks, summarize_result
 from app.services.llm_sections.client import client
@@ -27,61 +27,80 @@ class ReActDecision(BaseModel):
     is_final: bool = Field(default=False, description="Set to true if all research steps are complete")
     memory_summary: str = Field(default="", description="1-sentence summary of current findings and progress")
 
-AVAILABLE_TOOLS_SCHEMA = [
-    {
-        "name": "search_papers",
-        "description": "Search Semantic Scholar, Crossref, and arXiv literature for papers in a domain.",
-        "parameters": {
-            "domain": "Research domain/topic string",
-            "limit": "Max paper count (default 30)",
-        },
-    },
-    {
-        "name": "search_workspace_vector_db",
-        "description": "Search local Supabase pgvector database for uploaded paper embeddings.",
-        "parameters": {
-            "query": "Search query text",
-            "paper_id": "Optional paper ID filter",
-        },
-    },
-    {
-        "name": "analyze_paper",
-        "description": "Extract key methodology insights, assertions, and limitations from text/abstracts.",
-        "parameters": {
-            "text": "Paper text or abstract content to analyze",
-        },
-    },
-    {
-        "name": "detect_gaps",
-        "description": "Identify unexplored research gaps, limitations, and open challenges in a domain or uploaded paper.",
-        "parameters": {
-            "domain": "Target research domain",
-            "paper_id": "Optional paper ID filter",
-        },
-    },
-    {
-        "name": "generate_problem",
-        "description": "Formulate novel research directions, problem statements, and roadmaps.",
-        "parameters": {
-            "domain": "Target research domain",
-            "gap_summary": "Extracted research gap summary",
-        },
-    },
-    {
-        "name": "find_datasets",
-        "description": "Recommend SOTA datasets, benchmark suites, and evaluation metrics.",
-        "parameters": {
-            "topic": "Research topic or focus area",
-        },
-    },
-    {
-        "name": "plan_experiment",
-        "description": "Generate multi-stage experimental execution roadmap.",
-        "parameters": {
-            "topic": "Research direction or topic title",
-        },
-    },
-]
+
+def extract_structured_entities(tool_name: str, result: Any) -> Dict[str, Any]:
+    """Extract clean, strongly-typed semantic entities from raw tool output."""
+    if not isinstance(result, dict):
+        return {"raw_summary": str(result)[:300]}
+
+    if tool_name == "search_papers":
+        papers = result.get("papers") or []
+        extracted_papers = []
+        for p in papers[:5]:
+            extracted_papers.append({
+                "title": p.get("title") or "Untitled",
+                "year": p.get("year") or 2024,
+                "authors": p.get("authors")[:3] if isinstance(p.get("authors"), list) else p.get("authors"),
+                "summary": (p.get("summary") or "")[:200],
+            })
+        return {
+            "total_found": result.get("total_found", len(papers)),
+            "primary_papers": extracted_papers,
+        }
+
+    elif tool_name == "detect_gaps":
+        gaps = result.get("gaps") or []
+        extracted_gaps = []
+        for g in gaps[:5]:
+            extracted_gaps.append({
+                "gap": g.get("gap") or g.get("title") or "Research Gap",
+                "description": (g.get("description") or g.get("detail") or "")[:250],
+                "opportunity": g.get("opportunity") or g.get("solution_angle"),
+            })
+        return {"identified_gaps": extracted_gaps}
+
+    elif tool_name == "generate_problem":
+        problems = result.get("problems") or result.get("problem_statements") or []
+        extracted_problems = []
+        for pr in problems[:4]:
+            extracted_problems.append({
+                "title": pr.get("title") or pr.get("name") or "Problem Direction",
+                "description": (pr.get("description") or pr.get("problem_statement") or "")[:250],
+                "gap_addressed": pr.get("gap_addressed") or pr.get("targeted_gap"),
+            })
+        return {"formulated_problems": extracted_problems}
+
+    elif tool_name == "find_datasets":
+        datasets = result.get("datasets") or []
+        extracted_ds = []
+        for ds in datasets[:5]:
+            extracted_ds.append({
+                "name": ds.get("name") or "Benchmark Dataset",
+                "type": ds.get("type") or ds.get("data_modality"),
+                "description": (ds.get("short_description") or ds.get("description") or "")[:200],
+                "metrics": ds.get("metrics") or ds.get("evaluation_metrics"),
+            })
+        return {"suggested_datasets": extracted_ds}
+
+    elif tool_name == "plan_experiment":
+        stages = result.get("stages") or result.get("phases") or []
+        extracted_stages = []
+        for st in stages[:4]:
+            extracted_stages.append({
+                "phase": st.get("phase") or st.get("stage_name") or "Stage",
+                "focus": (st.get("focus") or st.get("description") or "")[:200],
+                "deliverable": st.get("deliverable") or st.get("outcome"),
+            })
+        return {"execution_stages": extracted_stages}
+
+    elif tool_name == "analyze_paper":
+        insights = result.get("insights") or result.get("analysis") or result
+        return {
+            "key_contributions": insights.get("methodology") or insights.get("contributions", [])[:3] if isinstance(insights, dict) else [],
+            "limitations": insights.get("limitations", [])[:3] if isinstance(insights, dict) else [],
+        }
+
+    return {"summary": str(result)[:300]}
 
 
 async def run_react_agent_loop(
@@ -92,7 +111,7 @@ async def run_react_agent_loop(
     session_id: str = "",
     conversation_history: List[Dict[str, Any]] = None,
 ):
-    """Iterative Autonomous ReAct Agent Execution Loop with multi-turn session context and robust error recovery."""
+    """Two-Tier Autonomous Agent Execution with structured entity extraction and working memory propagation."""
     db = SessionLocal()
     try:
         task = db.query(AgentTask).filter(AgentTask.id == task_id).first()
@@ -101,17 +120,21 @@ async def run_react_agent_loop(
             return
 
         # Working Memory & Context State
-        messages: List[Dict[str, Any]] = []
         executed_results: List[Dict[str, Any]] = []
         executed_tools: set = set()
+        structured_memory: Dict[str, Any] = {}
 
         # Tool Scoping & Intent Check with Multi-Turn Context
         from app.services.agents.router import select_agent_tools
         router_res = await select_agent_tools(goal, TOOL_REGISTRY, conversation_history=conversation_history or [])
         intent_type = router_res.get("intent_type", "research_tools")
-        selected_tool_names = {t.get("tool") for t in router_res.get("selected_tools", []) if t.get("tool")}
+        execution_mode = router_res.get("execution_mode", "direct")
+        selected_tool_items = router_res.get("selected_tools", [])
+        selected_tool_names = {t.get("tool") for t in selected_tool_items if t.get("tool")}
 
-        # DIRECT CHAT FAST-PATH: Bypasses academic research tool execution entirely!
+        # ---------------------------------------------------------------------------
+        # FAST-PATH 0: DIRECT CHAT (Bypasses research tools completely)
+        # ---------------------------------------------------------------------------
         if intent_type == "direct_chat" or not selected_tool_names:
             logger.info("Direct chat fast-path triggered for goal: '%s' (session=%s)", goal, session_id)
             trace.emit_event(task_id, {
@@ -119,7 +142,6 @@ async def run_react_agent_loop(
                 "thought": "Direct conversational query detected. Generating conversational response without tools...",
             })
 
-            # Include previous context in chat prompt if present
             context_snippet = ""
             if conversation_history:
                 prior_exchanges = [
@@ -133,9 +155,6 @@ async def run_react_agent_loop(
                 "Answer the user's conversational query in a clear, friendly, and well-structured Markdown response.\n\n"
                 f"{context_snippet}User Query: {goal}"
             )
-
-            from app.services.model_fallback import create_completion_with_fallback, DEFAULT_PRIMARY_MODEL, DEFAULT_FALLBACK_MODELS
-            from app.services.llm_sections.client import client
 
             try:
                 response = create_completion_with_fallback(
@@ -160,6 +179,7 @@ async def run_react_agent_loop(
                 "goal": goal,
                 "session_id": session_id,
                 "intent_type": "direct_chat",
+                "execution_mode": "direct",
                 "summary": conversational_answer[:300],
             }
             db.commit()
@@ -172,161 +192,252 @@ async def run_react_agent_loop(
             })
             return
 
-        scoped_tools_schema = [t for t in AVAILABLE_TOOLS_SCHEMA if t["name"] in selected_tool_names]
-        if not scoped_tools_schema:
-            scoped_tools_schema = AVAILABLE_TOOLS_SCHEMA
+        # ---------------------------------------------------------------------------
+        # TIER 1: DIRECT DETERMINISTIC EXECUTION PIPELINE (Eliminates ReAct re-routing)
+        # ---------------------------------------------------------------------------
+        if execution_mode == "direct" and selected_tool_items:
+            logger.info(
+                "Tier 1 Direct Execution active for %d tools: %s (session=%s)",
+                len(selected_tool_items),
+                [t.get("tool") for t in selected_tool_items],
+                session_id,
+            )
+            trace.emit_event(task_id, {
+                "type": "thought",
+                "step_index": 1,
+                "thought": f"Direct Execution Pipeline active. Executing {len(selected_tool_items)} specialized research tools directly with structured context passing...",
+            })
 
-        compact_tool_refs = ", ".join([f"{t['name']}({', '.join(t['parameters'].keys())})" for t in scoped_tools_schema])
+            step_idx = 0
+            for item in selected_tool_items:
+                if task_id in _cancelled_tasks:
+                    task.status = "cancelled"
+                    db.commit()
+                    _cancelled_tasks.discard(task_id)
+                    trace.emit_event(task_id, {"type": "cancelled", "message": "Process terminated by user."})
+                    return
 
-        # Turn 1: Detailed schema
-        system_prompt_turn1 = (
-            "You are Paperlens Autonomous ReAct AI Research Agent.\n"
-            "Your objective is to analyze the user's research request and select the optimal sequence of tools to satisfy it completely.\n\n"
-            f"SCOPED TOOLS & CAPABILITIES:\n{json.dumps(scoped_tools_schema, indent=2)}\n\n"
-            "AUTONOMOUS REASONING PROTOCOL:\n"
-            "1. Carefully analyze user research intent.\n"
-            "2. Select required tools in logical sequence. In each step, pass parameters from earlier tool outputs.\n"
-            "3. When all tools necessary to fulfill the request have executed, set \"is_final\": true.\n\n"
-            "CRITICAL JSON FORMATTING RULE:\n"
-            "Do NOT include comments (such as # or //) anywhere in the JSON output!\n\n"
-            f"EXPECTED JSON SCHEMA:\n{json.dumps(ReActDecision.model_json_schema(), indent=2)}\n\n"
-            "Return ONLY valid JSON matching this schema exactly."
-        )
+                step_idx += 1
+                t_name = item.get("tool")
+                if not t_name:
+                    continue
 
-        # Turn 2+: Compressed reference schema
-        system_prompt_turn_n = (
-            "You are Paperlens Autonomous ReAct AI Research Agent.\n"
-            f"ACTIVE SCOPED TOOLS: {compact_tool_refs}\n\n"
-            "Inspect Working Memory History, select next tool action, or set \"is_final\": true if finished.\n"
-            "CRITICAL JSON FORMATTING RULE: Do NOT include comments (such as # or //) anywhere in the JSON output!\n"
-            f"EXPECTED JSON SCHEMA: {json.dumps(ReActDecision.model_json_schema())}\n"
-            "Return ONLY valid JSON matching this schema exactly."
-        )
+                # Type-safe parameter validation and structured memory propagation
+                t_args = validate_and_normalize_tool_args(
+                    t_name,
+                    item.get("args"),
+                    goal,
+                    paper_id,
+                    structured_context=structured_memory,
+                )
 
+                trace.emit_event(task_id, {
+                    "type": "action",
+                    "step_index": step_idx,
+                    "tool": t_name,
+                    "args": t_args,
+                    "description": item.get("description") or f"Executing {t_name} with contextual arguments",
+                })
+
+                if t_name in TOOL_REGISTRY:
+                    fn = TOOL_REGISTRY[t_name]["fn"]
+                    try:
+                        result = await fn(**t_args)
+                    except Exception as exc:
+                        logger.error("Direct tool %s failed: %s. Retrying with normalized fallback...", t_name, exc)
+                        try:
+                            fallback_args = validate_and_normalize_tool_args(t_name, {}, goal, paper_id, structured_context=structured_memory)
+                            result = await fn(**fallback_args)
+                        except Exception as retry_exc:
+                            result = {
+                                "status": "unavailable",
+                                "error": str(exc),
+                                "message": f"Data source for {t_name} was temporarily unavailable or timed out.",
+                            }
+                else:
+                    result = {
+                        "status": "unavailable",
+                        "error": f"Tool {t_name} not registered",
+                        "message": f"Requested tool '{t_name}' could not be executed.",
+                    }
+
+                # Extract and accumulate structured entities for subsequent tools
+                extracted_entities = extract_structured_entities(t_name, result)
+                structured_memory.update(extracted_entities)
+
+                executed_tools.add(t_name)
+                executed_results.append({
+                    "tool": t_name,
+                    "args": t_args,
+                    "result": result,
+                    "structured_entities": extracted_entities,
+                })
+
+                # Save Audit Step to DB
+                try:
+                    db_step = AgentStep(
+                        task_id=task_id,
+                        step_index=step_idx,
+                        tool=t_name,
+                        args=t_args,
+                        result=result,
+                    )
+                    db.add(db_step)
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+
+                trace.emit_event(task_id, {
+                    "type": "observation",
+                    "step_index": step_idx,
+                    "tool": t_name,
+                    "summary": summarize_result(result),
+                    "data": result,
+                })
+                trace.emit_event(task_id, {
+                    "type": "memory_update",
+                    "step_index": step_idx,
+                    "total_tools_executed": len(executed_results),
+                    "latest_tool": t_name,
+                    "active_memory_summary": f"Collected structured entities from {t_name}.",
+                    "structured_memory": structured_memory,
+                })
+
+            # Single unified synthesis pass (Total LLM calls = 1 if fast-path, or 2 if router was called)
+            trace.emit_event(task_id, {
+                "type": "critique_start",
+                "message": "Synthesizing executive multi-agent research proposal from structured findings...",
+            })
+
+            from app.services.agents import planner
+            critique_result, final_answer = await planner.synthesize_and_verify(goal, executed_results)
+
+            trace.emit_event(task_id, {
+                "type": "critique",
+                "issues": critique_result.get("issues", []),
+                "strengths": critique_result.get("strengths", []),
+                "verdict": critique_result.get("verdict", "Passed with High Confidence"),
+                "data": critique_result,
+            })
+
+            task.status = "done"
+            task.context_data = {
+                "goal": goal,
+                "session_id": session_id,
+                "executed_tools": list(executed_tools),
+                "execution_mode": "direct",
+                "structured_memory": structured_memory,
+                "summary": final_answer[:400] if final_answer else "",
+            }
+            db.commit()
+
+            trace.emit_event(task_id, {
+                "type": "final",
+                "answer": final_answer,
+                "results": executed_results,
+                "critique": critique_result,
+            })
+            return
+
+        # ---------------------------------------------------------------------------
+        # TIER 2: NATIVE TOOL-CALLING REACT LOOP (For exploratory/open-ended queries)
+        # ---------------------------------------------------------------------------
+        logger.info("Tier 2 Native Tool ReAct Loop active for exploratory goal: '%s'", goal)
         step_count = 0
-        max_steps = min(6, max(2, len(selected_tool_names) + 1))
+        max_steps = 5
+
+        system_prompt = (
+            "You are PaperLens Autonomous Research Agent.\n"
+            "Analyze the user's research goal and execute tools via function calls to collect empirical evidence, literature, and benchmarks.\n"
+            "When all necessary research findings have been gathered, reply with a final thought or conclude with no tool calls."
+        )
 
         while step_count < max_steps:
             if task_id in _cancelled_tasks:
-                logger.info("ReAct task %s cancelled by user. Halting.", task_id)
                 task.status = "cancelled"
                 db.commit()
                 _cancelled_tasks.discard(task_id)
-                trace.emit_event(task_id, {
-                    "type": "cancelled",
-                    "message": "Process terminated by user.",
-                })
+                trace.emit_event(task_id, {"type": "cancelled", "message": "Process terminated by user."})
                 return
 
             step_count += 1
-            active_system_prompt = system_prompt_turn1 if step_count == 1 else system_prompt_turn_n
 
-            # Prepare prompt context
+            # Prepare structured working memory prompt (replaces 150-char string truncation)
             user_prompt = f"User Research Goal: {goal}\nStep #{step_count} of Max {max_steps}.\n"
-            if executed_results:
-                compact_memory = [
-                    {
-                        "step": idx + 1,
-                        "tool": item["tool"],
-                        "summary": str(summarize_result(item["result"]))[:180],
-                    }
-                    for idx, item in enumerate(executed_results)
-                ]
-                user_prompt += f"\nWorking Memory History:\n{json.dumps(compact_memory, indent=2)}\n"
+            if structured_memory:
+                user_prompt += f"\nStructured Working Memory Entities:\n{json.dumps(structured_memory, indent=2)}\n"
+
+            action_tool = None
+            action_args = {}
+            thought = f"Analyzing step #{step_count} requirements..."
+            is_final = False
 
             try:
                 llm_response = create_completion_with_fallback(
                     llm_client=client,
-                    task_name="react_agent_reasoning",
+                    task_name="react_agent_native_tools",
                     primary_model=FAST_ROUTER_MODEL,
                     fallback_models=DEFAULT_FALLBACK_MODELS,
                     messages=[
-                        {"role": "system", "content": active_system_prompt},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    response_format={"type": "json_object"},
+                    tools=NATIVE_TOOLS_SCHEMA,
+                    tool_choice="auto",
                     temperature=0.2,
                 )
-                raw_json = llm_response.choices[0].message.content
-                validated_decision = ReActDecision.model_validate_json(raw_json)
-                decision = validated_decision.model_dump()
+                msg = llm_response.choices[0].message
+                if msg.tool_calls:
+                    tc = msg.tool_calls[0]
+                    action_tool = tc.function.name
+                    try:
+                        raw_args = json.loads(tc.function.arguments)
+                    except Exception:
+                        raw_args = {}
+                    action_args = validate_and_normalize_tool_args(
+                        action_tool,
+                        raw_args,
+                        goal,
+                        paper_id,
+                        structured_context=structured_memory,
+                    )
+                    thought = msg.content or f"Calling tool {action_tool} to gather research data."
+                else:
+                    is_final = True
+                    thought = msg.content or "Completed research observations."
             except Exception as exc:
-                logger.warning("ReAct reasoning fallback at step %s: %s", step_count, exc)
-                decision = _fallback_react_decision(goal, step_count, executed_tools, selected_tool_names)
+                logger.warning("Native tool calling step %s failed: %s. Using fallback.", step_count, exc)
+                fallback_d = _fallback_react_decision(goal, step_count, executed_tools, selected_tool_names)
+                action_tool = fallback_d.get("action", "none")
+                action_args = validate_and_normalize_tool_args(
+                    action_tool,
+                    fallback_d.get("action_input"),
+                    goal,
+                    paper_id,
+                    structured_context=structured_memory,
+                )
+                is_final = fallback_d.get("is_final", False)
+                thought = fallback_d.get("thought", thought)
 
-            thought = decision.get("thought", f"Analyzing step #{step_count} requirements...")
-            action_tool = decision.get("action", "search_papers")
-            action_args = decision.get("action_input") or {"domain": goal, "topic": goal}
-            is_final = decision.get("is_final", False)
-            memory_summary = decision.get("memory_summary", f"Step {step_count} reasoning active.")
-
-            # SELF-HEALING: Check for hallucinated / unregistered tool names
-            if action_tool not in TOOL_REGISTRY and action_tool != "none" and not is_final:
-                logger.warning("ReAct LLM selected unregistered tool '%s'. Initiating self-correction re-prompt.", action_tool)
-                trace.emit_event(task_id, {
-                    "type": "thought",
-                    "step_index": step_count,
-                    "thought": f"Tool '{action_tool}' is not recognized. Re-evaluating against registered tools: {list(TOOL_REGISTRY.keys())}...",
-                })
-                try:
-                    re_prompt = (
-                        f"CORRECTION REQUIRED: Tool '{action_tool}' is not registered in TOOL_REGISTRY.\n"
-                        f"Available valid tools are: {list(TOOL_REGISTRY.keys())}\n"
-                        f"Target query: {goal}\n"
-                        f"Please select a valid tool name from the available list, or set action='none' / is_final=true."
-                    )
-                    re_response = create_completion_with_fallback(
-                        llm_client=client,
-                        task_name="react_agent_tool_self_correction",
-                        primary_model=FAST_ROUTER_MODEL,
-                        fallback_models=DEFAULT_FALLBACK_MODELS,
-                        messages=[
-                            {"role": "system", "content": active_system_prompt},
-                            {"role": "user", "content": re_prompt},
-                        ],
-                        response_format={"type": "json_object"},
-                        temperature=0.0,
-                    )
-                    re_raw_json = re_response.choices[0].message.content
-                    re_decision = ReActDecision.model_validate_json(re_raw_json).model_dump()
-                    if re_decision.get("action") in TOOL_REGISTRY or re_decision.get("action") == "none":
-                        action_tool = re_decision.get("action")
-                        action_args = re_decision.get("action_input") or action_args
-                        thought = re_decision.get("thought", thought)
-                        is_final = re_decision.get("is_final", is_final)
-                        logger.info("Tool self-correction succeeded -> selected '%s'", action_tool)
-                except Exception as re_exc:
-                    logger.warning("Tool self-correction failed: %s. Using fallback.", re_exc)
-                    fallback_d = _fallback_react_decision(goal, step_count, executed_tools, selected_tool_names)
-                    action_tool = fallback_d.get("action", "search_papers")
-                    action_args = fallback_d.get("action_input") or action_args
-
-            # Emit ReAct Thought SSE Event
             trace.emit_event(task_id, {
                 "type": "thought",
                 "step_index": step_count,
                 "thought": thought,
-                "memory_summary": memory_summary,
+                "memory_summary": f"Step {step_count} reasoning active.",
                 "is_final": is_final,
             })
 
-            if is_final or action_tool == "none":
+            if is_final or not action_tool or action_tool == "none":
                 logger.info("ReAct agent reached final state at step %s", step_count)
                 break
 
-            if task_id in _cancelled_tasks:
-                task.status = "cancelled"
-                db.commit()
-                _cancelled_tasks.discard(task_id)
-                return
-
-            # Execute Tool Action with Error Recovery & Retry Handling
+            # Execute tool with type-safe arguments and recovery
             trace.emit_event(task_id, {
                 "type": "action",
                 "step_index": step_count,
                 "tool": action_tool,
                 "args": action_args,
-                "description": f"Executing {action_tool} with dynamic arguments",
+                "description": f"Executing {action_tool} with validated arguments",
             })
 
             if action_tool in TOOL_REGISTRY:
@@ -334,25 +445,21 @@ async def run_react_agent_loop(
                 try:
                     result = await fn(**action_args)
                 except Exception as exc:
-                    logger.error("ReAct Tool %s initial execution failed: %s. Attempting parameter relaxation retry...", action_tool, exc)
-                    trace.emit_event(task_id, {
-                        "type": "thought",
-                        "step_index": step_count,
-                        "thought": f"Tool '{action_tool}' encountered an error ({str(exc)[:100]}). Retrying with relaxed search parameters...",
-                    })
-                    # Attempt retry with simplified domain/topic keyword arguments
+                    logger.error("ReAct Tool %s failed: %s. Attempting retry...", action_tool, exc)
                     try:
-                        simplified_args = {
-                            "domain": (action_args.get("domain") or goal)[:80].strip(),
-                            "topic": (action_args.get("topic") or goal)[:80].strip(),
-                        }
+                        simplified_args = validate_and_normalize_tool_args(
+                            action_tool,
+                            {},
+                            goal,
+                            paper_id,
+                            structured_context=structured_memory,
+                        )
                         result = await fn(**simplified_args)
                     except Exception as retry_exc:
-                        logger.error("ReAct Tool %s retry failed: %s", action_tool, retry_exc)
                         result = {
                             "status": "unavailable",
                             "error": str(exc),
-                            "message": f"Data source for {action_tool} was temporarily unavailable or timed out.",
+                            "message": f"Data source for {action_tool} was temporarily unavailable.",
                         }
             else:
                 result = {
@@ -361,8 +468,16 @@ async def run_react_agent_loop(
                     "message": f"Requested tool '{action_tool}' could not be executed.",
                 }
 
+            extracted_entities = extract_structured_entities(action_tool, result)
+            structured_memory.update(extracted_entities)
+
             executed_tools.add(action_tool)
-            executed_results.append({"tool": action_tool, "args": action_args, "result": result})
+            executed_results.append({
+                "tool": action_tool,
+                "args": action_args,
+                "result": result,
+                "structured_entities": extracted_entities,
+            })
 
             # Save Audit Step to DB
             try:
@@ -377,9 +492,7 @@ async def run_react_agent_loop(
                 db.commit()
             except Exception as e:
                 db.rollback()
-                logger.warning("Failed to log ReAct AgentStep: %s", e)
 
-            # Emit ReAct Observation SSE Event
             trace.emit_event(task_id, {
                 "type": "observation",
                 "step_index": step_count,
@@ -387,31 +500,22 @@ async def run_react_agent_loop(
                 "summary": summarize_result(result),
                 "data": result,
             })
-
-            # Emit Working Memory Update
             trace.emit_event(task_id, {
                 "type": "memory_update",
                 "step_index": step_count,
                 "total_tools_executed": len(executed_results),
                 "latest_tool": action_tool,
-                "active_memory_summary": f"Collected findings from {len(executed_results)} action cycles.",
+                "active_memory_summary": f"Collected structured findings from {len(executed_results)} action cycles.",
+                "structured_memory": structured_memory,
             })
 
-            # Early exit if all target tools selected by router have completed
-            if selected_tool_names.issubset(executed_tools):
-                logger.info("All selected target tools (%s) executed. Completing ReAct loop.", selected_tool_names)
+            if selected_tool_names and selected_tool_names.issubset(executed_tools):
+                logger.info("All selected target tools executed. Completing ReAct loop.")
                 break
 
-            # Token Pacing Delay between agent reasoning cycles to prevent Groq TPM limit spikes
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(1.0)
 
-        if task_id in _cancelled_tasks:
-            task.status = "cancelled"
-            db.commit()
-            _cancelled_tasks.discard(task_id)
-            return
-
-        # Critique & Synthesis Phase (Unified Single Pass with Anti-Hallucination Directives)
+        # Critique & Synthesis Phase
         trace.emit_event(task_id, {
             "type": "critique_start",
             "message": "Auditing findings & synthesizing executive multi-agent proposal...",
@@ -433,6 +537,8 @@ async def run_react_agent_loop(
             "goal": goal,
             "session_id": session_id,
             "executed_tools": list(executed_tools),
+            "execution_mode": "react_loop",
+            "structured_memory": structured_memory,
             "summary": final_answer[:400] if final_answer else "",
         }
         db.commit()
