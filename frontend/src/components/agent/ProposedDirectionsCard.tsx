@@ -5,23 +5,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 interface ProposedDirectionsCardProps {
-  proposedProblems: any[];
-  directionPlans: Record<number, any[]>;
-  loadingPlanIndex: number | null;
-  onPlanExperimentRoadmap: (idx: number, title: string) => void;
+  proposedProblems?: any[];
+  problems?: any[];
+  directionPlans?: Record<number, any[]>;
+  loadingPlanIndex?: number | null;
+  onPlanExperimentRoadmap?: (idx: number, title: string) => void;
   renderTextOrObject: (val: any) => string;
   sectionIndex?: number;
 }
 
 export const ProposedDirectionsCard: React.FC<ProposedDirectionsCardProps> = ({
   proposedProblems,
-  directionPlans,
-  loadingPlanIndex,
+  problems,
+  directionPlans = {},
+  loadingPlanIndex = null,
   onPlanExperimentRoadmap,
   renderTextOrObject,
   sectionIndex = 2,
 }) => {
-  if (!proposedProblems || proposedProblems.length === 0) {
+  const items = proposedProblems || problems || [];
+  if (!items || items.length === 0) {
     return null;
   }
 
@@ -40,7 +43,7 @@ export const ProposedDirectionsCard: React.FC<ProposedDirectionsCardProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-5">
-        {proposedProblems.map((prob, idx) => {
+        {items.map((prob, idx) => {
           const title = renderTextOrObject(prob.title) || `Novel Direction #${idx + 1}`;
           const problemStatement = renderTextOrObject(prob.problem_statement || prob.description || prob.desc);
           const objective = renderTextOrObject(prob.objective);

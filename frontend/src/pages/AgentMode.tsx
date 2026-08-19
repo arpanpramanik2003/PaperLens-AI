@@ -151,7 +151,7 @@ const PROMPT_SUGGESTIONS = [
 export default function AgentMode() {
   const { getToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Multi-Turn Session State
   const [sessionId, setSessionId] = useState<string>(() => {
@@ -222,9 +222,12 @@ export default function AgentMode() {
     toast.success("New research session initialized.");
   };
 
+  // Only scroll the internal chat container when a message is added (never window/page scroll)
   useEffect(() => {
-    chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, events]);
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages.length]);
 
   useEffect(() => {
     return () => {
@@ -544,20 +547,20 @@ export default function AgentMode() {
     setHighlightedCard(toolName);
     const el = document.getElementById(`card-${toolName}`);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
     setTimeout(() => setHighlightedCard(null), 3000);
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 pb-12">
       <AgentHeaderBanner
         isRunning={isRunning}
         onSelectPreset={(preset) => handleSendMessage(preset)}
       />
 
       {/* Split-Screen Workbench Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[780px]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 min-h-[780px]">
         {/* LEFT PANEL: Interactive Agent Chat & Inline Step-Trace */}
         <Card className="flex flex-col border border-border/80 bg-card/95 shadow-xl rounded-2xl overflow-hidden h-[780px]">
           {/* Chat Header */}
@@ -603,7 +606,7 @@ export default function AgentMode() {
           </div>
 
           {/* Chat Messages & Inline Receipts */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs">
             {chatMessages.map((msg) => (
               <div
                 key={msg.id}
@@ -651,7 +654,6 @@ export default function AgentMode() {
                 )}
               </div>
             ))}
-            <div ref={chatScrollRef} />
           </div>
 
           {/* Quick Suggestions */}
@@ -809,8 +811,13 @@ export default function AgentMode() {
                       <div
                         id={`card-${toolName}`}
                         key={idx}
-                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                        className={`space-y-1.5 transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
                       >
+                        <CardProvenanceBadge
+                          toolName={toolName}
+                          qualitySignal="Semantic Scholar + arXiv verified"
+                          className="px-1"
+                        />
                         <LiteratureReviewCard
                           papers={papers}
                           filteredPapers={papers}
@@ -824,36 +831,29 @@ export default function AgentMode() {
                           renderTextOrObject={renderTextOrObject}
                           sectionIndex={idx + 1}
                         />
-                        <CardProvenanceBadge
-                          toolName={toolName}
-                          qualitySignal="Semantic Scholar + arXiv verified"
-                          className="px-2"
-                        />
                       </div>
                     );
                   }
 
                   if (toolName === "detect_gaps" || toolName === "generate_problem") {
-                    const problems = res.problems || res.problem_statements || res.ideas || [];
+                    const problems = res.problems || res.problem_statements || res.ideas || res.gaps || [];
                     if (!problems.length) return null;
                     return (
                       <div
                         id={`card-${toolName}`}
                         key={idx}
-                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                        className={`space-y-1.5 transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
                       >
-                        <ProposedDirectionsCard
-                          problems={problems}
-                          loadingPlanIndex={null}
-                          directionPlans={{}}
-                          onGeneratePlan={() => {}}
-                          renderTextOrObject={renderTextOrObject}
-                          sectionIndex={idx + 1}
-                        />
                         <CardProvenanceBadge
                           toolName={toolName}
                           qualitySignal="Attributed Gaps"
-                          className="px-2"
+                          className="px-1"
+                        />
+                        <ProposedDirectionsCard
+                          proposedProblems={problems}
+                          problems={problems}
+                          renderTextOrObject={renderTextOrObject}
+                          sectionIndex={idx + 1}
                         />
                       </div>
                     );
@@ -866,17 +866,17 @@ export default function AgentMode() {
                       <div
                         id={`card-${toolName}`}
                         key={idx}
-                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                        className={`space-y-1.5 transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
                       >
+                        <CardProvenanceBadge
+                          toolName={toolName}
+                          qualitySignal="SOTA Benchmarks"
+                          className="px-1"
+                        />
                         <DatasetsBenchmarksCard
                           datasetsList={datasets}
                           renderTextOrObject={renderTextOrObject}
                           sectionIndex={idx + 1}
-                        />
-                        <CardProvenanceBadge
-                          toolName={toolName}
-                          qualitySignal="SOTA Benchmarks"
-                          className="px-2"
                         />
                       </div>
                     );
@@ -889,17 +889,17 @@ export default function AgentMode() {
                       <div
                         id={`card-${toolName}`}
                         key={idx}
-                        className={`transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
+                        className={`space-y-1.5 transition-all duration-500 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-2xl" : ""}`}
                       >
+                        <CardProvenanceBadge
+                          toolName={toolName}
+                          qualitySignal="Execution Roadmap"
+                          className="px-1"
+                        />
                         <ExperimentPlanCard
                           steps={steps}
                           renderTextOrObject={renderTextOrObject}
                           sectionIndex={idx + 1}
-                        />
-                        <CardProvenanceBadge
-                          toolName={toolName}
-                          qualitySignal="Execution Roadmap"
-                          className="px-2"
                         />
                       </div>
                     );
@@ -910,16 +910,16 @@ export default function AgentMode() {
 
                 {/* Self-Critique Audit Card */}
                 {critiqueData && (
-                  <div>
+                  <div className="space-y-1.5">
+                    <CardProvenanceBadge
+                      toolName="synthesize_and_verify"
+                      qualitySignal={critiqueData.verdict || "Audited"}
+                      className="px-1"
+                    />
                     <SelfCritiqueCard
                       critiqueData={critiqueData}
                       renderTextOrObject={renderTextOrObject}
                       sectionIndex={resultsData.length + 1}
-                    />
-                    <CardProvenanceBadge
-                      toolName="synthesize_and_verify"
-                      qualitySignal={critiqueData.verdict || "Audited"}
-                      className="px-2"
                     />
                   </div>
                 )}
