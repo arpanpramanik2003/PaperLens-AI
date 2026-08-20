@@ -25,7 +25,7 @@ export default function CitationIntelligenceWindow() {
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5" aria-hidden="true">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
@@ -33,15 +33,15 @@ export default function CitationIntelligenceWindow() {
           <span className="text-xs font-medium text-muted-foreground ml-2">PaperLens AI — Citation Intelligence</span>
         </div>
 
-        <div className="p-3 sm:p-4 flex-1 overflow-hidden flex flex-col gap-3">
-          <div className="grid grid-cols-4 gap-2">
+        <div className="p-3 sm:p-4 flex-1 overflow-y-auto flex flex-col gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
             {[
               { label: "Extracted", value: "23" },
               { label: "Processed", value: "23" },
               { label: "Matched", value: "19" },
               { label: "Missing", value: "4" },
             ].map((item) => (
-              <div key={item.label} className="rounded-lg border border-border bg-muted/30 px-2 py-1.5 shadow-2xs">
+              <div key={item.label} className="rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 shadow-2xs">
                 <p className="text-[10px] font-medium text-muted-foreground">{item.label}</p>
                 <p className="text-xs sm:text-sm font-semibold text-foreground">{item.value}</p>
               </div>
@@ -52,7 +52,7 @@ export default function CitationIntelligenceWindow() {
             <div className="lg:col-span-3 min-h-0">
               <div className="flex items-center gap-1.5 mb-2">
                 <BarChart3 className="w-3.5 h-3.5 text-accent" />
-                <p className="text-xs font-semibold text-foreground">Top Cited References</p>
+                <h3 className="text-xs font-semibold text-foreground">Top Cited References</h3>
               </div>
               <div className="space-y-2 overflow-y-auto pr-1 max-h-[170px] sm:max-h-[210px]">
                 {topRefs.map((ref, idx) => (
@@ -65,7 +65,7 @@ export default function CitationIntelligenceWindow() {
                     transition={{ duration: 0.3, delay: 0.15 + idx * 0.08 }}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-[11px] sm:text-xs font-semibold text-foreground leading-snug line-clamp-2">{ref.title}</p>
+                      <h4 className="text-[11px] sm:text-xs font-semibold text-foreground leading-snug line-clamp-2">{ref.title}</h4>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20 whitespace-nowrap">
                         {ref.citations}
                       </span>
@@ -84,7 +84,7 @@ export default function CitationIntelligenceWindow() {
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
                     <BookOpen className="w-3.5 h-3.5 text-accent" />
-                    <p className="text-xs font-semibold text-foreground">AI Recommendations</p>
+                    <h3 className="text-xs font-semibold text-foreground">AI Recommendations</h3>
                   </div>
 
                   <div className="mb-2 rounded-md bg-muted/40 border border-border/60 p-2">
@@ -94,7 +94,7 @@ export default function CitationIntelligenceWindow() {
                     </p>
                   </div>
 
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">Must Read</p>
+                  <h4 className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">Must Read</h4>
                   <div className="space-y-1.5">
                     {mustRead.map((title, idx) => (
                       <motion.div

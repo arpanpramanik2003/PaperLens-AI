@@ -37,7 +37,7 @@ export default function GapDetectionWindow() {
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5" aria-hidden="true">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
@@ -49,7 +49,7 @@ export default function GapDetectionWindow() {
           <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-border">
             <button
               onClick={() => setActiveTab("project")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 activeTab === "project"
                   ? "bg-accent/15 border border-accent/40 text-accent shadow-sm"
                   : "bg-secondary/70 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -60,7 +60,7 @@ export default function GapDetectionWindow() {
             </button>
             <button
               onClick={() => setActiveTab("paper")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 activeTab === "paper"
                   ? "bg-accent/15 border border-accent/40 text-accent shadow-sm"
                   : "bg-secondary/70 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -73,14 +73,14 @@ export default function GapDetectionWindow() {
 
           <div className="mb-4 p-3 bg-muted/40 border border-border rounded-lg text-xs text-muted-foreground leading-relaxed min-h-24">
             {projectContent}
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex justify-end" aria-hidden="true">
               <div className="w-2.5 h-2.5 rounded-full bg-success" />
             </div>
           </div>
 
           <motion.button
             onClick={handleDetectGaps}
-            className="mb-4 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full shadow-sm"
+            className="mb-4 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -92,7 +92,7 @@ export default function GapDetectionWindow() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 justify-between py-2 border-b border-border">
                 <span className="text-xs text-muted-foreground font-semibold">{gapsDetected.length} gaps identified</span>
-                <button className="text-xs text-success hover:text-success/80 font-medium flex items-center gap-1 transition-colors">
+                <button className="text-xs text-success hover:text-success/80 font-medium flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded">
                   <FileText className="w-3 h-3" />
                   Copy Report
                 </button>

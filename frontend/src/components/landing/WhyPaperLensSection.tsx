@@ -105,14 +105,14 @@ export default function WhyPaperLensSection() {
 
         <div className="space-y-6 sm:space-y-8">
           <motion.div
-            className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.45fr] gap-0 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
+            className="grid grid-cols-1 lg:grid-cols-[0.95fr_1.45fr] gap-0 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, ease }}
             whileHover={{ y: -2 }}
           >
-            <div className="relative bg-card p-6 sm:p-8 lg:p-10 border-b xl:border-b-0 xl:border-r border-border">
+            <div className="relative bg-card p-5 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-border">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2.5 rounded-lg bg-accent/10 border border-accent/20">
                   <Shield className="w-5 h-5 text-accent" />
@@ -131,7 +131,7 @@ export default function WhyPaperLensSection() {
               </div>
             </div>
 
-            <div className="relative p-4 sm:p-6 lg:p-8 bg-muted/40">
+            <div className="relative p-3.5 sm:p-6 lg:p-8 bg-muted/40">
               <motion.div
                 className="rounded-xl border border-border bg-card overflow-hidden shadow-sm"
               >
@@ -164,7 +164,7 @@ export default function WhyPaperLensSection() {
                             onMouseEnter={() => setActiveDimensionKey(item.key)}
                             onFocus={() => setActiveDimensionKey(item.key)}
                             onClick={() => setActiveDimensionKey(item.key)}
-                            className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                               isActive
                                 ? "border-accent bg-accent/15 text-accent font-semibold shadow-sm"
                                 : "border-border bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -192,14 +192,14 @@ export default function WhyPaperLensSection() {
           </motion.div>
 
           <motion.div
-            className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.45fr] gap-0 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
+            className="grid grid-cols-1 lg:grid-cols-[0.95fr_1.45fr] gap-0 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1, ease }}
             whileHover={{ y: -2 }}
           >
-            <div className="relative bg-card p-6 sm:p-8 lg:p-10 border-b xl:border-b-0 xl:border-r border-border xl:order-1">
+            <div className="relative bg-card p-5 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-border lg:order-1">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2.5 rounded-lg bg-accent/10 border border-accent/20">
                   <Lightbulb className="w-5 h-5 text-accent" />
@@ -218,7 +218,7 @@ export default function WhyPaperLensSection() {
               </div>
             </div>
 
-            <div className="relative p-4 sm:p-6 lg:p-8 bg-muted/40 xl:order-2">
+            <div className="relative p-3.5 sm:p-6 lg:p-8 bg-muted/40 lg:order-2">
               <motion.div
                 className="rounded-xl border border-border bg-card overflow-hidden shadow-sm"
               >
@@ -254,7 +254,7 @@ export default function WhyPaperLensSection() {
                               setActiveEvidenceTag(tag);
                               setShowEvidenceQuote((prev) => !prev);
                             }}
-                            className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                               isActive
                                 ? "border-accent bg-accent/15 text-accent font-semibold shadow-sm"
                                 : "border-border bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary"

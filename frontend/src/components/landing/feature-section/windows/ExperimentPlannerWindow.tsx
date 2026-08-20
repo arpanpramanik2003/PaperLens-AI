@@ -26,7 +26,7 @@ export default function ExperimentPlannerWindow() {
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5" aria-hidden="true">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
@@ -44,15 +44,15 @@ export default function ExperimentPlannerWindow() {
 
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Difficulty Level</label>
-                <div className="bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground flex items-center justify-between cursor-pointer hover:bg-muted/60 transition-colors">
+                <div tabIndex={0} role="button" aria-label={`Difficulty level: ${difficulty}`} className="bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground flex items-center justify-between cursor-pointer hover:bg-muted/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <span>{difficulty}</span>
-                  <span className="text-muted-foreground text-[10px]">▼</span>
+                  <span className="text-muted-foreground text-[10px]" aria-hidden="true">▼</span>
                 </div>
               </div>
 
               <motion.button
                 onClick={handleGeneratePlan}
-                className="mt-2 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto shadow-sm"
+                className="mt-2 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -63,6 +63,7 @@ export default function ExperimentPlannerWindow() {
           </div>
 
           <div className="space-y-2 flex-1">
+            <h3 className="sr-only">Experiment Execution Plan</h3>
             {steps.map((step) => (
               <div
                 key={step.num}
@@ -70,7 +71,8 @@ export default function ExperimentPlannerWindow() {
               >
                 <button
                   onClick={() => setExpandedStep(expandedStep === step.num ? null : step.num)}
-                  className="w-full flex items-start gap-3 p-2.5 hover:bg-muted/40 transition-colors text-left"
+                  aria-expanded={expandedStep === step.num}
+                  className="w-full flex items-start gap-3 p-2.5 hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex items-center justify-center w-5 h-5 rounded-full bg-accent/15 border border-accent/30 flex-shrink-0 mt-0.5 text-[11px] font-bold text-accent">
                     {step.num}
@@ -78,7 +80,7 @@ export default function ExperimentPlannerWindow() {
                   <div className="flex-1 min-w-0">
                     <h4 className="text-xs font-semibold text-foreground break-words">{step.title}</h4>
                   </div>
-                  <span className="text-muted-foreground text-[10px] flex-shrink-0">
+                  <span className="text-muted-foreground text-[10px] flex-shrink-0" aria-hidden="true">
                     {expandedStep === step.num ? "▲" : "▼"}
                   </span>
                 </button>

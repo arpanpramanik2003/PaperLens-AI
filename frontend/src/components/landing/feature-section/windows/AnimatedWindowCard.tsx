@@ -19,7 +19,7 @@ export default function AnimatedWindowCard({ feature }: AnimatedWindowCardProps)
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40">
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5" aria-hidden="true">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-success/70" />

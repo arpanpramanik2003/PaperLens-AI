@@ -215,29 +215,25 @@ export default function AgentModeSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, ease }}
         >
-          {/* Cockpit Window Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-border bg-muted/40">
-            <div className="flex items-center gap-3">
-              <div className="flex gap-1.5">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5" aria-hidden="true">
                 <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
                 <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
                 <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
               </div>
-              <span className="text-xs font-semibold text-foreground flex items-center gap-2">
-                <Bot className="w-3.5 h-3.5 text-accent" />
-                PaperLens Autonomous Orchestrator v2.4
+              <span className="text-xs font-medium text-muted-foreground ml-2 font-mono">
+                paperlens-agent-orchestrator :: v2.4.0
               </span>
             </div>
-
-            <div className="flex items-center gap-2 text-xs">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/15 border border-success/30 text-success font-medium">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-success/10 text-success border border-success/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                Agent Pipeline: Complete (1.65s total)
+                Active Run
               </span>
             </div>
           </div>
 
-          {/* Goal Prompt Banner */}
           <div className="p-4 sm:p-5 border-b border-border bg-muted/20">
             <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
               <div className="flex items-start gap-3">
@@ -254,7 +250,7 @@ export default function AgentModeSection() {
                 </div>
               </div>
 
-              <Link to="/dashboard/agent" className="flex-shrink-0">
+              <Link to="/agent" className="flex-shrink-0">
                 <ShinyButton variant="hero" className="rounded-xl px-4 py-2 text-xs font-semibold gap-1.5">
                   Launch Agent Mode <ArrowRight className="w-3.5 h-3.5" />
                 </ShinyButton>
@@ -262,9 +258,7 @@ export default function AgentModeSection() {
             </div>
           </div>
 
-          {/* Cockpit Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-border">
-            {/* Left Column: Live Step-by-Step Reasoning Trace (5 cols) */}
             <div className="lg:col-span-5 p-4 sm:p-6 bg-muted/10 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -275,15 +269,21 @@ export default function AgentModeSection() {
                   <span className="text-[11px] text-muted-foreground font-mono">4/4 Steps Done</span>
                 </div>
 
-                {/* Steps List */}
                 <div className="space-y-2.5">
-                  {traceSteps.map((step, index) => {
+                  {traceSteps.map((step) => {
                     const isSelected = selectedStepId === step.id;
                     return (
                       <motion.div
                         key={step.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelectedStepId(step.id)}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            setSelectedStepId(step.id);
+                          }
+                        }}
+                        className={`p-3 rounded-xl border transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                           isSelected
                             ? "bg-card border-accent/50 shadow-xs ring-1 ring-accent/30"
                             : "bg-card/60 border-border hover:bg-card hover:border-border/80"
@@ -293,7 +293,7 @@ export default function AgentModeSection() {
                       >
                         <div className="flex items-center justify-between gap-2 mb-1.5">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-success/15 text-success text-[10px] font-bold">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-success/15 text-success text-[10px] font-bold" aria-hidden="true">
                               ✓
                             </span>
                             <span className="text-xs font-semibold text-foreground truncate">
@@ -319,7 +319,6 @@ export default function AgentModeSection() {
                 </div>
               </div>
 
-              {/* Bottom Micro-Badge */}
               <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-success" />
@@ -329,20 +328,20 @@ export default function AgentModeSection() {
               </div>
             </div>
 
-            {/* Right Column: Multi-Dimensional Synthesized Dossier (7 cols) */}
             <div className="lg:col-span-7 p-4 sm:p-6 flex flex-col justify-between bg-card">
               <div>
-                {/* Tab Navigation */}
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-border overflow-x-auto gap-2">
-                  <div className="flex items-center gap-1.5 flex-nowrap">
+                  <div className="flex items-center gap-1.5 flex-nowrap" role="tablist">
                     {outputTabs.map((tab) => {
                       const isActive = activeTabId === tab.id;
                       const Icon = tab.icon;
                       return (
                         <button
                           key={tab.id}
+                          role="tab"
+                          aria-selected={isActive}
                           onClick={() => setActiveTabId(tab.id)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                             isActive
                               ? "bg-accent text-accent-foreground font-semibold shadow-xs"
                               : "bg-muted/50 border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -356,7 +355,6 @@ export default function AgentModeSection() {
                   </div>
                 </div>
 
-                {/* Tab Content Display */}
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab.id}

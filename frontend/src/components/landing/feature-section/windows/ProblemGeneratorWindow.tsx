@@ -24,7 +24,7 @@ export default function ProblemGeneratorWindow() {
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5" aria-hidden="true">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
             <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
@@ -52,16 +52,16 @@ export default function ProblemGeneratorWindow() {
 
                 <div>
                   <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Complexity</label>
-                  <div className="bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground flex items-center justify-between cursor-pointer hover:bg-muted/60 transition-colors">
+                  <div tabIndex={0} role="button" aria-label="Complexity selector: Medium" className="bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground flex items-center justify-between cursor-pointer hover:bg-muted/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <span>Medium</span>
-                    <span className="text-muted-foreground text-[10px]">▼</span>
+                    <span className="text-muted-foreground text-[10px]" aria-hidden="true">▼</span>
                   </div>
                 </div>
               </div>
 
               <motion.button
                 onClick={handleGenerateIdeas}
-                className="mt-3 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full sm:w-auto shadow-sm"
+                className="mt-3 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full sm:w-auto shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -72,14 +72,15 @@ export default function ProblemGeneratorWindow() {
           </div>
 
           <div className="space-y-3">
+            <h3 className="sr-only">Generated Research Directions</h3>
             {ideas.map((idea, idx) => (
               <div
                 key={idx}
                 className="bg-card border border-border rounded-lg p-3 hover:border-accent/40 transition-all duration-200 shadow-xs"
               >
-                <div className="flex items-center gap-1 mb-1.5">
+                <div className="flex items-center gap-1 mb-1.5" aria-label={`Rating: ${idea.rating} out of 5`}>
                   {[...Array(5)].map((_, i) => (
-                    <span key={i} className={`text-xs ${i < idea.rating ? "text-warning" : "text-muted/60"}`}>
+                    <span key={i} className={`text-xs ${i < idea.rating ? "text-warning" : "text-muted/60"}`} aria-hidden="true">
                       ★
                     </span>
                   ))}
@@ -97,7 +98,7 @@ export default function ProblemGeneratorWindow() {
                 </div>
 
                 <button
-                  className="text-xs font-medium text-accent hover:text-accent/80 flex items-center gap-1 transition-colors"
+                  className="text-xs font-medium text-accent hover:text-accent/80 flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
                 >
                   Use this idea →
                 </button>
