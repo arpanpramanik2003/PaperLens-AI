@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ShinyButton } from "@/components/ui/shiny-button";
+import ReasoningLoopFlow from "./ReasoningLoopFlow";
 
 const ease = [0.2, 0, 0, 1] as const;
 
@@ -257,6 +258,12 @@ export default function AgentModeSection() {
               </Link>
             </div>
           </div>
+
+          {/* Interactive SVG Flow Diagram */}
+          <ReasoningLoopFlow
+            activeStepId={selectedStepId}
+            onSelectStep={(stepId) => setSelectedStepId(stepId)}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-border">
             <div className="lg:col-span-5 p-4 sm:p-6 bg-muted/10 flex flex-col justify-between">

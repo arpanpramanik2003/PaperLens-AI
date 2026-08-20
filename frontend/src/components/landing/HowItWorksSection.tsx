@@ -1,42 +1,72 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Upload, Sparkles, MessageSquare, ArrowRight, CheckCircle2, Zap } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Upload, Sparkles, CheckCircle2, ArrowRight, BookOpen, Layers, MessageSquare, Zap, Cpu, Compass } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const ease = [0.2, 0, 0, 1] as const;
 
 const steps = [
-  { num: "01", title: "Upload Paper", desc: "Drag & drop your research PDF into PaperLens.", icon: Upload, color: "from-blue-600 to-indigo-600" },
-  { num: "02", title: "AI Analyzes", desc: "Our engine extracts structure, methodology, and key findings.", icon: Sparkles, color: "from-indigo-600 to-violet-600" },
-  { num: "03", title: "Ask & Generate", desc: "Chat with your paper, generate ideas, and plan experiments.", icon: MessageSquare, color: "from-violet-600 to-blue-600" },
+  {
+    num: "01",
+    title: "Upload & Ingest",
+    desc: "Drag and drop any PDF paper or paste an arXiv link for instant structural extraction.",
+    icon: Upload,
+    color: "from-blue-500/20 to-cyan-500/20",
+    stage: "Ingestion Stage",
+  },
+  {
+    num: "02",
+    title: "Analyze & Synthesize",
+    desc: "AI extracts methodology, parses mathematical proofs, and verifies citation networks.",
+    icon: Sparkles,
+    color: "from-indigo-500/20 to-purple-500/20",
+    stage: "Reasoning Stage",
+  },
+  {
+    num: "03",
+    title: "Plan & Discover",
+    desc: "Generate novel hypotheses, design ablation experiments, and uncover unaddressed research gaps.",
+    icon: MessageSquare,
+    color: "from-emerald-500/20 to-teal-500/20",
+    stage: "Execution Stage",
+  },
 ];
 
 const pipeline = [
   {
-    title: "Ingest & Parse",
-    desc: "Upload PDF and instantly extract sections, references, and technical entities.",
-    bullets: ["Auto section detection", "Key-term extraction", "Smart context chunking"],
+    phase: 1,
+    title: "Intelligent PDF & Citation Ingestion",
+    desc: "Extract clean structural representations from dual-column academic PDFs, preserving equation semantics, figure captions, and reference tables.",
+    bullets: ["Dual-column AST parsing", "Mathematical LaTeX extraction", "Reference graph linking"],
     progress: 100,
-    icon: Upload,
+    icon: BookOpen,
+    badge: "Input Stream",
+    stats: "2.4s Average Parse Time",
   },
   {
-    title: "Deep Analysis",
-    desc: "Structured AI reasoning across objectives, methods, results, and limitations.",
-    bullets: ["Methodology breakdown", "Contribution mapping", "Result reliability checks"],
+    phase: 2,
+    title: "Multi-Modal Reasoning & Claim Audit",
+    desc: "Deep semantic analysis maps core architectural claims to reported benchmarks, testing methodology bounds and identifying baseline discrepancies.",
+    bullets: ["Architecture validation", "Benchmark split cross-checking", "Confounding variable detection"],
     progress: 100,
-    icon: Sparkles,
+    icon: Layers,
+    badge: "Core Analysis",
+    stats: "98.4% Claim Verification",
   },
   {
-    title: "Action Layer",
-    desc: "Turn insights into experiments, novel ideas, and validated research gaps.",
-    bullets: ["Experiment blueprint", "Problem expansion", "Gap-to-next-step guidance"],
+    phase: 3,
+    title: "Generative Blueprint & Publication Guidance",
+    desc: "Turn extracted insights into publication-ready experimental blueprints, reproducible ablation matrices, and unexplored high-novelty hypotheses.",
+    bullets: ["Ablation matrix design", "Problem space expansion", "Falsification protocols"],
     progress: 100,
-    icon: MessageSquare,
+    icon: Compass,
+    badge: "Output Delivery",
+    stats: "Publication-Grade Dossier",
   },
 ];
 
 export default function HowItWorksSection() {
-  const [hoveredStep, setHoveredStep] = useState<string | null>(null);
-  const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
 
   return (
     <section id="how-it-works" className="relative py-16 sm:py-24 lg:py-28 scroll-mt-20">
@@ -60,180 +90,185 @@ export default function HowItWorksSection() {
               Complete Workflow
             </span>
           </motion.div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
             From Upload to <span className="text-gradient-research">Publishable Direction</span>
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Streamlined AI workflow that transforms your research paper into actionable insights, experiments, and publication-ready directions in just three powerful steps.
+            A continuous, evidence-anchored pipeline that deconstructs complex papers, verifies claims against literature graphs, and synthesizes actionable research roadmaps.
           </p>
         </motion.div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 mb-20">
-          {/* Steps Timeline */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-32">
-              <motion.div
-                className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm overflow-hidden relative"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <h3 className="text-lg font-semibold mb-8 text-foreground flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-accent" />
-                  Process Steps
+        {/* Main Interactive Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-16">
+          {/* Left: Step Stepper Column (5 cols) */}
+          <div className="lg:col-span-5">
+            <div className="rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm sticky top-28">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+                <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-accent" />
+                  Execution Pipeline
                 </h3>
+                <span className="text-xs font-mono text-muted-foreground">3 Discrete Stages</span>
+              </div>
 
-                <div className="space-y-0 relative">
-                  {/* Animated connecting line */}
-                  <svg className="absolute left-6 top-12 w-1 h-[calc(100%-48px)]" viewBox="0 0 1 100" preserveAspectRatio="none">
-                    <motion.line
-                      x1="0.5"
-                      y1="0"
-                      x2="0.5"
-                      y2="100"
-                      stroke="url(#gradient)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      initial={{ pathLength: 0 }}
-                      whileInView={{ pathLength: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1.2, delay: 0.3 }}
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="hsl(var(--accent))" />
-                        <stop offset="100%" stopColor="hsl(262, 70%, 50%)" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
+              <div className="relative space-y-3">
+                {/* Custom SVG Connecting Flow Conduit */}
+                <div className="absolute left-[23px] top-6 bottom-6 w-0.5 bg-border pointer-events-none" aria-hidden="true">
+                  <motion.div
+                    className="w-full bg-accent"
+                    style={{
+                      height: `${(activeStepIndex / (steps.length - 1)) * 100}%`,
+                      transition: "height 0.3s ease",
+                    }}
+                  />
+                </div>
 
-                  {steps.map((s, i) => (
-                    <motion.div
+                {steps.map((s, i) => {
+                  const isSelected = activeStepIndex === i;
+                  const Icon = s.icon;
+                  return (
+                    <div
                       key={s.num}
-                      className="relative flex gap-5 pb-12 last:pb-0"
-                      onMouseEnter={() => setHoveredStep(s.num)}
-                      onMouseLeave={() => setHoveredStep(null)}
-                      initial={{ opacity: 0, x: -15 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: i * 0.15 }}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveStepIndex(i)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setActiveStepIndex(i);
+                        }
+                      }}
+                      className={`relative z-10 flex items-start gap-4 p-3.5 rounded-xl border transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        isSelected
+                          ? "bg-accent/10 border-accent/50 shadow-xs ring-1 ring-accent/20"
+                          : "bg-card/70 border-border/70 hover:bg-card hover:border-border"
+                      }`}
                     >
-                      {/* Circle */}
-                      <motion.div
-                        className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 bg-gradient-to-br ${s.color} text-white shadow-sm`}
-                        whileHover={{ scale: 1.08 }}
-                        whileTap={{ scale: 0.95 }}
+                      {/* Step Circle */}
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all flex-shrink-0 mt-0.5 ${
+                          isSelected
+                            ? "bg-accent text-accent-foreground shadow-sm"
+                            : "bg-muted text-muted-foreground border border-border"
+                        }`}
                       >
-                        <s.icon className="w-5 h-5" />
-                      </motion.div>
+                        {s.num}
+                      </div>
 
-                      {/* Content */}
-                      <motion.div
-                        className="pt-1 flex-1"
-                        animate={{
-                          x: hoveredStep === s.num ? 4 : 0,
-                        }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div className="text-xs font-semibold text-accent mb-1 tracking-wider">STEP {s.num}</div>
-                        <h4 className={`font-semibold text-foreground mb-1.5 transition-colors ${
-                          hoveredStep === s.num ? "text-accent" : ""
-                        }`}>
-                          {s.title}
-                        </h4>
-                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                      {/* Step Text */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <h4 className={`text-xs sm:text-sm font-semibold transition-colors ${
+                            isSelected ? "text-foreground" : "text-muted-foreground"
+                          }`}>
+                            {s.title}
+                          </h4>
+                          <span className="text-[10px] font-mono text-muted-foreground">{s.stage}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           {s.desc}
                         </p>
-                      </motion.div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Pipeline Phases */}
-          <div className="lg:col-span-2">
+          {/* Right: Detailed Stage Showcase (7 cols) */}
+          <div className="lg:col-span-7">
             <div className="space-y-4">
-              {pipeline.map((item, i) => (
-                <motion.div
-                  key={item.title}
-                  className="group relative rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm overflow-hidden cursor-pointer hover:border-accent/40 transition-colors"
-                  onMouseEnter={() => setHoveredPhase(item.title)}
-                  onMouseLeave={() => setHoveredPhase(null)}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.15 }}
-                  whileHover={{ y: -2 }}
-                >
-                  <div className="relative">
+              {pipeline.map((item, i) => {
+                const isSelected = activeStepIndex === i;
+                const Icon = item.icon;
+
+                return (
+                  <motion.div
+                    key={item.title}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveStepIndex(i)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        setActiveStepIndex(i);
+                      }
+                    }}
+                    className={`rounded-2xl border bg-card p-6 sm:p-7 shadow-sm transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      isSelected
+                        ? "border-accent shadow-md ring-1 ring-accent/30"
+                        : "border-border/80 opacity-85 hover:opacity-100 hover:border-border"
+                    }`}
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2.5 rounded-lg bg-accent/10 border border-accent/20">
-                            <item.icon className="w-5 h-5 text-accent" />
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2.5 rounded-xl border ${
+                          isSelected ? "bg-accent/15 border-accent/40 text-accent" : "bg-muted border-border text-muted-foreground"
+                        }`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold text-accent uppercase tracking-wider mb-0.5">
+                            Stage 0{item.phase} · {item.badge}
                           </div>
-                          <h3 className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors">
+                          <h3 className="text-base sm:text-lg font-semibold text-foreground">
                             {item.title}
                           </h3>
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                          {item.desc}
-                        </p>
                       </div>
-
-                      <div className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent whitespace-nowrap">
-                        Phase {i + 1}/3
-                      </div>
+                      <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground whitespace-nowrap">
+                        {item.stats}
+                      </span>
                     </div>
 
-                    {/* Features */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-5">
+                      {item.desc}
+                    </p>
+
+                    {/* Feature Chips */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
                       {item.bullets.map((bullet) => (
                         <div
                           key={bullet}
-                          className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted/50 border border-border/60 transition-colors"
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border text-xs text-foreground/90 font-medium"
                         >
-                          <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                          <span className="text-xs sm:text-sm text-foreground/90 font-medium">{bullet}</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-success flex-shrink-0" />
+                          <span className="truncate">{bullet}</span>
                         </div>
                       ))}
                     </div>
 
-                    {/* Progress bar */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-muted-foreground">Pipeline State</span>
-                        <span className="text-xs font-mono font-semibold text-accent">{item.progress}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                        <div className="h-full bg-accent rounded-full w-full" />
-                      </div>
+                    {/* Progress Indicator */}
+                    <div className="flex items-center justify-between pt-3 border-t border-border/60 text-xs">
+                      <span className="text-muted-foreground">Pipeline State: Operational</span>
+                      <span className="font-mono text-accent font-semibold flex items-center gap-1">
+                        Active Stage 0{item.phase} <ArrowRight className="w-3 h-3" />
+                      </span>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </div>
 
         {/* Bottom CTA */}
         <motion.div
-          className="mt-16 text-center"
-          initial={{ opacity: 0, y: 20 }}
+          className="text-center"
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full border border-border bg-card shadow-sm hover:border-accent transition-all cursor-pointer group">
-            <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-              Ready to transform your research?
-            </span>
-            <ArrowRight className="w-4 h-4 text-accent transition-transform duration-200 group-hover:translate-x-1" />
-          </div>
+          <Link to="/signup" className="inline-block">
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full border border-border bg-card shadow-sm hover:border-accent transition-all cursor-pointer group">
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                Ready to transform your research workflow?
+              </span>
+              <ArrowRight className="w-4 h-4 text-accent transition-transform duration-200 group-hover:translate-x-1" />
+            </div>
+          </Link>
         </motion.div>
       </div>
     </section>
