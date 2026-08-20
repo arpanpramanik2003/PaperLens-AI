@@ -91,12 +91,12 @@ export default function WhyPaperLensSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-violet-500/20 to-pink-500/20 border border-violet-500/30 text-foreground">
+            <span className="badge-research">
               Why Choose Us
             </span>
           </motion.div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
-            Why <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">PaperLens AI?</span>
+            Why <span className="text-gradient-research">PaperLens AI?</span>
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Designed for real research decisions: configurable, auditable, and built to reduce manual verification overhead.
@@ -105,42 +105,38 @@ export default function WhyPaperLensSection() {
 
         <div className="space-y-6 sm:space-y-8">
           <motion.div
-            className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.45fr] gap-0 rounded-3xl overflow-hidden backdrop-blur-xl border border-border/30 bg-card/30"
+            className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.45fr] gap-0 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, ease }}
-            whileHover={{ y: -4 }}
+            whileHover={{ y: -2 }}
           >
-            {/* Background gradients */}
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-            
-            <div className="relative bg-card/50 p-6 sm:p-8 lg:p-10 border-b xl:border-b-0 xl:border-r border-border/20">
+            <div className="relative bg-card p-6 sm:p-8 lg:p-10 border-b xl:border-b-0 xl:border-r border-border">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-lg bg-gradient-to-br from-cyan-500/20 to-cyan-500/10">
-                  <Shield className="w-5 h-5 text-cyan-400" />
+                <div className="p-2.5 rounded-lg bg-accent/10 border border-accent/20">
+                  <Shield className="w-5 h-5 text-accent" />
                 </div>
                 <h3 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-foreground">{whyPanels[0].title}</h3>
               </div>
-              <div className="h-px w-16 bg-gradient-to-r from-cyan-500 to-transparent mb-6" />
+              <div className="h-px w-16 bg-accent mb-6" />
               <p className="text-base sm:text-lg text-foreground/90 leading-relaxed mb-6">{whyPanels[0].description}</p>
               <div className="space-y-2.5">
                 {whyPanels[0].points.map((point) => (
                   <div key={point} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                    <CheckCircle2 className="w-4 h-4 text-accent mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5" />
                     <span>{point}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="relative p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-cyan-500/5 to-violet-500/5">
+            <div className="relative p-4 sm:p-6 lg:p-8 bg-muted/40">
               <motion.div
-                className="rounded-2xl backdrop-blur-sm border border-border/30 bg-card/60 overflow-hidden shadow-xl"
-                whileHover={{ borderColor: "rgba(6, 182, 212, 0.5)" }}
+                className="rounded-xl border border-border bg-card overflow-hidden shadow-sm"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 border-b border-border/50">
-                  <div className="p-4 sm:p-5 border-b md:border-b-0 md:border-r border-border/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 border-b border-border">
+                  <div className="p-4 sm:p-5 border-b md:border-b-0 md:border-r border-border">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Paper</p>
                     <h4 className="font-medium text-foreground leading-relaxed mb-3">
                       Foundation model adaptation for robust research-paper understanding across domains.
@@ -152,8 +148,8 @@ export default function WhyPaperLensSection() {
                       <p className="text-xs uppercase tracking-wider text-muted-foreground">Screening recommendation</p>
                       <Info className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 text-cyan-300 text-sm font-semibold mb-3">
-                      <motion.span className="w-1.5 h-1.5 rounded-full bg-cyan-400" animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} /> Include · 4.8/5
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-sm font-semibold mb-3">
+                      <motion.span className="w-1.5 h-1.5 rounded-full bg-accent" animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} /> Include · 4.8/5
                     </div>
                     <p className="text-sm text-foreground/90 leading-relaxed mb-3">
                       Strong alignment with paper-structure parsing and domain transfer. Contains clear methodology and reproducible benchmarks.
@@ -170,8 +166,8 @@ export default function WhyPaperLensSection() {
                             onClick={() => setActiveCriteriaKey(item.key)}
                             className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                               isActive
-                                ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 shadow-lg shadow-cyan-500/20"
-                                : "border-border/50 bg-secondary/50 text-foreground/80 hover:bg-secondary hover:border-cyan-500/30"
+                                ? "border-accent bg-accent/15 text-accent font-semibold shadow-sm"
+                                : "border-border bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary"
                             }`}
                           >
                             {item.label}
@@ -180,7 +176,7 @@ export default function WhyPaperLensSection() {
                       })}
                     </div>
                     <motion.div
-                      className="rounded-lg border border-border/30 bg-gradient-to-br from-cyan-500/10 to-violet-500/10 backdrop-blur-sm p-3"
+                      className="rounded-lg border border-border bg-muted/60 p-3"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
@@ -196,52 +192,44 @@ export default function WhyPaperLensSection() {
           </motion.div>
 
           <motion.div
-            className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.45fr] gap-0 rounded-3xl overflow-hidden backdrop-blur-xl border border-border/30 bg-card/30"
+            className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.45fr] gap-0 rounded-2xl overflow-hidden border border-border bg-card shadow-sm"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1, ease }}
-            whileHover={{ y: -4 }}
+            whileHover={{ y: -2 }}
           >
-            {/* Background gradients */}
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-            
-            <div className="relative bg-card/50 p-6 sm:p-8 lg:p-10 border-b xl:border-b-0 xl:border-r border-border/20 xl:order-1">
+            <div className="relative bg-card p-6 sm:p-8 lg:p-10 border-b xl:border-b-0 xl:border-r border-border xl:order-1">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-500/10">
-                  <Lightbulb className="w-5 h-5 text-violet-400" />
+                <div className="p-2.5 rounded-lg bg-accent/10 border border-accent/20">
+                  <Lightbulb className="w-5 h-5 text-accent" />
                 </div>
                 <h3 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-foreground">{whyPanels[1].title}</h3>
               </div>
-              <div className="h-px w-16 bg-gradient-to-r from-violet-500 to-transparent mb-6" />
+              <div className="h-px w-16 bg-accent mb-6" />
               <p className="text-base sm:text-lg text-foreground/90 leading-relaxed mb-6">{whyPanels[1].description}</p>
               <div className="space-y-2.5">
                 {whyPanels[1].points.map((point) => (
                   <div key={point} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                    <CheckCircle2 className="w-4 h-4 text-accent mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5" />
                     <span>{point}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="relative p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-violet-500/5 to-pink-500/5 xl:order-2">
+            <div className="relative p-4 sm:p-6 lg:p-8 bg-muted/40 xl:order-2">
               <motion.div
-                className="rounded-2xl backdrop-blur-sm border border-border/30 bg-card/60 overflow-hidden shadow-xl"
-                whileHover={{ borderColor: "rgba(147, 51, 234, 0.5)" }}
+                className="rounded-xl border border-border bg-card overflow-hidden shadow-sm"
               >
-                <div className="p-4 sm:p-5 border-b border-border/30 flex items-center justify-between gap-3 bg-gradient-to-r from-violet-500/5 to-transparent">
+                <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between gap-3 bg-muted/30">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-violet-400" />
+                    <Zap className="w-4 h-4 text-accent" />
                     Supporting evidence panel
                   </p>
-                  <motion.span
-                    className="text-xs px-2.5 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-300"
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
+                  <span className="badge-research">
                     Linked quotes
-                  </motion.span>
+                  </span>
                 </div>
                 <div className="p-4 sm:p-5 space-y-3">
                   <div className="relative">
@@ -268,8 +256,8 @@ export default function WhyPaperLensSection() {
                             }}
                             className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                               isActive
-                                ? "border-violet-500/40 bg-violet-500/10 text-violet-300 shadow-lg shadow-violet-500/20"
-                                : "border-border/50 bg-secondary/50 text-foreground/80 hover:bg-secondary hover:border-violet-500/30"
+                                ? "border-accent bg-accent/15 text-accent font-semibold shadow-sm"
+                                : "border-border bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary"
                             }`}
                           >
                             {tag}
@@ -280,7 +268,7 @@ export default function WhyPaperLensSection() {
 
                     {showEvidenceQuote && (
                       <motion.div
-                        className="mt-3 rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-pink-500/10 backdrop-blur-sm shadow-lg p-3 sm:p-4"
+                        className="mt-3 rounded-xl border border-accent/30 bg-accent/5 shadow-sm p-3 sm:p-4"
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
@@ -297,11 +285,11 @@ export default function WhyPaperLensSection() {
                     )}
                   </div>
                   <motion.div
-                    className="rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-500/10 to-pink-500/10 backdrop-blur-sm p-4"
-                    whileHover={{ borderColor: "rgba(147, 51, 234, 0.6)", scale: 1.02 }}
+                    className="rounded-xl border border-border bg-muted/40 p-4"
+                    whileHover={{ scale: 1.01 }}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <Quote className="w-4 h-4 text-violet-400" />
+                      <Quote className="w-4 h-4 text-accent" />
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">Cited rationale</p>
                     </div>
                     <p className="text-sm text-foreground/90 leading-relaxed">

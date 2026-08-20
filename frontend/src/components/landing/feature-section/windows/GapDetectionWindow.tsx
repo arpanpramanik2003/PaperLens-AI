@@ -17,13 +17,13 @@ export default function GapDetectionWindow() {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "Critical":
-        return "text-red-400";
+        return "text-destructive";
       case "High":
-        return "text-yellow-400";
+        return "text-warning";
       case "Medium":
         return "text-accent";
       default:
-        return "text-green-400";
+        return "text-success";
     }
   };
 
@@ -36,80 +36,53 @@ export default function GapDetectionWindow() {
       transition={{ duration: 0.6, delay: 0.3, ease }}
       onMouseEnter={handleDetectGaps}
     >
-      <div className="absolute inset-0 overflow-hidden rounded-2xl">
-        <motion.div
-          className="absolute top-0 right-0 w-40 h-40 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 opacity-10 blur-3xl"
-          animate={{ y: [0, 20, 0], x: [0, -10, 0] }}
-          transition={{ duration: 4, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-gradient-to-tr from-green-500 to-emerald-500 opacity-5 blur-3xl"
-          animate={{ y: [0, -15, 0], x: [0, 15, 0] }}
-          transition={{ duration: 5, repeat: Infinity, delay: 0.5 }}
-        />
-      </div>
-
-      <div className="relative backdrop-blur-sm border border-border/30 rounded-2xl overflow-hidden bg-card/40 h-full flex flex-col">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/20 bg-secondary/30 flex-shrink-0">
+      <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">
           <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
+            <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
+            <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
           </div>
-          <span className="text-xs text-muted-foreground ml-2">PaperLens AI — Gap Detection</span>
+          <span className="text-xs font-medium text-muted-foreground ml-2">PaperLens AI — Gap Detection</span>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col">
-          <motion.div
-            className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-border/20"
-            initial={{ opacity: 0, y: -10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <motion.button
+          <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-border">
+            <button
               onClick={() => setActiveTab("project")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === "project"
-                  ? "bg-accent/20 border border-accent/50 text-accent"
-                  : "bg-secondary/30 border border-border/30 text-muted-foreground hover:bg-secondary/50"
+                  ? "bg-accent/15 border border-accent/40 text-accent shadow-sm"
+                  : "bg-secondary/70 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
               <FileText className="w-3.5 h-3.5" />
               Project Plan
-            </motion.button>
-            <motion.button
+            </button>
+            <button
               onClick={() => setActiveTab("paper")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === "paper"
-                  ? "bg-accent/20 border border-accent/50 text-accent"
-                  : "bg-secondary/30 border border-border/30 text-muted-foreground hover:bg-secondary/50"
+                  ? "bg-accent/15 border border-accent/40 text-accent shadow-sm"
+                  : "bg-secondary/70 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
               <FileText className="w-3.5 h-3.5" />
               Upload Paper
-            </motion.button>
-          </motion.div>
+            </button>
+          </div>
 
-          <motion.div
-            className="mb-4 p-3 bg-secondary/20 border border-border/20 rounded text-xs text-muted-foreground leading-relaxed min-h-24"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
+          <div className="mb-4 p-3 bg-muted/40 border border-border rounded-lg text-xs text-muted-foreground leading-relaxed min-h-24">
             {projectContent}
             <div className="mt-3 flex justify-end">
-              <div className="w-3 h-3 rounded-full bg-green-500/60" />
+              <div className="w-2.5 h-2.5 rounded-full bg-success" />
             </div>
-          </motion.div>
+          </div>
 
           <motion.button
-            className="mb-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full shadow-lg shadow-green-500/20"
-            whileHover={{ scale: 1.02 }}
+            onClick={handleDetectGaps}
+            className="mb-4 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors w-full shadow-sm"
+            whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
             <Search className="w-3.5 h-3.5" />
@@ -117,28 +90,23 @@ export default function GapDetectionWindow() {
           </motion.button>
 
           {gapsDetected && (
-            <motion.div
-              className="space-y-3"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="flex flex-wrap items-center gap-2 justify-between py-2 border-b border-border/20">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 justify-between py-2 border-b border-border">
                 <span className="text-xs text-muted-foreground font-semibold">{gapsDetected.length} gaps identified</span>
-                <motion.button className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 transition-colors" whileHover={{ scale: 1.05 }}>
+                <button className="text-xs text-success hover:text-success/80 font-medium flex items-center gap-1 transition-colors">
                   <FileText className="w-3 h-3" />
                   Copy Report
-                </motion.button>
+                </button>
               </div>
 
               <div className="space-y-3">
                 {gapsDetected.map((gap, idx) => (
                   <motion.div
                     key={idx}
-                    className="bg-secondary/30 border border-border/20 rounded-lg p-3 hover:border-accent/30 transition-colors"
-                    initial={{ opacity: 0, x: -10 }}
+                    className="bg-card border border-border rounded-lg p-3 hover:border-accent/40 transition-colors shadow-xs"
+                    initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                    transition={{ duration: 0.25, delay: idx * 0.04 }}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h4 className="text-xs font-semibold text-foreground flex-1">{gap.title}</h4>
@@ -146,11 +114,11 @@ export default function GapDetectionWindow() {
                     </div>
 
                     <p className="text-xs text-muted-foreground leading-relaxed mb-2">{gap.desc}</p>
-                    <p className="text-xs text-accent/90 italic leading-relaxed pl-3 border-l-2 border-accent/50">{gap.action}</p>
+                    <p className="text-xs text-foreground/90 italic leading-relaxed pl-3 border-l-2 border-accent/60">{gap.action}</p>
                   </motion.div>
                 ))}
               </div>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>

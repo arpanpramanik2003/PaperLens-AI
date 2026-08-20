@@ -7,7 +7,7 @@ const ease = [0.2, 0, 0, 1] as const;
 
 export default function CTASection() {
   return (
-    <section className="py-16 sm:py-24 bg-secondary/30">
+    <section className="py-16 sm:py-24 bg-card border-y border-border relative">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 16 }}

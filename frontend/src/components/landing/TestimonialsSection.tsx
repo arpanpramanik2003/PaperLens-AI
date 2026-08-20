@@ -28,7 +28,7 @@ export default function TestimonialsSection() {
           {testimonials.map((t, i) => (
             <motion.div
               key={t.name}
-              className="rounded-2xl border border-border/50 bg-card p-6"
+              className="rounded-2xl border border-border bg-card p-6 shadow-sm"
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -36,7 +36,7 @@ export default function TestimonialsSection() {
             >
               <div className="flex gap-0.5 mb-4">
                 {Array.from({ length: t.rating }).map((_, j) => (
-                  <Star key={j} className="w-4 h-4 fill-accent text-accent" />
+                  <Star key={j} className="w-4 h-4 fill-warning text-warning" />
                 ))}
               </div>
               <p className="text-sm text-foreground mb-4 leading-relaxed">"{t.text}"</p>

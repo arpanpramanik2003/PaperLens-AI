@@ -28,12 +28,12 @@ export default function FeaturesSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <span className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 text-foreground">
+            <span className="badge-research">
               Advanced Research Tools
             </span>
           </motion.div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
-            Powerful features for <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">researchers</span>
+            Powerful features for <span className="text-gradient-research">researchers</span>
           </h2>
           <p className="text-muted-foreground text-sm sm:text-lg max-w-2xl mx-auto">
             Everything you need to accelerate your research work. From paper analysis to experiment planning, we've got you covered.

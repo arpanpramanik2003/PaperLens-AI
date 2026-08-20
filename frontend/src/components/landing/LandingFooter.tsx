@@ -7,7 +7,7 @@ type LandingFooterProps = {
 
 export default function LandingFooter({ onOpenAbout }: LandingFooterProps) {
   return (
-    <footer className="py-8 sm:py-12 border-t border-border/30">
+    <footer className="py-8 sm:py-12 border-t border-border bg-background">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
           <div>
@@ -25,6 +25,7 @@ export default function LandingFooter({ onOpenAbout }: LandingFooterProps) {
               <li><Link to="/dashboard/planner" className="hover:text-foreground transition-colors">Experiment Planner</Link></li>
               <li><Link to="/dashboard/generator" className="hover:text-foreground transition-colors">Problem Generator</Link></li>
               <li><Link to="/dashboard/gaps" className="hover:text-foreground transition-colors">Gap Detection</Link></li>
+              <li><Link to="/dashboard/agent" className="hover:text-foreground transition-colors">Autonomous Agent</Link></li>
             </ul>
           </div>
 
@@ -45,20 +46,20 @@ export default function LandingFooter({ onOpenAbout }: LandingFooterProps) {
             <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-4">Connect</h3>
             <p className="text-xs sm:text-sm text-muted-foreground mb-4">Email: <a href="mailto:pramanikarpan089@gmail.com" className="hover:text-foreground transition-colors">pramanikarpan089@gmail.com</a></p>
             <div className="flex gap-2 sm:gap-3">
-              <a href="https://arpanpramanik.dev" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors text-xs font-bold" title="Portfolio">
+              <a href="https://arpanpramanik.dev" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-bold" title="Portfolio">
                 PF
               </a>
-              <a href="https://www.linkedin.com/in/arpanpramanik2003/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+              <a href="https://www.linkedin.com/in/arpanpramanik2003/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                 <Linkedin className="w-4 h-4" />
               </a>
-              <a href="https://github.com/arpanpramanik2003" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+              <a href="https://github.com/arpanpramanik2003" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                 <Github className="w-4 h-4" />
               </a>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border/30 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+        <div className="border-t border-border pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <p>© 2026 PaperLens AI. All rights reserved.</p>
           <p>Built with ❤️ by <a href="https://github.com/arpanpramanik2003" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Arpan Pramanik</a></p>
         </div>
