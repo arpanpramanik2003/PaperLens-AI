@@ -8,69 +8,69 @@ const ease = [0.2, 0, 0, 1] as const;
 
 const whyPanels = [
   {
-    title: "Precisely configurable",
+    title: "Evidence-Grounded Intelligence",
     description:
-      "Define your own screening criteria and evaluation priorities. PaperLens adapts to your research objective instead of forcing generic summaries.",
+      "PaperLens AI eliminates LLM hallucinations by anchoring every generated hypothesis, experiment step, and summary to exact citations and claims from uploaded papers.",
     points: [
-      "Custom inclusion/exclusion logic",
-      "Criteria-level confidence signals",
-      "One-click recommendation override",
+      "Provenance-linked hypothesis generation",
+      "Confidence-scored methodology extraction",
+      "Direct sentence-level citation verification",
     ],
   },
   {
-    title: "Evidence-linked reasoning",
+    title: "Built-in Academic Rigor",
     description:
-      "Every decision can be traced to explicit rationale and supporting cues, so you can validate outputs faster and write with confidence.",
+      "Unlike conversational bots that passively agree, PaperLens stress-tests ideas with adversarial critique, uncovering failure modes and confounding variables before peer reviewers do.",
     points: [
-      "Transparent ‘why included’ explanation",
-      "Criteria-level detail tags",
-      "Quote-first interpretation workflow",
+      "Automated peer-review stress testing",
+      "Confounding variable & leakage detection",
+      "Ablation & falsification suggestions",
     ],
   },
 ];
 
-const recommendationCriteria = [
+const analysisDimensions = [
   {
     key: "methodology",
-    label: "Methodology fit",
-    detail: "Directly evaluates structured paper understanding with clearly defined methodology blocks.",
+    label: "Methodology Extraction",
+    detail: "Deep architectural breakdown of mathematical formulations, loss functions, and network designs.",
   },
   {
-    key: "evaluation",
-    label: "Quantitative evaluation",
-    detail: "Reports measurable performance metrics across multiple benchmark datasets.",
+    key: "novelty",
+    label: "Novelty Validation",
+    detail: "Cross-checks proposed ideas against published literature to prevent redundant effort and confirm technical originality.",
   },
   {
     key: "reproducibility",
-    label: "Reproducibility",
-    detail: "Includes ablation settings and implementation notes that support reruns.",
+    label: "Reproducibility Audit",
+    detail: "Identifies missing hyperparameters, dataset splits, or unstated training assumptions that could derail experiments.",
   },
   {
-    key: "alignment",
-    label: "Cross-domain evidence",
-    detail: "Shows transfer across NLP and biomedical contexts with consistent behavior.",
+    key: "transfer",
+    label: "Cross-Domain Transfer",
+    detail: "Evaluates whether extracted techniques translate across NLP, Vision, or Biomedical domains with consistent performance.",
   },
 ];
 
 const evidenceDetails = {
-  "Study design": "Controlled evaluation setup with explicit assumptions and bounded scope.",
-  Population: "Tested on representative datasets with clear sampling criteria.",
-  Intervention: "Compares baseline vs. adapted model behavior under same constraints.",
-  "Outcome metrics": "Precision, recall, and faithfulness-oriented checks are all reported.",
-  "Limitation clarity": "Failure modes and blind spots are documented for downstream judgment.",
+  "Hypothesis Grounding": "Directly linked to Section 3.2: Early saliency routing reduces edge latency while bounding accuracy loss.",
+  "Baseline Delta": "Evaluated against SOTA MobileNetV4 and FastViT under identical INT8 compute budgets.",
+  "Ablation Guard": "Isolates token pruning effects from KV-cache compression to verify independent contribution.",
+  "Reviewer Defense": "Flags potential hardware measurement jitter on tensor cores, mandating P99 latency percentiles.",
+  "Failure Mode Check": "Documents non-deterministic tensor shape behavior on fixed-graph compilers (TensorRT/ONNX).",
 } as const;
 
 const evidenceQuoteMap = {
-  "Study design": "A controlled protocol isolates model adaptation effects from prompt-only variance.",
-  Population: "Datasets span scientific domains to assess stability of reasoning quality.",
-  Intervention: "Model adaptation is tested against equivalent baseline inference budgets.",
-  "Outcome metrics": "Improvements are significant on structure extraction and grounded QA tasks.",
-  "Limitation clarity": "Edge cases remain in long-tail notation and highly sparse methodology sections.",
+  "Hypothesis Grounding": "Early patch saliency gating achieves 32% FLOP reduction with under 0.4% Top-1 accuracy delta on ImageNet.",
+  "Baseline Delta": "Outperforms FastViT-SA12 and EfficientFormer-L1 in throughput-per-watt on ARM Cortex-A76.",
+  "Ablation Guard": "A 4-stage ablation independently verifies saliency threshold sensitivity against fixed token pruning.",
+  "Reviewer Defense": "Multi-seed initialization (seeds 42, 1337, 2026) eliminates stochastic variance across all reported latency benchmarks.",
+  "Failure Mode Check": "Dynamic graph execution incurs a 1.2ms initial compilation overhead before reaching steady-state throughput.",
 } as const;
 
 export default function WhyPaperLensSection() {
-  const [activeCriteriaKey, setActiveCriteriaKey] = useState(recommendationCriteria[0].key);
-  const [activeEvidenceTag, setActiveEvidenceTag] = useState<keyof typeof evidenceDetails>("Study design");
+  const [activeDimensionKey, setActiveDimensionKey] = useState(analysisDimensions[0].key);
+  const [activeEvidenceTag, setActiveEvidenceTag] = useState<keyof typeof evidenceDetails>("Hypothesis Grounding");
   const [showEvidenceQuote, setShowEvidenceQuote] = useState(false);
 
   return (
@@ -99,7 +99,7 @@ export default function WhyPaperLensSection() {
             Why <span className="text-gradient-research">PaperLens AI?</span>
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Designed for real research decisions: configurable, auditable, and built to reduce manual verification overhead.
+            Designed for genuine scientific discovery: evidence-grounded, citation-anchored, and built to withstand academic scrutiny.
           </p>
         </motion.div>
 
@@ -137,33 +137,33 @@ export default function WhyPaperLensSection() {
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 border-b border-border">
                   <div className="p-4 sm:p-5 border-b md:border-b-0 md:border-r border-border">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Paper</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Underlying Paper</p>
                     <h4 className="font-medium text-foreground leading-relaxed mb-3">
-                      Foundation model adaptation for robust research-paper understanding across domains.
+                      Adaptive Saliency Gating for Low-Power Edge Vision Transformers.
                     </h4>
-                    <p className="text-xs text-muted-foreground">A. Roy, P. Banerjee, L. Kumar — 2025</p>
+                    <p className="text-xs text-muted-foreground">Roy, Banerjee, Kumar — arXiv:2502.04918</p>
                   </div>
                   <div className="p-4 sm:p-5">
                     <div className="flex items-center justify-between gap-3 mb-3">
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Screening recommendation</p>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Synthesis & Audit</p>
                       <Info className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-sm font-semibold mb-3">
-                      <motion.span className="w-1.5 h-1.5 rounded-full bg-accent" animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} /> Include · 4.8/5
+                      <motion.span className="w-1.5 h-1.5 rounded-full bg-accent" animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} /> Verified Claim · 98.4% Confidence
                     </div>
                     <p className="text-sm text-foreground/90 leading-relaxed mb-3">
-                      Strong alignment with paper-structure parsing and domain transfer. Contains clear methodology and reproducible benchmarks.
+                      Methodology rigorously validated against edge compute baselines. Contains verifiable mathematical formulations and reproducible artifact checkpoints.
                     </p>
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {recommendationCriteria.map((item) => {
-                        const isActive = activeCriteriaKey === item.key;
+                      {analysisDimensions.map((item) => {
+                        const isActive = activeDimensionKey === item.key;
                         return (
                           <button
                             key={item.key}
                             type="button"
-                            onMouseEnter={() => setActiveCriteriaKey(item.key)}
-                            onFocus={() => setActiveCriteriaKey(item.key)}
-                            onClick={() => setActiveCriteriaKey(item.key)}
+                            onMouseEnter={() => setActiveDimensionKey(item.key)}
+                            onFocus={() => setActiveDimensionKey(item.key)}
+                            onClick={() => setActiveDimensionKey(item.key)}
                             className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                               isActive
                                 ? "border-accent bg-accent/15 text-accent font-semibold shadow-sm"
@@ -180,9 +180,9 @@ export default function WhyPaperLensSection() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Criteria detail</p>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Dimension detail</p>
                       <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
-                        {recommendationCriteria.find((item) => item.key === activeCriteriaKey)?.detail}
+                        {analysisDimensions.find((item) => item.key === activeDimensionKey)?.detail}
                       </p>
                     </motion.div>
                   </div>
@@ -225,10 +225,10 @@ export default function WhyPaperLensSection() {
                 <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between gap-3 bg-muted/30">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Zap className="w-4 h-4 text-accent" />
-                    Supporting evidence panel
+                    Adversarial Stress Test & Provenance
                   </p>
                   <span className="badge-research">
-                    Linked quotes
+                    Grounded Citations
                   </span>
                 </div>
                 <div className="p-4 sm:p-5 space-y-3">
@@ -273,7 +273,7 @@ export default function WhyPaperLensSection() {
                         animate={{ opacity: 1, y: 0 }}
                       >
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">
-                          Supporting note on {activeEvidenceTag}
+                          Verification Check for: {activeEvidenceTag}
                         </p>
                         <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed mb-2">
                           {evidenceDetails[activeEvidenceTag]}
@@ -290,10 +290,10 @@ export default function WhyPaperLensSection() {
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Quote className="w-4 h-4 text-accent" />
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Cited rationale</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Audited Citation Excerpt</p>
                     </div>
                     <p className="text-sm text-foreground/90 leading-relaxed">
-                      “We report significant gains under controlled protocol settings, with explicit methodological constraints and reproducibility artifacts.”
+                      “We report significant throughput gains under controlled edge hardware protocols, with explicit hyperparameter constraints and reproducible PyTorch artifacts.”
                     </p>
                   </motion.div>
                 </div>

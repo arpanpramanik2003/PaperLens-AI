@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import LandingNavbar from "../components/landing/LandingNavbar";
 import HeroSection from "../components/landing/HeroSection";
 import SocialProofSection from "../components/landing/SocialProofSection";
+import AgentModeSection from "../components/landing/AgentModeSection";
 import FeaturesSection from "../components/landing/FeaturesSection";
 import HowItWorksSection from "../components/landing/HowItWorksSection";
 import WhyPaperLensSection from "../components/landing/WhyPaperLensSection";
@@ -72,8 +73,9 @@ export default function LandingPage() {
               <SocialProofSection />
             </div>
           </div>
-          {/* Shared background from Explore to Loved by researchers */}
+          {/* Shared background from Agent Mode to Loved by researchers */}
           <div className="bg-background overflow-hidden">
+            <AgentModeSection />
             <FeaturesSection />
             <HowItWorksSection />
             <WhyPaperLensSection />

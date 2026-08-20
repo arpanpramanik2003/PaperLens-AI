@@ -19,13 +19,15 @@ export default function LandingFooter({ onOpenAbout }: LandingFooterProps) {
           </div>
 
           <div>
-            <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-4">Product</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-4">Capabilities</h3>
             <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
               <li><Link to="/dashboard/analyzer" className="hover:text-foreground transition-colors">Paper Analyzer</Link></li>
+              <li><Link to="/agent" className="hover:text-foreground transition-colors font-medium text-accent">Autonomous Agent</Link></li>
               <li><Link to="/dashboard/planner" className="hover:text-foreground transition-colors">Experiment Planner</Link></li>
               <li><Link to="/dashboard/generator" className="hover:text-foreground transition-colors">Problem Generator</Link></li>
               <li><Link to="/dashboard/gaps" className="hover:text-foreground transition-colors">Gap Detection</Link></li>
-              <li><Link to="/dashboard/agent" className="hover:text-foreground transition-colors">Autonomous Agent</Link></li>
+              <li><Link to="/dashboard/dataset-benchmarks" className="hover:text-foreground transition-colors">Dataset Benchmarks</Link></li>
+              <li><Link to="/dashboard/citation-intelligence" className="hover:text-foreground transition-colors">Citation Intelligence</Link></li>
             </ul>
           </div>
 
