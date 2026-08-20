@@ -175,12 +175,12 @@ export default function AgentModeSection() {
   const activeTab = outputTabs.find((t) => t.id === activeTabId) || outputTabs[0];
 
   return (
-    <section id="agent-mode" className="relative pt-12 pb-20 sm:pt-16 sm:pb-32 scroll-mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+    <section id="agent-mode" className="relative py-16 sm:py-24 lg:py-28 scroll-mt-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
         <motion.div
-          className="text-center mb-12 sm:mb-16"
-          initial={{ opacity: 0, y: 16 }}
+          className="text-center mb-16 sm:mb-20"
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, ease }}

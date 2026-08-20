@@ -10,16 +10,14 @@ export default function FeaturesSection() {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
 
   return (
-    <section id="features" className="py-12 sm:py-24 scroll-mt-20 relative">
-
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+    <section id="features" className="py-16 sm:py-24 lg:py-28 scroll-mt-20 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
-          className="text-center mb-12 sm:mb-20"
-          initial={{ opacity: 0, y: 16 }}
+          className="text-center mb-16 sm:mb-20"
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, ease }}
+          transition={{ duration: 0.6, ease }}
         >
           <motion.div
             className="inline-block mb-4"
@@ -35,8 +33,8 @@ export default function FeaturesSection() {
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
             Powerful features for <span className="text-gradient-research">researchers</span>
           </h2>
-          <p className="text-muted-foreground text-sm sm:text-lg max-w-2xl mx-auto">
-            Everything you need to accelerate your research work. From paper analysis to experiment planning, we've got you covered.
+          <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Everything you need to accelerate your scientific research. From paper analysis to experiment planning, we've got you covered.
           </p>
         </motion.div>
 

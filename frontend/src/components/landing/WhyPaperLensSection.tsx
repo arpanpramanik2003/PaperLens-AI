@@ -74,9 +74,8 @@ export default function WhyPaperLensSection() {
   const [showEvidenceQuote, setShowEvidenceQuote] = useState(false);
 
   return (
-    <section id="about" className="relative pt-10 pb-20 sm:pt-14 sm:pb-28 scroll-mt-20">
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
+    <section id="about" className="relative py-16 sm:py-24 lg:py-28 scroll-mt-20">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-16 sm:mb-20"
           initial={{ opacity: 0, y: 20 }}

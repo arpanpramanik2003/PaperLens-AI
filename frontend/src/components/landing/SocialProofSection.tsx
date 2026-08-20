@@ -5,7 +5,7 @@ const institutions = ["Nature", "IEEE", "arXiv", "Springer", "ACM"];
 export default function SocialProofSection() {
   return (
     <section className="relative py-8 sm:py-12 bg-transparent">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-6">
           Trusted by researchers at
         </p>
