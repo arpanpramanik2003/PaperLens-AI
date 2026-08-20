@@ -5,16 +5,14 @@ import { benchmarksData, datasetsData, domainDescriptions, projectTitles } from 
 import { ease } from "../shared";
 
 export default function DatasetBenchmarkWindow() {
-  const [projectTitle, setProjectTitle] = useState("");
+  const [projectTitle, setProjectTitle] = useState("Brain Tumor Classification with CNNs");
   const [projectPlan, setProjectPlan] = useState("");
-  const [showResults, setShowResults] = useState(false);
-  const [datasets, setDatasets] = useState<typeof datasetsData>([]);
-  const [benchmarks, setBenchmarks] = useState<typeof benchmarksData>([]);
-  const domainDesc = domainDescriptions[Math.floor(Math.random() * domainDescriptions.length)];
-  const defaultTitle = projectTitles[Math.floor(Math.random() * projectTitles.length)];
+  const [showResults, setShowResults] = useState(true);
+  const [datasets, setDatasets] = useState<typeof datasetsData>(datasetsData.slice(0, 3));
+  const [benchmarks, setBenchmarks] = useState<typeof benchmarksData>(benchmarksData.slice(0, 3));
+  const domainDesc = domainDescriptions[0];
 
   const handleFindDatasets = () => {
-    setProjectTitle(defaultTitle);
     const selectedDatasets = [...datasetsData].sort(() => Math.random() - 0.5).slice(0, 3);
     const selectedBenchmarks = [...benchmarksData].sort(() => Math.random() - 0.5).slice(0, 3);
     setDatasets(selectedDatasets);
@@ -29,7 +27,6 @@ export default function DatasetBenchmarkWindow() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6, delay: 0.3, ease }}
-      onMouseEnter={handleFindDatasets}
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">

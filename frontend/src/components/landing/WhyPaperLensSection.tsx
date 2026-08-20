@@ -149,7 +149,7 @@ export default function WhyPaperLensSection() {
                       <Info className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-sm font-semibold mb-3">
-                      <motion.span className="w-1.5 h-1.5 rounded-full bg-accent" animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} /> Verified Claim · 98.4% Confidence
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> Verified Claim · 98.4% Confidence
                     </div>
                     <p className="text-sm text-foreground/90 leading-relaxed mb-3">
                       Methodology rigorously validated against edge compute baselines. Contains verifiable mathematical formulations and reproducible artifact checkpoints.

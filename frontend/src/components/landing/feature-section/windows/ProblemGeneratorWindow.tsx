@@ -6,7 +6,7 @@ import { ease } from "../shared";
 
 export default function ProblemGeneratorWindow() {
   const [ideas, setIdeas] = useState(researchIdeas.slice(0, 2));
-  const selectedDomain = domains[Math.floor(Math.random() * domains.length)];
+  const selectedDomain = domains[0];
   const selectedSubdomain = subdomains[selectedDomain as keyof typeof subdomains][0];
 
   const handleGenerateIdeas = () => {
@@ -21,7 +21,6 @@ export default function ProblemGeneratorWindow() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6, delay: 0.3, ease }}
-      onMouseEnter={handleGenerateIdeas}
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">

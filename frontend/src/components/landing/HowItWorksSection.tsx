@@ -233,12 +233,7 @@ export default function HowItWorksSection() {
             <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
               Ready to transform your research?
             </span>
-            <motion.div
-              animate={{ x: [0, 4, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <ArrowRight className="w-4 h-4 text-accent" />
-            </motion.div>
+            <ArrowRight className="w-4 h-4 text-accent transition-transform duration-200 group-hover:translate-x-1" />
           </div>
         </motion.div>
       </div>

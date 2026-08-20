@@ -6,11 +6,11 @@ import { ease } from "../shared";
 
 export default function GapDetectionWindow() {
   const [activeTab, setActiveTab] = useState<"project" | "paper">("project");
-  const [gapsDetected, setGapsDetected] = useState<typeof detectedGaps | null>(null);
-  const projectContent = projectDescriptions[Math.floor(Math.random() * projectDescriptions.length)];
+  const [gapsDetected, setGapsDetected] = useState<typeof detectedGaps | null>(detectedGaps.slice(0, 3));
+  const projectContent = projectDescriptions[0];
 
   const handleDetectGaps = () => {
-    const randomGaps = [...detectedGaps].sort(() => Math.random() - 0.5).slice(0, 5);
+    const randomGaps = [...detectedGaps].sort(() => Math.random() - 0.5).slice(0, 4);
     setGapsDetected(randomGaps);
   };
 
@@ -34,7 +34,6 @@ export default function GapDetectionWindow() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6, delay: 0.3, ease }}
-      onMouseEnter={handleDetectGaps}
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">

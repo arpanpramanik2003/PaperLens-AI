@@ -6,13 +6,8 @@ import { ease } from "../shared";
 
 export default function PaperAnalyzerWindow() {
   const [hoveredSection, setHoveredSection] = useState<string | null>(null);
-  const [project, setProject] = useState(randomProjects[Math.floor(Math.random() * randomProjects.length)]);
-  const [question, setQuestion] = useState(randomQuestions[Math.floor(Math.random() * randomQuestions.length)]);
-
-  const handleCardHover = () => {
-    setProject(randomProjects[Math.floor(Math.random() * randomProjects.length)]);
-    setQuestion(randomQuestions[Math.floor(Math.random() * randomQuestions.length)]);
-  };
+  const [project] = useState(randomProjects[0]);
+  const [question] = useState(randomQuestions[0]);
 
   return (
     <motion.div
@@ -21,7 +16,6 @@ export default function PaperAnalyzerWindow() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6, delay: 0.3, ease }}
-      onMouseEnter={handleCardHover}
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">

@@ -97,7 +97,7 @@ export default function FeaturesSection() {
                 </div>
               </motion.div>
 
-              <motion.div className={`${index === 0 ? "h-80 sm:h-96 md:h-96" : "h-72 sm:h-80 md:h-96"} ${index % 2 === 1 ? "md:order-1" : ""}`} whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }}>
+              <motion.div className={`h-[420px] sm:h-[460px] md:h-[460px] ${index % 2 === 1 ? "md:order-1" : ""}`} whileHover={{ scale: 1.01 }} transition={{ duration: 0.25 }}>
                 <FeatureDemoWindow feature={feature} index={index} />
               </motion.div>
             </motion.div>

@@ -7,8 +7,8 @@ import { ease } from "../shared";
 export default function ExperimentPlannerWindow() {
   const [steps, setSteps] = useState(experimentSteps.slice(0, 4));
   const [expandedStep, setExpandedStep] = useState<number | null>(0);
-  const topic = researchTopics[Math.floor(Math.random() * researchTopics.length)];
-  const difficulty = difficultyLevels[Math.floor(Math.random() * difficultyLevels.length)];
+  const topic = researchTopics[0];
+  const difficulty = difficultyLevels[0];
 
   const handleGeneratePlan = () => {
     const shuffled = [...experimentSteps].sort(() => Math.random() - 0.5);
@@ -23,7 +23,6 @@ export default function ExperimentPlannerWindow() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6, delay: 0.3, ease }}
-      onMouseEnter={handleGeneratePlan}
     >
       <div className="relative border border-border rounded-2xl overflow-hidden bg-card shadow-sm h-full flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40 flex-shrink-0">
