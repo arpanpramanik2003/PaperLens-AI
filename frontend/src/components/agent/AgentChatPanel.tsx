@@ -105,12 +105,38 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
 }) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Smooth scroll message container when new messages arrive
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages.length, isRunning]);
+
+  // Dynamic textarea height adjustment (auto-expand up to 5 lines ~120px, then smooth scroll to bottom)
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollH = textareaRef.current.scrollHeight;
+      const maxHeight = 120; // 5 lines limit
+      textareaRef.current.style.height = `${Math.min(scrollH, maxHeight)}px`;
+
+      // If prompt crosses 5 lines, keep latest typed lines directly in viewpoint
+      if (scrollH > maxHeight) {
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+      }
+    }
+  }, [inputQuery]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (inputQuery.trim() && !isRunning) {
+        onSendMessage();
+      }
+    }
+  };
 
   return (
     <Card className="h-full w-full flex flex-col min-h-0 border border-border/80 bg-card shadow-sm rounded-xl overflow-hidden">
@@ -189,7 +215,7 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
         </div>
       </div>
 
-      {/* Messages Scroll Area: Takes all available remaining height */}
+      {/* Messages Scroll Area */}
       <div ref={chatContainerRef} className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-3 font-sans text-xs">
         {chatMessages.map((msg) => (
           <div
@@ -240,8 +266,8 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
         ))}
       </div>
 
-      {/* Suggestion Chips: Pinned above input dock */}
-      <div className="px-3 py-1.5 bg-secondary/15 border-t border-border/30 overflow-x-auto flex items-center gap-1.5 flex-shrink-0 scrollbar-none">
+      {/* Suggestion Chips: Clean scroll container without native scrollbar */}
+      <div className="px-3 py-2 bg-secondary/15 border-t border-border/30 overflow-x-auto flex items-center gap-1.5 flex-shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <span className="text-[10px] text-muted-foreground shrink-0 font-medium">Suggestions:</span>
         {promptSuggestions.map((sug, i) => (
           <button
@@ -249,72 +275,93 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
             type="button"
             onClick={() => onSendMessage(sug)}
             disabled={isRunning}
-            className="px-2 py-0.5 rounded-md bg-secondary/60 hover:bg-secondary border border-border/40 text-[11px] text-foreground/80 hover:text-foreground transition-all shrink-0 whitespace-nowrap"
+            className="px-2.5 py-1 rounded-lg bg-secondary/60 hover:bg-secondary border border-border/50 text-[11px] text-foreground/80 hover:text-foreground transition-all shrink-0 whitespace-nowrap cursor-pointer"
           >
             {sug}
           </button>
         ))}
       </div>
 
-      {/* Input Dock: Permanently pinned at the bottom in the viewport! */}
-      <div className="p-2.5 border-t border-border/50 bg-secondary/20 flex items-center gap-2 flex-shrink-0">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={onFileUpload}
-          accept=".pdf"
-          className="hidden"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          disabled={isUploadingPaper || isRunning}
-          onClick={() => fileInputRef.current?.click()}
-          title="Attach PDF Paper"
-          className="h-8.5 w-8.5 rounded-lg border-border/60 hover:bg-secondary shrink-0"
-        >
-          {isUploadingPaper ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Paperclip className="w-3.5 h-3.5" />
-          )}
-        </Button>
+      {/* Prominent Auto-Expanding Multi-Line Prompt Card (Gemini / ChatGPT style) */}
+      <div className="p-3 border-t border-border/50 bg-card/60 flex flex-col gap-2 flex-shrink-0">
+        <div className="relative flex flex-col rounded-2xl border border-border/80 bg-background/90 shadow-sm focus-within:border-indigo-500/70 focus-within:ring-1 focus-within:ring-indigo-500/30 transition-all p-2.5">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={inputQuery}
+            onChange={(e) => setInputQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              activePaper
+                ? `Ask research agent about '${activePaper.filename}'... (Shift+Enter for newline)`
+                : "Ask research query, compare datasets, or design experiment plans... (Shift+Enter for newline)"
+            }
+            disabled={isRunning}
+            className="w-full bg-transparent resize-none text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none leading-relaxed max-h-[120px] min-h-[38px] overflow-y-auto px-1 py-0.5 font-sans"
+          />
 
-        <input
-          type="text"
-          value={inputQuery}
-          onChange={(e) => setInputQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSendMessage()}
-          placeholder={
-            activePaper
-              ? `Ask research agent about '${activePaper.filename}'...`
-              : "Ask research query, compare datasets, or design experiment plans..."
-          }
-          disabled={isRunning}
-          className="flex-1 bg-background border border-border/70 rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-indigo-500/60"
-        />
+          <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-1">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={onFileUpload}
+                accept=".pdf"
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={isUploadingPaper || isRunning}
+                onClick={() => fileInputRef.current?.click()}
+                title="Attach PDF Paper"
+                className="h-8 px-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1.5 text-xs font-medium"
+              >
+                {isUploadingPaper ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                ) : (
+                  <Paperclip className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden sm:inline">Attach PDF</span>
+              </Button>
 
-        {isRunning ? (
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            onClick={onStopAgent}
-            className="h-8.5 rounded-lg px-3 text-xs"
-          >
-            Stop
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            disabled={!inputQuery.trim()}
-            onClick={() => onSendMessage()}
-            className="h-8.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white px-3"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </Button>
-        )}
+              {activePaper && (
+                <span className="text-[11px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 truncate max-w-[130px]">
+                  {activePaper.filename}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground font-mono hidden sm:inline">
+                ↵ Enter
+              </span>
+              {isRunning ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={onStopAgent}
+                  className="h-8 rounded-lg px-3 text-xs flex items-center gap-1.5"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                  Stop
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  disabled={!inputQuery.trim()}
+                  onClick={() => onSendMessage()}
+                  className="h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-40"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span className="text-xs font-medium hidden sm:inline">Send</span>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </Card>
   );
