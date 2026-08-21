@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock, ShieldCheck, Cpu } from "lucide-react";
+import { Clock, ShieldCheck, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface CardProvenanceBadgeProps {
@@ -10,22 +10,35 @@ interface CardProvenanceBadgeProps {
   className?: string;
 }
 
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  search_papers: "Literature Discovery",
+  search_workspace_vector_db: "Document Index",
+  analyze_paper: "Deep Paper Analysis",
+  detect_gaps: "Research Gap Analysis",
+  generate_problem: "Problem Formulation",
+  find_datasets: "Benchmark Datasets",
+  plan_experiment: "Experimental Roadmap",
+  synthesize_and_verify: "Quality Audit",
+};
+
 export const CardProvenanceBadge: React.FC<CardProvenanceBadgeProps> = ({
   toolName,
   timestamp,
   durationMs,
-  qualitySignal = "High Confidence",
+  qualitySignal,
   className = "",
 }) => {
-  if (!toolName && !timestamp && !durationMs) return null;
+  if (!toolName && !timestamp && !durationMs && !qualitySignal) return null;
+
+  const displayName = toolName ? (TOOL_DISPLAY_NAMES[toolName] || toolName) : null;
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-muted-foreground pb-1.5 px-1 ${className}`}>
       <div className="flex items-center gap-2">
-        {toolName && (
-          <span className="flex items-center gap-1.5 bg-secondary/80 px-2 py-0.5 rounded-md border border-border/60 text-foreground font-semibold text-[10px]">
-            <Cpu className="w-3 h-3 text-indigo-400" />
-            Tool: {toolName}
+        {displayName && (
+          <span className="flex items-center gap-1.5 bg-secondary/80 px-2 py-0.5 rounded-md border border-border/60 text-foreground font-medium text-[10px]">
+            <Sparkles className="w-3 h-3 text-indigo-400" />
+            {displayName}
           </span>
         )}
 
@@ -46,7 +59,7 @@ export const CardProvenanceBadge: React.FC<CardProvenanceBadgeProps> = ({
       {qualitySignal && (
         <Badge
           variant="outline"
-          className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 flex items-center gap-1"
+          className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 flex items-center gap-1 font-mono"
         >
           <ShieldCheck className="w-3 h-3" />
           {qualitySignal}
