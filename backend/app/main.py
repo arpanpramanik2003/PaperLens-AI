@@ -74,24 +74,40 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
         response.headers["X-Correlation-ID"] = correlation_id
         return response
 
-ALLOWED_ORIGINS = os.environ.get(
-    "ALLOWED_ORIGINS",
-    "http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://localhost:8000,http://localhost:8081"
-).split(",")
-origins = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+raw_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").strip()
+if raw_allowed_origins and raw_allowed_origins != "*":
+    origins = [origin.strip() for origin in raw_allowed_origins.split(",") if origin.strip()]
+else:
+    origins = [
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8081",
+    ]
+
+# Allow any HTTP / HTTPS web origin by default (e.g. Vercel, Netlify, Render, custom domains, localhost)
+origin_regex = os.environ.get("ALLOWED_ORIGIN_REGEX", r"^https?://.*$")
 
 app.add_middleware(CorrelationIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origin_regex=origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(router, prefix="/api")
 app.include_router(agent_router, prefix="/api")
+
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root():
+    return {"name": "PaperLens AI API", "status": "healthy", "version": "1.0.0"}
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
