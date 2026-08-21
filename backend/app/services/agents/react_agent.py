@@ -51,12 +51,27 @@ def extract_structured_entities(tool_name: str, result: Any) -> Dict[str, Any]:
     elif tool_name == "detect_gaps":
         gaps = result.get("gaps") or []
         extracted_gaps = []
-        for g in gaps[:5]:
-            extracted_gaps.append({
-                "gap": g.get("gap") or g.get("title") or "Research Gap",
-                "description": (g.get("description") or g.get("detail") or "")[:250],
-                "opportunity": g.get("opportunity") or g.get("solution_angle"),
-            })
+        for g in gaps[:6]:
+            if isinstance(g, dict):
+                extracted_gaps.append({
+                    "gap": g.get("gap") or g.get("title") or "Research Gap",
+                    "title": g.get("title") or g.get("gap") or "Research Gap",
+                    "description": (g.get("explanation") or g.get("description") or g.get("detail") or "")[:400],
+                    "explanation": g.get("explanation") or g.get("description") or g.get("detail") or "",
+                    "severity": g.get("severity") or "medium",
+                    "opportunity": g.get("suggestion") or g.get("opportunity") or g.get("mitigation") or g.get("solution_angle") or "",
+                    "suggestion": g.get("suggestion") or g.get("opportunity") or g.get("mitigation") or "",
+                })
+            else:
+                extracted_gaps.append({
+                    "gap": str(g),
+                    "title": str(g),
+                    "description": "",
+                    "explanation": "",
+                    "severity": "medium",
+                    "opportunity": "",
+                    "suggestion": "",
+                })
         return {"identified_gaps": extracted_gaps}
 
     elif tool_name == "generate_problem":

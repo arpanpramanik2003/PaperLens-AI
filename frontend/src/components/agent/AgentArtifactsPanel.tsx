@@ -20,6 +20,7 @@ import remarkGfm from "remark-gfm";
 
 import { CardProvenanceBadge } from "./CardProvenanceBadge";
 import { LiteratureReviewCard } from "./LiteratureReviewCard";
+import { ResearchGapsCard } from "./ResearchGapsCard";
 import { ProposedDirectionsCard } from "./ProposedDirectionsCard";
 import { DatasetsBenchmarksCard } from "./DatasetsBenchmarksCard";
 import { ExperimentPlanCard } from "./ExperimentPlanCard";
@@ -232,8 +233,30 @@ export const AgentArtifactsPanel: React.FC<AgentArtifactsPanelProps> = ({
                 );
               }
 
-              if (toolName === "detect_gaps" || toolName === "generate_problem") {
-                const problems = res.problems || res.problem_statements || res.ideas || res.gaps || [];
+              if (toolName === "detect_gaps") {
+                const gaps = res.gaps || [];
+                if (!gaps.length) return null;
+                return (
+                  <div
+                    id={`card-${toolName}`}
+                    key={idx}
+                    className={`space-y-1.5 transition-all duration-300 ${isHighlighted ? "ring-2 ring-indigo-500 rounded-xl" : ""}`}
+                  >
+                    <CardProvenanceBadge
+                      toolName={toolName}
+                      qualitySignal="Critical Gap Analysis"
+                    />
+                    <ResearchGapsCard
+                      gaps={gaps}
+                      renderTextOrObject={renderTextOrObject}
+                      sectionIndex={idx + 1}
+                    />
+                  </div>
+                );
+              }
+
+              if (toolName === "generate_problem") {
+                const problems = res.problems || res.problem_statements || res.ideas || [];
                 if (!problems.length) return null;
                 return (
                   <div

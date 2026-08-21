@@ -103,9 +103,18 @@ def compact_results_for_llm(results: List[Dict[str, Any]]) -> List[Dict[str, Any
                 }
             elif "gaps" in raw_res:
                 gaps = raw_res.get("gaps") or []
-                compact_item["result"] = {
-                    "gaps": [g if isinstance(g, str) else str(g)[:150] for g in gaps[:4]]
-                }
+                compact_gaps = []
+                for g in gaps[:6]:
+                    if isinstance(g, dict):
+                        compact_gaps.append({
+                            "title": g.get("title") or g.get("gap") or "Research Gap",
+                            "explanation": g.get("explanation") or g.get("description") or g.get("detail") or "",
+                            "severity": g.get("severity") or "medium",
+                            "suggestion": g.get("suggestion") or g.get("opportunity") or "",
+                        })
+                    else:
+                        compact_gaps.append({"title": str(g), "explanation": "", "severity": "medium", "suggestion": ""})
+                compact_item["result"] = {"gaps": compact_gaps}
             elif "problems" in raw_res or "ideas" in raw_res:
                 items = raw_res.get("problems") or raw_res.get("ideas") or []
                 compact_item["result"] = {
@@ -160,12 +169,17 @@ def _build_unavailability_directive(results: List[Dict[str, Any]]) -> str:
     )
 
 
-async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[str, Any]) -> str:
-    """Synthesize comprehensive literature review and research directions from step results."""
-    executed_tools = {item.get("tool") for item in results if item.get("tool")}
-
-    if executed_tools == {"find_datasets"}:
-        header_guidelines = (
+def _get_header_guidelines(executed_tools: set) -> str:
+    if executed_tools == {"detect_gaps"}:
+        return (
+            "Recommended Section Header Guidelines:\n"
+            "  # Comprehensive Research Gap Analysis & Limitation Survey\n"
+            "  ## 1. Analyzed Paper Scope & Core Findings\n"
+            "  ## 2. Identified Research Gaps, Vulnerabilities & Severity\n"
+            "  ## 3. Recommended Technical Mitigations & Future Opportunities\n"
+        )
+    elif executed_tools == {"find_datasets"}:
+        return (
             "Recommended Section Header Guidelines:\n"
             "  # Benchmark Datasets & Evaluation Suite\n"
             "  ## 1. Top Recommended SOTA Datasets & Benchmarks\n"
@@ -174,7 +188,7 @@ async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[st
             "  ## 4. Benchmark Fit & Selection Summary\n"
         )
     elif executed_tools == {"search_papers"}:
-        header_guidelines = (
+        return (
             "Recommended Section Header Guidelines:\n"
             "  # Executive Summary\n"
             "  ## 1. Domain Overview & Key Literature\n"
@@ -182,7 +196,7 @@ async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[st
             "  ## 3. Critical Evaluation & Citation Synthesis\n"
         )
     else:
-        header_guidelines = (
+        return (
             "Recommended Section Header Guidelines:\n"
             "  # Executive Summary & End-to-End Research Guide\n"
             "  ## 1. Domain Overview & Key Literature\n"
@@ -193,15 +207,21 @@ async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[st
             "  ## 6. Critical Self-Evaluation & Source Citations\n"
         )
 
+
+async def synthesize(goal: str, results: List[Dict[str, Any]], critique: Dict[str, Any]) -> str:
+    """Synthesize comprehensive literature review and research directions from step results."""
+    executed_tools = {item.get("tool") for item in results if item.get("tool")}
+    header_guidelines = _get_header_guidelines(executed_tools)
     unavail_directive = _build_unavailability_directive(results)
 
     system_prompt = (
-        "You are a distinguished senior researcher. Synthesize a comprehensive, beautifully formatted Markdown "
+        "You are a distinguished senior academic researcher. Synthesize a comprehensive, beautifully formatted Markdown "
         "report based on the research goal, retrieved data, and step execution results.\n\n"
-        "CRITICAL FORMATTING & TABLE RULES:\n"
+        "CRITICAL FORMATTING & PRESENTATION RULES:\n"
         "1. Tailor your section headers dynamically based ONLY on the data present in Execution Results.\n"
         "2. Do NOT output empty, blank, or placeholder sections for tools that were not executed.\n"
-        "3. When generating Markdown tables, output every row on its own line with explicit newline breaks (e.g. '| Col 1 | Col 2 |\\n|---|---|\\n| Val 1 | Val 2 |\\n'). Never collapse table rows onto a single line!\n\n"
+        "3. NEVER mention internal backend tool names (such as 'detect_gaps', 'search_papers', 'find_datasets'), function signatures, internal execution IDs (e.g. hex UUIDs), or system architecture details. Refer to findings naturally (e.g. 'From paper gap analysis', 'From literature survey').\n"
+        "4. When generating Markdown tables, strictly output every row on its own line with explicit newline characters (\\n). Never collapse table rows onto a single line!\n\n"
         f"{header_guidelines}{unavail_directive}"
     )
 
@@ -249,47 +269,19 @@ class SynthesisAndCritiqueResult(BaseModel):
 async def synthesize_and_verify(goal: str, results: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], str]:
     """Perform both critique verification and comprehensive Markdown synthesis in a single unified LLM pass."""
     executed_tools = {item.get("tool") for item in results if item.get("tool")}
-
-    if executed_tools == {"find_datasets"}:
-        header_guidelines = (
-            "Recommended Section Header Guidelines:\n"
-            "  # Benchmark Datasets & Evaluation Suite\n"
-            "  ## 1. Top Recommended SOTA Datasets & Benchmarks\n"
-            "  ## 2. Primary Evaluation Metrics & Standard Baselines\n"
-            "  ## 3. Data Modalities & Task Specifications\n"
-            "  ## 4. Benchmark Fit & Selection Summary\n"
-        )
-    elif executed_tools == {"search_papers"}:
-        header_guidelines = (
-            "Recommended Section Header Guidelines:\n"
-            "  # Executive Summary\n"
-            "  ## 1. Domain Overview & Key Literature\n"
-            "  ## 2. Comparative Methodological Insights & Taxonomy\n"
-            "  ## 3. Critical Evaluation & Citation Synthesis\n"
-        )
-    else:
-        header_guidelines = (
-            "Recommended Section Header Guidelines:\n"
-            "  # Executive Summary & End-to-End Research Guide\n"
-            "  ## 1. Domain Overview & Key Literature\n"
-            "  ## 2. Unexplored Research Gaps & Limitations\n"
-            "  ## 3. Proposed Novel Research Directions\n"
-            "  ## 4. Recommended Datasets, Benchmarks & Evaluation Metrics\n"
-            "  ## 5. Multi-Stage Experimental Execution Roadmap & Implementation Plan\n"
-            "  ## 6. Critical Self-Evaluation & Source Citations\n"
-        )
-
+    header_guidelines = _get_header_guidelines(executed_tools)
     unavail_directive = _build_unavailability_directive(results)
 
     system_prompt = (
-        "You are a distinguished senior researcher and peer-review auditor.\n"
+        "You are a distinguished senior academic researcher and peer-review auditor.\n"
         "Your task is to analyze the research goal and tool execution results, conduct a rigorous peer-review verification, "
         "and synthesize a comprehensive Markdown report in a single structured JSON response.\n\n"
         f"EXPECTED JSON SCHEMA:\n{json.dumps(SynthesisAndCritiqueResult.model_json_schema(), indent=2)}\n\n"
-        "CRITICAL FORMATTING & TABLE RULES FOR synthesis_report:\n"
+        "CRITICAL FORMATTING & PRESENTATION RULES FOR synthesis_report:\n"
         "1. Tailor your section headers dynamically based ONLY on the data present in Execution Results.\n"
         "2. Do NOT output empty, blank, or placeholder sections for tools that were not executed.\n"
-        "3. When generating Markdown tables, output every row on its own line with explicit newline breaks.\n\n"
+        "3. NEVER mention internal backend tool names (such as 'detect_gaps', 'search_papers', 'find_datasets'), function signatures, internal execution IDs (e.g. hex UUIDs), or system architecture details. Refer to findings naturally (e.g. 'From paper gap analysis', 'From literature survey').\n"
+        "4. When generating Markdown tables, strictly output every row on its own line with explicit newline characters (\\n). Never collapse table rows onto a single line!\n\n"
         f"{header_guidelines}{unavail_directive}"
     )
 
