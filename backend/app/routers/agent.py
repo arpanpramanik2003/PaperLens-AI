@@ -67,6 +67,8 @@ async def upload_agent_paper(
         # Store in shared cache for instant analysis & gap detection
         store_doc(doc_id, {
             "chunks": chunks,
+            "vector_index": None,
+            "bm25_index": None,
             "filename": file.filename,
             "page_count": total_pages,
         })

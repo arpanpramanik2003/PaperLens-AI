@@ -148,9 +148,9 @@ def set_active_doc(doc_id: str) -> bool:
     if not payload:
         return False
 
-    _active["vector_index"] = payload["vector_index"]
-    _active["bm25_index"] = payload["bm25_index"]
-    _active["chunks"] = payload["chunks"]
+    _active["vector_index"] = payload.get("vector_index")
+    _active["bm25_index"] = payload.get("bm25_index")
+    _active["chunks"] = payload.get("chunks", [])
     current_doc_id = doc_id
     return True
 
