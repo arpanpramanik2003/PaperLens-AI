@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://paper-explainer.vercel.app"><b>🚀 Live Platform Demo</b></a> •
+  <a href="https://paperlens.arpanpramanik.dev"><b>🚀 Live Platform Demo</b></a> •
   <a href="https://github.com/arpanpramanik2003/PaperLens-AI"><b>💻 GitHub Repository</b></a> •
   <a href="docs/API_REFERENCE.md"><b>📖 API Reference</b></a> •
   <a href="docs/ARCHITECTURE.md"><b>🏗 System Architecture</b></a>
