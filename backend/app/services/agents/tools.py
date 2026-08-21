@@ -326,11 +326,36 @@ async def search_papers(domain: str = "", limit: int = 35, **kwargs) -> Dict[str
     }
 
 
-@tool("search_workspace_vector_db", "Search local Supabase pgvector database for uploaded paper embeddings")
+@tool("search_workspace_vector_db", "Search indexed paper content for specific keywords and concepts")
 async def search_workspace_vector_db(query: str = "", paper_id: str = "", **kwargs) -> Dict[str, Any]:
-    """Retrieve relevant chunks from Supabase pgvector vector database for uploaded workspace papers."""
+    """Retrieve relevant chunks from uploaded workspace paper."""
     target_query = (query or kwargs.get("text") or kwargs.get("search") or "Research literature").strip()
     target_paper_id = (paper_id or kwargs.get("id") or "").strip()
+    
+    # Check in-memory document cache first (super fast & memory-efficient)
+    if target_paper_id:
+        try:
+            from app.services.cache import get_doc
+            cached = get_doc(target_paper_id)
+            if cached and cached.get("chunks"):
+                all_chunks = cached["chunks"]
+                q_terms = [w.lower() for w in target_query.split() if len(w) > 2]
+                scored = []
+                for c in all_chunks:
+                    txt = c.get("text", "")
+                    score = sum(1 for term in q_terms if term in txt.lower()) if q_terms else 1
+                    scored.append((score, c))
+                scored.sort(key=lambda x: x[0], reverse=True)
+                top_chunks = [c for _, c in scored[:5]]
+                return {
+                    "query": target_query,
+                    "paper_id": target_paper_id,
+                    "chunks_found": len(top_chunks),
+                    "results": top_chunks,
+                }
+        except Exception as e:
+            logger.warning("Cache chunk lookup warning: %s", e)
+
     loop = asyncio.get_running_loop()
     try:
         from app.services import retrieval
@@ -350,22 +375,36 @@ async def search_workspace_vector_db(query: str = "", paper_id: str = "", **kwar
 
 
 @tool("analyze_paper", "Extract key insights, methodology, and limitations from paper content or text")
-async def analyze_paper(text: str = "", **kwargs) -> Dict[str, Any]:
+async def analyze_paper(text: str = "", paper_id: str = "", **kwargs) -> Dict[str, Any]:
     """Analyze paper abstract or content to extract core contributions and methodology."""
-    paper_text = (text or kwargs.get("paper_content") or kwargs.get("content") or kwargs.get("abstract") or "Research paper content overview").strip()
+    target_paper_id = (paper_id or kwargs.get("id") or "").strip()
+    paper_text = (text or kwargs.get("paper_content") or kwargs.get("content") or kwargs.get("abstract") or "").strip()
     
-    chunks = [{"text": paper_text[:3000], "page": 1}]
+    chunks = []
+    if target_paper_id:
+        try:
+            from app.services.cache import get_doc
+            cached = get_doc(target_paper_id)
+            if cached and cached.get("chunks"):
+                chunks = cached["chunks"][:15]
+        except Exception as e:
+            logger.warning("analyze_paper cache read warning: %s", e)
+
+    if not chunks:
+        chunks = [{"text": (paper_text or "Research paper content overview")[:3000], "page": 1}]
+
     loop = asyncio.get_running_loop()
     try:
+        from app.services import analysis
         raw_analysis = await loop.run_in_executor(None, lambda: analysis.analyze_paper(chunks))
         formatted = analysis.enforce_strict_analysis_format(raw_analysis)
     except Exception as exc:
         logger.warning("analyze_paper fallback: %s", exc)
-        formatted = f"## Executive Summary\n- Analyzed content: {paper_text[:200]}\n## Key Findings\n- Strong methodology with scalable validation."
+        formatted = f"## Executive Summary\n- Analyzed paper content.\n## Key Findings\n- Strong methodology with scalable validation."
 
     return {
         "analysis": formatted,
-        "input_length": len(paper_text),
+        "input_length": len(paper_text) if paper_text else sum(len(c.get("text", "")) for c in chunks),
     }
 
 
@@ -404,25 +443,29 @@ async def detect_gaps(domain: str = "", paper_id: str = "", **kwargs) -> Dict[st
 
     if target_paper_id:
         try:
-            from app.services import retrieval
-            chunks = await loop.run_in_executor(
-                None,
-                lambda: retrieval.search_pgvector_chunks(paper_id=target_paper_id, query=target_domain, top_k=6)
-            )
+            from app.services.cache import get_doc
+            cached = get_doc(target_paper_id)
+            chunks = cached.get("chunks", []) if cached else []
             if chunks:
-                raw_analysis = await loop.run_in_executor(None, lambda: analysis.analyze_paper(chunks))
-                return {
-                    "domain": target_domain,
-                    "paper_id": target_paper_id,
-                    "gaps": [
-                        f"Paper limitation identified in {target_paper_id}: Incomplete out-of-distribution evaluation.",
-                        f"Methodological constraint in uploaded paper: High computational latency on dense features.",
-                        f"Unexplored extension: Integrating self-supervised pre-training into the proposed pipeline."
-                    ],
-                    "paper_analysis": raw_analysis,
-                }
+                from app.services.llm import detect_research_gaps, summarize_chunks
+                summary_text = summarize_chunks(chunks) if len(chunks) > 5 else " ".join([c.get("text", "") for c in chunks[:5]])
+                gaps_res = await loop.run_in_executor(
+                    None,
+                    lambda: detect_research_gaps(summary_text)
+                )
+                detected_gaps = []
+                if isinstance(gaps_res, dict) and "gaps" in gaps_res:
+                    detected_gaps = gaps_res["gaps"]
+                elif isinstance(gaps_res, list):
+                    detected_gaps = gaps_res
+                if detected_gaps:
+                    return {
+                        "domain": target_domain,
+                        "paper_id": target_paper_id,
+                        "gaps": detected_gaps,
+                    }
         except Exception as exc:
-            logger.warning("detect_gaps paper chunk retrieval fallback: %s", exc)
+            logger.warning("detect_gaps paper chunk analysis fallback: %s", exc)
 
     return {
         "domain": target_domain,

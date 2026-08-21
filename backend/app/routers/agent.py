@@ -31,11 +31,11 @@ async def upload_agent_paper(
     user_id: str = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Upload a research paper PDF for Agent Mode context, parse text, and embed chunks into vector DB."""
-    import os, uuid
+    """Upload a research paper PDF for Agent Mode context, extract pages/chunks, and cache in memory."""
+    import hashlib
     from app.models.domain import Document
     from app.services.parsing import parse_pdf_bytes
-    from app.services.embedding import embed_chunks_and_store
+    from app.services.cache import store_doc, set_active_doc, has_doc, get_doc
 
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
@@ -45,8 +45,32 @@ async def upload_agent_paper(
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
     try:
+        # Deterministic document ID to reuse cache for same file
+        doc_id = hashlib.sha256(f"{file.filename}:{len(content)}".encode("utf-8")).hexdigest()[:12]
+
+        if has_doc(doc_id):
+            cached = get_doc(doc_id)
+            set_active_doc(doc_id)
+            return {
+                "paper_id": doc_id,
+                "filename": file.filename,
+                "total_pages": cached.get("page_count", 1) if cached else 1,
+                "status": "ready",
+                "message": f"Paper '{file.filename}' loaded from cache.",
+            }
+
+        # Fast in-memory extraction via PyMuPDF (fitz)
         parsed_doc = parse_pdf_bytes(content, filename=file.filename)
-        doc_id = str(uuid.uuid4())
+        chunks = parsed_doc.get("chunks", [])
+        total_pages = parsed_doc.get("total_pages", 1)
+
+        # Store in shared cache for instant analysis & gap detection
+        store_doc(doc_id, {
+            "chunks": chunks,
+            "filename": file.filename,
+            "page_count": total_pages,
+        })
+        set_active_doc(doc_id)
 
         # Store Document Record in DB
         db_doc = db.query(Document).filter(Document.id == doc_id).first()
@@ -61,30 +85,10 @@ async def upload_agent_paper(
             db.add(db_doc)
             db.commit()
 
-        # Store in shared memory cache for instant search & analysis
-        chunks = parsed_doc.get("chunks", [])
-        try:
-            from app.services.cache import store_doc, set_active_doc
-            store_doc(doc_id, {
-                "chunks": chunks,
-                "filename": file.filename,
-                "page_count": parsed_doc.get("total_pages", 1),
-            })
-            set_active_doc(doc_id)
-        except Exception as e:
-            logger.warning("Cache store warning: %s", e)
-
-        # Embed chunks into pgvector storage asynchronously if available
-        if chunks:
-            try:
-                embed_chunks_and_store(doc_id, chunks, user_id=user_id)
-            except Exception as e:
-                logger.warning("Agent paper embedding warning: %s", e)
-
         return {
             "paper_id": doc_id,
             "filename": file.filename,
-            "total_pages": parsed_doc.get("total_pages", 1),
+            "total_pages": total_pages,
             "status": "ready",
             "message": f"Paper '{file.filename}' uploaded and indexed for Agent Mode.",
         }
