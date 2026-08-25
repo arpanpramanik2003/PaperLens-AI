@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import LandingNavbar from "../components/landing/LandingNavbar";
 import HeroSection from "../components/landing/HeroSection";
 import SocialProofSection from "../components/landing/SocialProofSection";
@@ -10,19 +10,14 @@ import TestimonialsSection from "../components/landing/TestimonialsSection";
 import CTASection from "../components/landing/CTASection";
 import LandingFooter from "../components/landing/LandingFooter";
 import AboutModal from "../components/landing/AboutModal";
-import useSmoothScrollbar from "../hooks/useSmoothScrollbar";
 
 export default function LandingPage() {
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-  const scrollbarRef = useSmoothScrollbar(scrollContainerRef, { damping: 0.08 });
   const [isDark, setIsDark] = useState(() => {
     const savedTheme = localStorage.getItem("paperlens-theme");
     if (savedTheme) return savedTheme === "dark";
     return document.documentElement.classList.contains("dark");
   });
   const [showAbout, setShowAbout] = useState(false);
-  // Initialize smooth-scrollbar on the landing page (desktop only)
 
   const handleNavigate = (href: string) => {
     const targetId = href.replace("#", "");
@@ -32,14 +27,6 @@ export default function LandingPage() {
       return;
     }
 
-    const scrollbar = scrollbarRef.current;
-    if (scrollbar && typeof scrollbar.scrollTo === "function") {
-      const topOffset = targetId === "home" ? 0 : 80;
-      scrollbar.scrollTo(0, Math.max(target.offsetTop - topOffset, 0), 600);
-      return;
-    }
-
-    target.style.scrollMarginTop = "80px";
     target.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -57,10 +44,9 @@ export default function LandingPage() {
       />
       <main
         id="main-content"
-        ref={scrollContainerRef}
-        className={isTouchDevice ? "min-h-screen overflow-x-hidden bg-background" : "h-screen overflow-hidden bg-background"}
+        className="min-h-screen bg-background"
       >
-        <div className={isTouchDevice ? "min-h-screen bg-background" : "min-h-full bg-background"}>
+        <div className="min-h-screen bg-background">
           <div className="relative overflow-hidden bg-background">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute inset-0 bg-[radial-gradient(78%_60%_at_50%_36%,rgba(114,66,195,0.08),transparent_70%)] dark:bg-[radial-gradient(78%_60%_at_50%_36%,rgba(114,66,195,0.25),transparent_70%)]" />

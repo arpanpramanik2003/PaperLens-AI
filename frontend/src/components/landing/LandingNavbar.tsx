@@ -111,7 +111,7 @@ export default function LandingNavbar({ isDark, onToggleTheme, onNavigate }: Lan
         Skip to main content
       </a>
       <div
-        className={`mx-auto transition-all duration-500 ${
+        className={`mx-auto transition-all duration-500 transform-gpu ${
           isScrolled
             ? "max-w-6xl rounded-2xl backdrop-blur-xl bg-background/72 border border-border/65 shadow-[0_10px_40px_-22px_rgba(0,0,0,0.45)]"
             : "max-w-none rounded-none bg-transparent border-transparent shadow-none"

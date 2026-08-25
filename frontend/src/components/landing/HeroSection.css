@@ -7,8 +7,9 @@
 .hero-mobile-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(28px);
   will-change: transform;
+  transform: translate3d(0, 0, 0);
   pointer-events: none;
 }
 
@@ -17,7 +18,7 @@
   height: 280px;
   top: 5%;
   left: -20%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(139, 92, 246, 0.12) 45%, transparent 70%);
   animation: heroMobOrb1 14s ease-in-out infinite;
 }
 
@@ -26,7 +27,7 @@
   height: 240px;
   top: 35%;
   right: -15%;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.3) 0%, rgba(6, 182, 212, 0.1) 45%, transparent 70%);
   animation: heroMobOrb2 16s ease-in-out infinite;
 }
 
@@ -35,20 +36,20 @@
   height: 260px;
   bottom: 0;
   left: 10%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.28) 0%, rgba(236, 72, 153, 0.08) 45%, transparent 70%);
   animation: heroMobOrb3 18s ease-in-out infinite;
 }
 
 .dark .hero-mobile-orb--1 {
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.5) 0%, rgba(139, 92, 246, 0.05) 60%, transparent 70%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.55) 0%, rgba(139, 92, 246, 0.15) 45%, transparent 70%);
 }
 
 .dark .hero-mobile-orb--2 {
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(6, 182, 212, 0.04) 60%, transparent 70%);
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.45) 0%, rgba(6, 182, 212, 0.12) 45%, transparent 70%);
 }
 
 .dark .hero-mobile-orb--3 {
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.35) 0%, rgba(236, 72, 153, 0.04) 60%, transparent 70%);
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.4) 0%, rgba(236, 72, 153, 0.1) 45%, transparent 70%);
 }
 
 /* ── Subtle Grid Overlay ── */

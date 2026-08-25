@@ -39,7 +39,7 @@ const FS_SOURCE = `
   const float offsetSpeed = 1.33 * overallSpeed;
   const float minOffsetSpread = 0.6;
   const float maxOffsetSpread = 2.0;
-  const int linesPerGroup = 16;
+  const int linesPerGroup = 8;
 
   #define drawCircle(pos, radius, coord) smoothstep(radius + gridSmoothWidth, radius, length(coord - (pos)))
   #define drawSmoothLine(pos, halfWidth, t) smoothstep(halfWidth, 0.0, abs(pos - (t)))
@@ -126,7 +126,7 @@ const FS_SOURCE_LINE_ONLY = `
   const float offsetSpeed = 1.33 * overallSpeed;
   const float minOffsetSpread = 0.6;
   const float maxOffsetSpread = 2.0;
-  const int linesPerGroup = 16;
+  const int linesPerGroup = 8;
 
   #define drawCircle(pos, radius, coord) smoothstep(radius + gridSmoothWidth, radius, length(coord - (pos)))
   #define drawSmoothLine(pos, halfWidth, t) smoothstep(halfWidth, 0.0, abs(pos - (t)))
@@ -236,7 +236,14 @@ const ShaderBackground = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gl = canvas.getContext('webgl');
+    const gl = canvas.getContext('webgl', {
+      powerPreference: 'low-power',
+      alpha: variant === 'line-only',
+      antialias: false,
+      depth: false,
+      stencil: false,
+      preserveDrawingBuffer: false,
+    });
     if (!gl) {
       console.warn('WebGL not supported.');
       return;
@@ -281,24 +288,35 @@ const ShaderBackground = ({
     };
 
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      const scaleFactor = 0.75;
+      canvas.width = Math.max(Math.floor(window.innerWidth * dpr * scaleFactor), 320);
+      canvas.height = Math.max(Math.floor(window.innerHeight * dpr * scaleFactor), 240);
       gl.viewport(0, 0, canvas.width, canvas.height);
     };
 
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas, { passive: true });
     resizeCanvas();
 
     let animFrameId: number | null = null;
     let isIntersecting = true;
     let isTabVisible = !document.hidden;
     const startTime = Date.now();
+    let lastRenderTimestamp = 0;
+    const frameInterval = 1000 / 40; // 40fps is smooth for ambient plasma waves while saving 40%+ GPU cycles
 
-    const render = () => {
+    const render = (timestamp: number) => {
       if (!isIntersecting || !isTabVisible) {
         animFrameId = null;
         return;
       }
+
+      animFrameId = requestAnimationFrame(render);
+
+      if (timestamp - lastRenderTimestamp < frameInterval) {
+        return;
+      }
+      lastRenderTimestamp = timestamp;
 
       const currentTime = (Date.now() - startTime) / 1000;
 
@@ -330,7 +348,6 @@ const ShaderBackground = ({
       gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      animFrameId = requestAnimationFrame(render);
     };
 
     const startAnimation = () => {
