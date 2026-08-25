@@ -3,12 +3,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClerkProvider } from "@clerk/clerk-react";
-import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Loader2 } from "lucide-react";
 
 // Lazy-loaded routes for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const ClerkAuthProvider = lazy(() => import("./components/ClerkAuthProvider"));
+const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const SignupPage = lazy(() => import("./pages/SignupPage"));
 const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
@@ -26,13 +26,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-// Import your publishable key
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key");
-}
-
 const PageLoader = () => (
   <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background text-foreground gap-3">
     <Loader2 className="w-8 h-8 text-accent animate-spin" />
@@ -41,14 +34,16 @@ const PageLoader = () => (
 );
 
 const App = () => (
-  <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Sonner />
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* Lazy-loaded Clerk Auth Provider for authenticated & login routes only */}
+            <Route element={<ClerkAuthProvider />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route 
@@ -74,13 +69,14 @@ const App = () => (
                 <Route path="citation-intelligence" element={<CitationIntelligence />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ClerkProvider>
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 export default App;
