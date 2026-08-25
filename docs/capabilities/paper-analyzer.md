@@ -21,10 +21,10 @@ flowchart TD
     SemanticChunker --> DualIndex{Storage Pipeline}
     
     %% In-Memory Path
-    DualIndex -->|In-Memory Cache (doc_id)| InMemIndex["Hybrid In-Memory Index\n• Dense: FAISS (IndexFlatIP)\n• Sparse: BM25 (BM25Okapi)"]
+    DualIndex -->|"In-Memory Cache (doc_id)"| InMemIndex["Hybrid In-Memory Index\n• Dense: FAISS (IndexFlatIP)\n• Sparse: BM25 (BM25Okapi)"]
     
     %% Persistent DB Path
-    DualIndex -->|Persistent Postgres (paper_id)| PgVectorIndex["PostgreSQL + pgvector\n• sentence-transformers/all-MiniLM-L6-v2\n• HNSW Cosine Vector Index"]
+    DualIndex -->|"Persistent Postgres (paper_id)"| PgVectorIndex["PostgreSQL + pgvector\n• sentence-transformers/all-MiniLM-L6-v2\n• HNSW Cosine Vector Index"]
     
     %% Analysis Pass
     InMemIndex --> SectionSampler["Targeted Keyword Section Sampler\n• Problem Statement, Methodology\n• Results, Limitations, Future Work"]
