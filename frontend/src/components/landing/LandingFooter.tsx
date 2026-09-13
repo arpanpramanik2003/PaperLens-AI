@@ -48,7 +48,7 @@ export default function LandingFooter({ onOpenAbout }: LandingFooterProps) {
             <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-4">Connect</h3>
             <p className="text-xs sm:text-sm text-muted-foreground mb-4">Email: <a href="mailto:pramanikarpan089@gmail.com" className="hover:text-foreground transition-colors">pramanikarpan089@gmail.com</a></p>
             <div className="flex gap-2 sm:gap-3">
-              <a href="https://arpanpramanik.dev" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-bold" title="Portfolio">
+              <a href="https://arpanpramanik.tech" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-bold" title="Portfolio">
                 PF
               </a>
               <a href="https://www.linkedin.com/in/arpanpramanik2003/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
