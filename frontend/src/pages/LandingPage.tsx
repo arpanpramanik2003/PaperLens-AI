@@ -3,7 +3,7 @@ import LandingNavbar from "../components/landing/layout/LandingNavbar";
 import HeroSection from "../components/landing/sections/Hero/HeroSection";
 import SocialProofSection from "../components/landing/sections/SocialProof/SocialProofSection";
 import AgentShowcaseSection from "../components/landing/sections/AgentShowcase/AgentShowcaseSection";
-import FeaturesSection from "../components/landing/feature-section/FeaturesSection";
+import WorkstationSection from "../components/landing/sections/Workstation/WorkstationSection";
 import HowItWorksSection from "../components/landing/HowItWorksSection";
 import WhyPaperLensSection from "../components/landing/WhyPaperLensSection";
 import TestimonialsSection from "../components/landing/TestimonialsSection";
@@ -66,7 +66,7 @@ export default function LandingPage() {
           {/* Shared background from Agent Mode to Loved by researchers */}
           <div className="bg-background overflow-hidden">
             <AgentShowcaseSection />
-            <FeaturesSection />
+            <WorkstationSection />
             <HowItWorksSection />
             <WhyPaperLensSection />
             <TestimonialsSection />
