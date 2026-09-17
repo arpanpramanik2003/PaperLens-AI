@@ -4,10 +4,10 @@ import HeroSection from "../components/landing/sections/Hero/HeroSection";
 import SocialProofSection from "../components/landing/sections/SocialProof/SocialProofSection";
 import AgentShowcaseSection from "../components/landing/sections/AgentShowcase/AgentShowcaseSection";
 import WorkstationSection from "../components/landing/sections/Workstation/WorkstationSection";
-import HowItWorksSection from "../components/landing/HowItWorksSection";
-import WhyPaperLensSection from "../components/landing/WhyPaperLensSection";
-import TestimonialsSection from "../components/landing/TestimonialsSection";
-import CTASection from "../components/landing/CTASection";
+import HowItWorksSection from "../components/landing/sections/Workflow/HowItWorksSection";
+import EvidenceRigorSection from "../components/landing/sections/EvidenceRigor/EvidenceRigorSection";
+import TestimonialsSection from "../components/landing/sections/Testimonials/TestimonialsSection";
+import CTASection from "../components/landing/sections/CTA/CTASection";
 import LandingFooter from "../components/landing/layout/LandingFooter";
 import AboutModal from "../components/landing/layout/AboutModal";
 
@@ -68,7 +68,7 @@ export default function LandingPage() {
             <AgentShowcaseSection />
             <WorkstationSection />
             <HowItWorksSection />
-            <WhyPaperLensSection />
+            <EvidenceRigorSection />
             <TestimonialsSection />
           </div>
           <CTASection />
