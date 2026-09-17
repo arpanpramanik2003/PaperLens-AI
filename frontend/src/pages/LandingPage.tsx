@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import LandingNavbar from "../components/landing/layout/LandingNavbar";
 import HeroSection from "../components/landing/sections/Hero/HeroSection";
 import SocialProofSection from "../components/landing/sections/SocialProof/SocialProofSection";
-import AgentModeSection from "../components/landing/AgentModeSection";
+import AgentShowcaseSection from "../components/landing/sections/AgentShowcase/AgentShowcaseSection";
 import FeaturesSection from "../components/landing/feature-section/FeaturesSection";
 import HowItWorksSection from "../components/landing/HowItWorksSection";
 import WhyPaperLensSection from "../components/landing/WhyPaperLensSection";
@@ -65,7 +65,7 @@ export default function LandingPage() {
           </div>
           {/* Shared background from Agent Mode to Loved by researchers */}
           <div className="bg-background overflow-hidden">
-            <AgentModeSection />
+            <AgentShowcaseSection />
             <FeaturesSection />
             <HowItWorksSection />
             <WhyPaperLensSection />
