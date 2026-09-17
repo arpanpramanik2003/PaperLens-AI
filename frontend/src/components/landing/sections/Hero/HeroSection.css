@@ -18,7 +18,7 @@
   height: 280px;
   top: 5%;
   left: -20%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(139, 92, 246, 0.12) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(59, 130, 246, 0.12) 45%, transparent 70%);
   animation: heroMobOrb1 14s ease-in-out infinite;
 }
 
@@ -27,7 +27,7 @@
   height: 240px;
   top: 35%;
   right: -15%;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.3) 0%, rgba(6, 182, 212, 0.1) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.3) 0%, rgba(56, 189, 248, 0.1) 45%, transparent 70%);
   animation: heroMobOrb2 16s ease-in-out infinite;
 }
 
@@ -36,20 +36,20 @@
   height: 260px;
   bottom: 0;
   left: 10%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.28) 0%, rgba(236, 72, 153, 0.08) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.28) 0%, rgba(99, 102, 241, 0.08) 45%, transparent 70%);
   animation: heroMobOrb3 18s ease-in-out infinite;
 }
 
 .dark .hero-mobile-orb--1 {
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.55) 0%, rgba(139, 92, 246, 0.15) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.55) 0%, rgba(59, 130, 246, 0.15) 45%, transparent 70%);
 }
 
 .dark .hero-mobile-orb--2 {
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.45) 0%, rgba(6, 182, 212, 0.12) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.45) 0%, rgba(56, 189, 248, 0.12) 45%, transparent 70%);
 }
 
 .dark .hero-mobile-orb--3 {
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.4) 0%, rgba(236, 72, 153, 0.1) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0.1) 45%, transparent 70%);
 }
 
 /* ── Subtle Grid Overlay ── */
@@ -109,9 +109,9 @@
   animation: heroMobRingPulse 5s ease-in-out 2s infinite;
 }
 
-.dark .hero-mobile-ring--1 { border-color: rgba(139, 92, 246, 0.2); }
-.dark .hero-mobile-ring--2 { border-color: rgba(6, 182, 212, 0.14); }
-.dark .hero-mobile-ring--3 { border-color: rgba(236, 72, 153, 0.1); }
+.dark .hero-mobile-ring--1 { border-color: rgba(59, 130, 246, 0.2); }
+.dark .hero-mobile-ring--2 { border-color: rgba(56, 189, 248, 0.14); }
+.dark .hero-mobile-ring--3 { border-color: rgba(99, 102, 241, 0.1); }
 
 /* ── Central Glow Pulse ── */
 .hero-mobile-glow {
@@ -123,12 +123,12 @@
   height: 180px;
   border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(114, 66, 195, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
   animation: heroMobGlow 4s ease-in-out infinite;
 }
 
 .dark .hero-mobile-glow {
-  background: radial-gradient(circle, rgba(114, 66, 195, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%);
 }
 
 /* ── Floating Particles ── */
@@ -155,9 +155,9 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(6, 182, 212, 0.3) 25%,
-    rgba(139, 92, 246, 0.5) 50%,
-    rgba(236, 72, 153, 0.3) 75%,
+    rgba(56, 189, 248, 0.3) 25%,
+    rgba(59, 130, 246, 0.5) 50%,
+    rgba(99, 102, 241, 0.3) 75%,
     transparent 100%
   );
   animation: heroMobScanline 8s ease-in-out infinite;
@@ -168,9 +168,9 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(6, 182, 212, 0.5) 25%,
-    rgba(139, 92, 246, 0.6) 50%,
-    rgba(236, 72, 153, 0.5) 75%,
+    rgba(56, 189, 248, 0.5) 25%,
+    rgba(59, 130, 246, 0.6) 50%,
+    rgba(99, 102, 241, 0.5) 75%,
     transparent 100%
   );
 }
@@ -312,7 +312,7 @@
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, rgb(6, 182, 212), rgb(139, 92, 246));
+  background: linear-gradient(135deg, hsl(var(--accent)), #60a5fa);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -339,121 +339,149 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* Get Started Button - Sliding Icon Animation */
+/* Get Started Button - Theme Accent with Sliding Icon Animation */
 .btn-get-started {
-  background: linear-gradient(135deg, rgb(6, 182, 212) 0%, rgb(14, 116, 144) 100%);
-  color: #fff;
+  background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(221 83% 45%) 100%);
+  color: #ffffff;
   font-family: inherit;
-  font-size: 17px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  border: none;
-  border-radius: 0.9em;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid hsl(var(--accent) / 0.4);
+  border-radius: 0.85em;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  height: 2.8em;
-  padding: 0.35em 3.3em 0.35em 1.2em;
-  box-shadow: inset 0 0 1.6em -0.6em rgba(6, 182, 212, 0.85), 0 10px 24px -14px rgba(6, 182, 212, 0.8);
+  height: 2.85em;
+  padding: 0.35em 3.3em 0.35em 1.35em;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 10px 24px -12px hsl(var(--accent) / 0.75);
   white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-get-started:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 14px 28px -12px hsl(var(--accent) / 0.9);
 }
 
 .btn-get-started .icon {
   position: absolute;
-  right: 0.3em;
-  width: 2.2em;
-  height: 2.2em;
+  right: 0.35em;
+  width: 2.15em;
+  height: 2.15em;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border-radius: 0.7em;
-  box-shadow: 0.1em 0.1em 0.6em 0.2em rgba(6, 182, 212, 0.55);
-  transition: width 0.3s ease;
+  background: #ffffff;
+  border-radius: 0.65em;
+  box-shadow: 0.1em 0.1em 0.6em 0.15em hsl(var(--accent) / 0.35);
+  transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-get-started:hover .icon {
-  width: calc(100% - 0.6em);
+  width: calc(100% - 0.7em);
 }
 
 .btn-get-started .icon svg {
   width: 1.1em;
-  color: rgb(6, 182, 212);
+  color: hsl(var(--accent));
   transition: transform 0.3s ease;
 }
 
 .btn-get-started:hover .icon svg {
-  transform: translateX(0.1em);
+  transform: translateX(0.15em);
 }
 
 .btn-get-started:active .icon {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
-/* Explore Button - Rotating Skew Animation */
+/* Explore Button - Theme-Harmonized Rotating Skew Animation */
 .btn-explore {
   overflow: hidden;
   position: relative;
-  width: 8.25rem;
-  height: 3rem;
+  width: 8.5rem;
+  height: 2.85em;
   padding: 0.5rem 1rem;
-  background: rgb(88, 28, 135);
-  color: #fff;
-  border: none;
-  border-radius: 0.9em;
-  font-size: 1rem;
-  font-weight: bold;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.85em;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
   white-space: nowrap;
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.15);
+  transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+
+.dark .btn-explore {
+  background: hsl(224 20% 10%);
+  color: #f8fafc;
+  border-color: hsl(224 16% 22%);
+  box-shadow: 0 4px 16px -6px rgba(0, 0, 0, 0.5);
+}
+
+.btn-explore:hover {
+  border-color: hsl(var(--accent) / 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -12px hsl(var(--accent) / 0.45);
 }
 
 .btn-explore-layer {
   position: absolute;
-  width: 9rem;
+  width: 9.5rem;
   height: 8rem;
   top: -2rem;
   left: -0.5rem;
   transform: rotate(12deg) scaleX(0);
   transform-origin: left;
-  transition: transform 1000ms linear;
+  transition: transform 900ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-explore:hover .btn-explore-layer {
   transform: rotate(12deg) scaleX(1);
 }
 
+/* Layer 1: Subtle backdrop highlight */
 .btn-explore-layer:nth-child(1) {
-  background: white;
-  transition-duration: 500ms;
+  background: hsl(var(--secondary));
+  transition-duration: 450ms;
 }
 
+.dark .btn-explore-layer:nth-child(1) {
+  background: hsl(224 20% 16%);
+}
+
+/* Layer 2: Vibrant Azure */
 .btn-explore-layer:nth-child(2) {
-  background: rgb(147, 51, 234);
-  transition-duration: 700ms;
+  background: #38bdf8;
+  transition-duration: 650ms;
 }
 
+/* Layer 3: Deep Intellectual Cobalt Accent */
 .btn-explore-layer:nth-child(3) {
-  background: rgb(236, 72, 153);
-  transition-duration: 1000ms;
+  background: hsl(var(--accent));
+  transition-duration: 850ms;
 }
 
 .btn-explore-text {
   position: relative;
   z-index: 10;
   opacity: 1;
-  transition: opacity 100ms linear;
+  transition: opacity 120ms linear;
 }
 
 .btn-explore:hover .btn-explore-text {
   opacity: 0;
-  transition: opacity 1000ms linear;
+  transition: opacity 800ms linear;
 }
 
 .btn-explore-text-hover {
@@ -462,15 +490,16 @@
   left: 50%;
   transform: translate(-50%, -50%);
   opacity: 0;
-  transition: opacity 100ms linear;
+  transition: opacity 120ms linear;
   z-index: 10;
-  color: rgb(88, 28, 135);
-  font-weight: bold;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .btn-explore:hover .btn-explore-text-hover {
   opacity: 1;
-  transition: opacity 1000ms linear;
+  transition: opacity 800ms linear;
 }
 
 a .btn-get-started,
@@ -478,22 +507,37 @@ a .btn-explore {
   text-decoration: none !important;
 }
 
-/* ── Previous Hero Text Shimmer ── */
+/* ── Hero Heading Text Shimmer (Harmonized to Theme Colors) ── */
 #home .text-shimmer {
-  background: linear-gradient(110deg, rgb(6, 182, 212) 0%, rgb(147, 51, 234) 45%, rgb(236, 72, 153) 55%, rgb(6, 182, 212) 100%);
-  background-size: 250% 100%;
+  background: linear-gradient(
+    110deg,
+    hsl(var(--foreground)) 0%,
+    hsl(var(--accent)) 35%,
+    #2563eb 50%,
+    hsl(var(--accent)) 65%,
+    hsl(var(--foreground)) 100%
+  );
+  background-size: 240% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: shimmer 4s ease-in-out infinite;
+  animation: shimmer 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .dark #home .text-shimmer {
-  background: linear-gradient(110deg, rgb(34, 211, 238) 0%, rgb(196, 181, 253) 45%, rgb(249, 168, 212) 55%, rgb(34, 211, 238) 100%);
-  background-size: 250% 100%;
+  background: linear-gradient(
+    110deg,
+    #ffffff 0%,
+    #93c5fd 35%,
+    #38bdf8 50%,
+    #60a5fa 65%,
+    #ffffff 100%
+  );
+  background-size: 240% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+  animation: shimmer 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }

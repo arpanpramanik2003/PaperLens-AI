@@ -95,26 +95,26 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease }}
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border/50 bg-background/85 text-xs sm:text-sm text-foreground/85 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.45)] backdrop-blur-md mb-6 sm:mb-8">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-accent/25 bg-background/90 dark:bg-card/80 text-xs sm:text-sm text-foreground/90 dark:text-slate-200 shadow-[0_8px_24px_-18px_rgba(59,130,246,0.35)] backdrop-blur-md mb-6 sm:mb-8">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
-            AI-Powered Research Assistant
+            <span className="font-medium tracking-tight">AI-Powered Research Assistant</span>
           </div>
         </motion.div>
 
         {/* ─── Heading ─── */}
         <motion.h1
-          className="text-[1.75rem] sm:text-4xl lg:text-6xl font-semibold tracking-tighter text-balance leading-[1.1] sm:leading-[1.0] mb-4 sm:mb-6"
+          className="text-[1.85rem] sm:text-4xl lg:text-6xl font-bold tracking-tight text-balance leading-[1.15] sm:leading-[1.08] mb-4 sm:mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease }}
         >
           <span className="text-shimmer">Understand Research Papers</span>
-          <span className="block text-foreground mt-0">in Minutes, Not Hours</span>
+          <span className="block text-foreground mt-1 sm:mt-2">in Minutes, Not Hours</span>
         </motion.h1>
 
         {/* ─── Description ─── */}
         <motion.p
-          className="text-[0.82rem] sm:text-base lg:text-lg text-foreground/80 dark:text-white/80 max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
+          className="text-[0.88rem] sm:text-base lg:text-lg text-muted-foreground dark:text-slate-300 max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease }}
@@ -131,10 +131,10 @@ export default function HeroSection({ isDark = true }: HeroSectionProps) {
             transition={{ duration: 0.5, delay: 0.3, ease }}
           >
             {[
-              { icon: FileSearch, label: "Smart Summaries", color: "text-cyan-400" },
-              { icon: Quote, label: "Citation Intel", color: "text-purple-400" },
-              { icon: Lightbulb, label: "Research Gaps", color: "text-amber-400" },
-              { icon: FlaskConical, label: "Experiment Plans", color: "text-pink-400" },
+              { icon: FileSearch, label: "Smart Summaries", color: "text-accent" },
+              { icon: Quote, label: "Citation Intel", color: "text-amber-500 dark:text-amber-400" },
+              { icon: Lightbulb, label: "Research Gaps", color: "text-indigo-500 dark:text-indigo-400" },
+              { icon: FlaskConical, label: "Experiment Plans", color: "text-emerald-500 dark:text-emerald-400" },
             ].map((item, i) => (
               <motion.div
                 key={item.label}

@@ -25,7 +25,7 @@ export default function LightHeroBackground() {
           className="absolute w-[120%] h-[300px]"
           style={{
             background:
-              "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.08) 20%, rgba(6,182,212,0.12) 50%, rgba(236,72,153,0.08) 80%, transparent 100%)",
+              "linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.08) 20%, rgba(56,189,248,0.12) 50%, rgba(99,102,241,0.08) 80%, transparent 100%)",
             top: "30%",
             left: "-10%",
             filter: "blur(40px)",
@@ -52,7 +52,7 @@ export default function LightHeroBackground() {
           className="absolute w-[120%] h-[250px]"
           style={{
             background:
-              "linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.08) 25%, rgba(147,51,234,0.10) 50%, rgba(6,182,212,0.08) 75%, transparent 100%)",
+              "linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.08) 25%, rgba(99,102,241,0.10) 50%, rgba(56,189,248,0.08) 75%, transparent 100%)",
             top: "55%",
             left: "-10%",
             filter: "blur(35px)",
