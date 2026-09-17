@@ -20,6 +20,11 @@ export default function LandingPage() {
   const [showAbout, setShowAbout] = useState(false);
 
   const handleNavigate = (href: string) => {
+    if (href === "#about") {
+      setShowAbout(true);
+      return;
+    }
+
     const targetId = href.replace("#", "");
     const target = document.getElementById(targetId);
 
@@ -27,7 +32,16 @@ export default function LandingPage() {
       return;
     }
 
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    const navOffset = 76;
+    const bodyRect = document.body.getBoundingClientRect().top;
+    const elementRect = target.getBoundingClientRect().top;
+    const elementPosition = elementRect - bodyRect;
+    const offsetPosition = Math.max(0, elementPosition - navOffset);
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: "smooth",
+    });
   };
 
   useEffect(() => {
@@ -41,6 +55,7 @@ export default function LandingPage() {
         isDark={isDark}
         onToggleTheme={() => setIsDark((prev) => !prev)}
         onNavigate={handleNavigate}
+        onOpenAbout={() => setShowAbout(true)}
       />
       <main
         id="main-content"

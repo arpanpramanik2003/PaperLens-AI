@@ -84,15 +84,18 @@ export default function AboutModal({ open, onClose }: AboutModalProps) {
           >
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/70 dark:border-white/10">
               <div className="flex items-center gap-3">
-                <img
-                  src="/favicon.svg"
-                  alt="PaperLens Logo"
-                  width="32"
-                  height="32"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-8 h-8"
-                />
+                <picture className="flex-shrink-0">
+                  <source srcSet="/paperlens-logo.webp" type="image/webp" />
+                  <img
+                    src="/paperlens-logo.png"
+                    alt="PaperLens Logo"
+                    width="36"
+                    height="36"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-9 h-9 object-contain"
+                  />
+                </picture>
                 <div>
                   <h2 className="text-xl font-bold text-foreground">PaperLens AI</h2>
                   <p className="text-xs text-muted-foreground font-mono">

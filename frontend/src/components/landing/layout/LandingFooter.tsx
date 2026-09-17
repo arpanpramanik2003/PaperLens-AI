@@ -12,16 +12,19 @@ export default function LandingFooter({ onOpenAbout }: LandingFooterProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <div>
-            <Link to="/" className="flex items-center gap-2 mb-3 group">
-              <img
-                src="/favicon.svg"
-                alt="PaperLens Logo"
-                width="24"
-                height="24"
-                loading="lazy"
-                decoding="async"
-                className="w-6 h-6 flex-shrink-0 transition-transform group-hover:scale-105"
-              />
+            <Link to="/" className="flex items-center gap-2.5 mb-3 group">
+              <picture className="flex-shrink-0">
+                <source srcSet="/paperlens-logo.webp" type="image/webp" />
+                <img
+                  src="/paperlens-logo.png"
+                  alt="PaperLens Logo"
+                  width="28"
+                  height="28"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-7 h-7 flex-shrink-0 transition-transform group-hover:scale-105 object-contain"
+                />
+              </picture>
               <span className="text-sm font-bold text-foreground tracking-tight">
                 PaperLens<span className="text-accent ml-0.5">.ai</span>
               </span>
