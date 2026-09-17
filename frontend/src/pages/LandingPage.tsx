@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import LandingNavbar from "../components/landing/layout/LandingNavbar";
-import HeroSection from "../components/landing/HeroSection";
-import SocialProofSection from "../components/landing/SocialProofSection";
+import HeroSection from "../components/landing/sections/Hero/HeroSection";
+import SocialProofSection from "../components/landing/sections/SocialProof/SocialProofSection";
 import AgentModeSection from "../components/landing/AgentModeSection";
 import FeaturesSection from "../components/landing/feature-section/FeaturesSection";
 import HowItWorksSection from "../components/landing/HowItWorksSection";
