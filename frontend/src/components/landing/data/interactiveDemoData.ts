@@ -58,13 +58,13 @@ export const sampleEquations: Record<string, EquationInspectorTarget> = {
   "saliency-gate": {
     id: "saliency-gate",
     name: "Early Saliency Routing Head",
-    latex: "\\mathcal{G}(x_i) = \\sigma\\left( \\mathbf{W}_2 \\cdot \\text{GELU}(\\mathbf{W}_1 x_i + b_1) \\right) \\odot \\mathbb{I}_{\\tau}",
+    latex: "𝒢(xᵢ) = σ(W₂ · GELU(W₁xᵢ + b₁)) ⊙ 𝕀_τ",
     description: "Evaluates token saliency at layer 3 to bypass dense self-attention for redundant background patches.",
     terms: [
-      { symbol: "x_i", meaning: "Token embedding of patch i from layer l" },
-      { symbol: "\\sigma", meaning: "Sigmoid gating activation" },
-      { symbol: "\\mathbb{I}_{\\tau}", meaning: "Indicator mask passing tokens with score > threshold \\tau" },
-      { symbol: "\\mathbf{W}_1, \\mathbf{W}_2", meaning: "Low-rank bottleneck projection matrices (rank=16)" },
+      { symbol: "xᵢ", meaning: "Token embedding of patch i at layer l" },
+      { symbol: "σ", meaning: "Sigmoid gating activation function" },
+      { symbol: "𝕀_τ", meaning: "Indicator mask passing tokens with score > τ" },
+      { symbol: "W₁, W₂", meaning: "Low-rank bottleneck projection matrices (rank=16)" },
     ],
   },
 };

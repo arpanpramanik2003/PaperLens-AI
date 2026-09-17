@@ -84,8 +84,7 @@ export default function HeroInteractiveLens() {
                   title="Inspect citation [24]"
                 >
                   [24]
-                </button>
-                , we propose dynamic saliency gating guided by early-exit projections.
+                </button>, we propose dynamic saliency gating guided by early-exit projections.
               </p>
 
               {/* Equation Box (Clickable / Hoverable) */}
@@ -96,20 +95,25 @@ export default function HeroInteractiveLens() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") setActiveInspectType("equation");
                 }}
-                className={`p-3 rounded-xl border transition-all cursor-pointer font-mono text-xs sm:text-[13px] ${
+                className={`p-3 rounded-xl border transition-all cursor-pointer ${
                   activeInspectType === "equation"
                     ? "bg-accent/10 border-accent/40 shadow-xs ring-1 ring-accent/30"
                     : "bg-muted/30 border-border/70 hover:bg-muted/60"
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1.5">
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1.5 font-mono">
                   <span className="flex items-center gap-1 font-semibold uppercase tracking-wider text-accent">
                     <Calculator className="w-3 h-3" /> Eq. 3 — Saliency Gate
                   </span>
-                  <span className="font-mono text-[10px]">Click to deconstruct AST</span>
+                  <span>Click to deconstruct AST</span>
                 </div>
-                <div className="text-center py-1.5 font-bold text-foreground overflow-x-auto">
-                  𝒢(xᵢ) = σ(W₂ · GELU(W₁xᵢ + b₁)) ⊙ 𝕀_τ
+                <div className="flex items-center justify-between py-1.5 px-2 font-serif text-sm sm:text-base font-bold text-foreground overflow-x-auto">
+                  <span className="mx-auto tracking-wide">
+                    𝒢(xᵢ) = σ(W₂ · GELU(W₁xᵢ + b₁)) ⊙ 𝕀_τ
+                  </span>
+                  <span className="text-xs font-mono font-normal text-muted-foreground ml-3">
+                    (3)
+                  </span>
                 </div>
               </div>
 
@@ -145,8 +149,7 @@ export default function HeroInteractiveLens() {
                   title="Inspect citation [31]"
                 >
                   [31]
-                </button>
-                , our architecture reduces inference latency by 32% on NVIDIA Jetson Orin Nano with &lt; 0.4% Top-1 ImageNet accuracy degradation.
+                </button>, our architecture reduces inference latency by 32% on NVIDIA Jetson Orin Nano with &lt; 0.4% Top-1 ImageNet accuracy degradation.
               </p>
             </div>
           </div>
@@ -155,7 +158,7 @@ export default function HeroInteractiveLens() {
           <div className="lg:col-span-5 p-5 sm:p-6 bg-card flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-border/70 dark:border-white/10 mb-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5 font-mono">
                   <Sparkles className="w-3.5 h-3.5 text-accent" />
                   {activeInspectType === "equation" ? "Equation Deconstruction" : "Citation Provenance"}
                 </span>
@@ -184,18 +187,18 @@ export default function HeroInteractiveLens() {
                     </div>
 
                     <div className="space-y-2">
-                      <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
                         Symbolic Breakdown
                       </div>
                       {equation.terms.map((term, i) => (
                         <div
                           key={i}
-                          className="flex items-start gap-2 p-2 rounded-lg bg-muted/40 border border-border/60 text-xs"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/30 border border-border/60 text-xs"
                         >
-                          <code className="font-mono text-[11px] font-bold text-accent min-w-[28px]">
+                          <span className="font-serif font-bold text-xs sm:text-sm text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20 min-w-[34px] text-center flex-shrink-0">
                             {term.symbol}
-                          </code>
-                          <span className="text-[11px] text-muted-foreground leading-tight">
+                          </span>
+                          <span className="text-[11px] text-muted-foreground leading-relaxed flex-1">
                             {term.meaning}
                           </span>
                         </div>
