@@ -59,6 +59,14 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        citation: {
+          DEFAULT: "hsl(38 92% 50%)",
+          foreground: "hsl(38 92% 10%)",
+        },
+        evidence: {
+          DEFAULT: "hsl(158 75% 40%)",
+          foreground: "hsl(0 0% 100%)",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -69,6 +77,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      boxShadow: {
+        academic: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)",
+        "academic-lg": "0 12px 32px -8px rgba(0, 0, 0, 0.15), 0 4px 12px -4px rgba(0, 0, 0, 0.08)",
+        "academic-glow": "0 0 30px -6px rgba(59, 130, 246, 0.18)",
       },
       borderRadius: {
         lg: "var(--radius)",

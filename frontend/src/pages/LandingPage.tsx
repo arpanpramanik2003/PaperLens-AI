@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import LandingNavbar from "../components/landing/LandingNavbar";
+import LandingNavbar from "../components/landing/layout/LandingNavbar";
 import HeroSection from "../components/landing/HeroSection";
 import SocialProofSection from "../components/landing/SocialProofSection";
 import AgentModeSection from "../components/landing/AgentModeSection";
-import FeaturesSection from "../components/landing/FeaturesSection";
+import FeaturesSection from "../components/landing/feature-section/FeaturesSection";
 import HowItWorksSection from "../components/landing/HowItWorksSection";
 import WhyPaperLensSection from "../components/landing/WhyPaperLensSection";
 import TestimonialsSection from "../components/landing/TestimonialsSection";
 import CTASection from "../components/landing/CTASection";
-import LandingFooter from "../components/landing/LandingFooter";
-import AboutModal from "../components/landing/AboutModal";
+import LandingFooter from "../components/landing/layout/LandingFooter";
+import AboutModal from "../components/landing/layout/AboutModal";
 
 export default function LandingPage() {
   const [isDark, setIsDark] = useState(() => {
@@ -48,11 +48,15 @@ export default function LandingPage() {
       >
         <div className="min-h-screen bg-background">
           <div className="relative overflow-hidden bg-background">
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute inset-0 bg-[radial-gradient(78%_60%_at_50%_36%,rgba(114,66,195,0.08),transparent_70%)] dark:bg-[radial-gradient(78%_60%_at_50%_36%,rgba(114,66,195,0.25),transparent_70%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(46%_36%_at_20%_72%,rgba(0,186,255,0.05),transparent_76%)] dark:bg-[radial-gradient(46%_36%_at_20%_72%,rgba(0,186,255,0.12),transparent_76%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(44%_34%_at_82%_68%,rgba(231,78,255,0.05),transparent_80%)] dark:bg-[radial-gradient(44%_34%_at_82%_68%,rgba(231,78,255,0.1),transparent_80%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(255,255,255,0.01)_34%,rgba(255,255,255,0.03))] dark:bg-[linear-gradient(to_bottom,rgba(0,0,0,0.2),rgba(0,0,0,0.06)_34%,rgba(0,0,0,0.22))]" />
+            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+              {/* Subtle academic grid pattern */}
+              <div className="absolute inset-0 academic-grid opacity-60" />
+              {/* Refined cobalt focal glow */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.14),transparent_70%)]" />
+              {/* Soft warm gold provenance ambient glow */}
+              <div className="absolute top-[20%] right-[10%] w-[500px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(217,119,6,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(217,119,6,0.05),transparent_70%)]" />
+              {/* Smooth vignette overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
             </div>
             <div className="relative z-10">
               <HeroSection isDark={isDark} />
