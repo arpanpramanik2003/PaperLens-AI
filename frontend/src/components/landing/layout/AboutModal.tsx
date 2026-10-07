@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShieldCheck, BookOpen, Sparkles, CheckCircle2 } from "lucide-react";
+import { X, ShieldCheck, BookOpen } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Zap } from "lucide-react";
-import { randomProjects, randomQuestions } from "../constants";
-import { ease } from "../shared";
+import { randomProjects, randomQuestions, ease } from "../workstationData";
 
 export default function PaperAnalyzerWindow() {
   const [hoveredSection, setHoveredSection] = useState<string | null>(null);

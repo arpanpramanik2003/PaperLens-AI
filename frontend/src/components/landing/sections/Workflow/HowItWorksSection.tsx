@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Upload, BookOpen, Layers, Compass, CheckCircle2, ArrowRight } from "lucide-react";
+import { Upload, BookOpen, Layers, Compass, CheckCircle2 } from "lucide-react";
 import SectionHeader from "../../ui/SectionHeader";
 import AcademicBadge from "../../ui/AcademicBadge";
 

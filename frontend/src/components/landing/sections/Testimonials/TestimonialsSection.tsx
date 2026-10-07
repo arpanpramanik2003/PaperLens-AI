@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
-import { Quote, ExternalLink, Award, CheckCircle2 } from "lucide-react";
+import { Quote, Award, CheckCircle2 } from "lucide-react";
 import SectionHeader from "../../ui/SectionHeader";
-import AcademicBadge from "../../ui/AcademicBadge";
 import { academicTestimonials } from "../../data/landingContent";
 
 const ease = [0.16, 1, 0.3, 1] as const;

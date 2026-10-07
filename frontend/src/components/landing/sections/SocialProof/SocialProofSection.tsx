@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { ShieldCheck, Database, CheckCircle2, Zap } from "lucide-react";
 import { trustMetrics, researcherAffiliations } from "../../data/landingContent";
 
 const ease = [0.16, 1, 0.3, 1] as const;

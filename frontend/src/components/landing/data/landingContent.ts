@@ -1,14 +1,3 @@
-export const heroContent = {
-  badge: "Academic Intelligence Engine v2.4 • Evidence-Anchored",
-  titleLine1: "Read Papers in Depth.",
-  titleLine2: "Accelerate Discovery Without Hallucinations.",
-  description:
-    "Deconstruct complex methodologies, verify citations against live literature graphs, detect unexplored novelty gaps, and synthesize reproducible ablation plans in minutes.",
-  primaryCtaText: "Start Exploring Free",
-  secondaryCtaText: "Interactive Demo",
-  samplePaperBadge: "Live arXiv Sample: EdgeViT Latency Bottlenecks",
-};
-
 export interface TrustMetric {
   value: string;
   label: string;

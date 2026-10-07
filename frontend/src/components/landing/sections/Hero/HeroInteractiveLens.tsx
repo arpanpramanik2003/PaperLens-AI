@@ -1,14 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FileText,
-  Quote,
   Calculator,
-  ShieldCheck,
   ExternalLink,
   Sparkles,
-  Info,
-  CheckCircle2,
 } from "lucide-react";
 import { samplePaperCitations, sampleEquations } from "../../data/interactiveDemoData";
 import KeyCap from "../../ui/KeyCap";

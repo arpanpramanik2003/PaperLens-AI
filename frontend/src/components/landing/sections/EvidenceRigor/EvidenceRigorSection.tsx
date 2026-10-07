@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
-import { Check, X, Shield, BookOpen, Layers, Award, Sparkles, Scale } from "lucide-react";
+import { Check, X, Shield, Scale } from "lucide-react";
 import SectionHeader from "../../ui/SectionHeader";
-import AcademicBadge from "../../ui/AcademicBadge";
 import { evidenceComparisonTable } from "../../data/landingContent";
 
 const ease = [0.16, 1, 0.3, 1] as const;

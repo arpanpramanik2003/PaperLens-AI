@@ -233,7 +233,6 @@ export default function LandingNavbar({
                 width="34"
                 height="34"
                 loading="eager"
-                fetchPriority="high"
                 decoding="async"
                 className="w-8 h-8 sm:w-8.5 sm:h-8.5 object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_2px_8px_rgba(59,130,246,0.3)]"
               />

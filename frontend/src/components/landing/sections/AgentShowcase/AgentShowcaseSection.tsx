@@ -22,7 +22,6 @@ import {
   Check,
   Sliders,
   Sparkles,
-  ExternalLink,
   Lock,
 } from "lucide-react";
 import { Link } from "react-router-dom";

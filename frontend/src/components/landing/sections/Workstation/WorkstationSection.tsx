@@ -15,10 +15,10 @@ import {
 import SectionHeader from "../../ui/SectionHeader";
 import AcademicBadge from "../../ui/AcademicBadge";
 
-const PaperAnalyzerWindow = lazy(() => import("../../feature-section/windows/PaperAnalyzerWindow"));
-const CitationIntelligenceWindow = lazy(() => import("../../feature-section/windows/CitationIntelligenceWindow"));
-const GapDetectionWindow = lazy(() => import("../../feature-section/windows/GapDetectionWindow"));
-const ExperimentPlannerWindow = lazy(() => import("../../feature-section/windows/ExperimentPlannerWindow"));
+const PaperAnalyzerWindow = lazy(() => import("./windows/PaperAnalyzerWindow"));
+const CitationIntelligenceWindow = lazy(() => import("./windows/CitationIntelligenceWindow"));
+const GapDetectionWindow = lazy(() => import("./windows/GapDetectionWindow"));
+const ExperimentPlannerWindow = lazy(() => import("./windows/ExperimentPlannerWindow"));
 
 interface CapabilityTab {
   id: string;
