@@ -363,26 +363,29 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-3">
             <Link to="/agent">
               <motion.div
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                className="relative group p-[1px] rounded-xl overflow-hidden shadow-md shadow-emerald-950/20"
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative group rounded-xl p-[1px] transition-all duration-300 overflow-hidden shadow-sm hover:shadow-md hover:shadow-emerald-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
               >
-                {/* Continuous Spinning Border Beam */}
-                <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,#10b981_0%,#3b82f6_50%,#10b981_100%)] animate-[spin_4s_linear_infinite] opacity-80 group-hover:opacity-100 transition-opacity" />
+                {/* Refined subtle border gradient with smooth hover transition */}
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/40 via-teal-500/20 to-emerald-500/40 transition-opacity duration-300 opacity-60 group-hover:opacity-100" />
                 
-                {/* Dark Glass Inner Pill */}
-                <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-[11px] bg-zinc-950/90 backdrop-blur-xl transition-all group-hover:bg-zinc-900/90">
-                  {/* Live Radar Pulse Dot + Icon */}
+                {/* Elegant hover light sweep across button */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+
+                {/* Inner Pill Container */}
+                <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-[11px] bg-card/90 dark:bg-zinc-950/90 backdrop-blur-md transition-colors duration-200 group-hover:bg-card dark:group-hover:bg-zinc-900/90">
+                  {/* Status Indicator & Icon */}
                   <div className="relative flex items-center justify-center">
-                    <span className="absolute -inset-0.5 rounded-full bg-emerald-400/40 animate-ping" />
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-0.5 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 transition-transform duration-300 group-hover:scale-110" />
                   </div>
 
-                  <span className="bg-gradient-to-r from-zinc-100 via-emerald-200 to-teal-300 bg-clip-text text-transparent font-bold text-xs tracking-wide">
+                  <span className="font-semibold text-xs tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">
                     Agent Mode
                   </span>
 
-                  <span className="px-1.5 py-0.2 text-[9px] font-mono font-extrabold uppercase rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 tracking-wider">
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono font-semibold uppercase tracking-wider rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400">
                     PRO
                   </span>
                 </div>
