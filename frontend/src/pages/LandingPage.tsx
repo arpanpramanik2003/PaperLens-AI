@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import Lenis from "lenis";
 import LandingNavbar from "../components/landing/layout/LandingNavbar";
 import HeroSection from "../components/landing/sections/Hero/HeroSection";
 import SocialProofSection from "../components/landing/sections/SocialProof/SocialProofSection";
@@ -18,6 +19,31 @@ export default function LandingPage() {
     return document.documentElement.classList.contains("dark");
   });
   const [showAbout, setShowAbout] = useState(false);
+  const lenisRef = useRef<Lenis | null>(null);
+
+  useEffect(() => {
+    // Initialize Lenis with smooth momentum settings
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // exponential ease-out
+      smoothWheel: true,
+      touchMultiplier: 1.5,
+    });
+    lenisRef.current = lenis;
+
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+      lenisRef.current = null;
+    };
+  }, []);
 
   const handleNavigate = (href: string) => {
     if (href === "#about") {
@@ -32,16 +58,23 @@ export default function LandingPage() {
       return;
     }
 
-    const navOffset = 76;
-    const bodyRect = document.body.getBoundingClientRect().top;
-    const elementRect = target.getBoundingClientRect().top;
-    const elementPosition = elementRect - bodyRect;
-    const offsetPosition = Math.max(0, elementPosition - navOffset);
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(target, {
+        offset: -76,
+        duration: 1.2,
+      });
+    } else {
+      const navOffset = 76;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = target.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = Math.max(0, elementPosition - navOffset);
 
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: "smooth",
-    });
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
   };
 
   useEffect(() => {
