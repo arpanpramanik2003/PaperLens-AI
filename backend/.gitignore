@@ -8,14 +8,17 @@ myenv/
 venv/
 env/
 
-# Caches & Bytecode
+# Caches, Indices & Bytecode
 .cache/
+**/__pycache__/
 __pycache__/
 *.py[cod]
 *.so
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*.pkl
+*.bin
 
 # Environment Secrets
 .env
@@ -28,6 +31,8 @@ uploads/
 *.sqlite3
 *.db
 *.log
+logs/
 
-# Benchmark Scripts
+# Benchmark & Ad-hoc Test Scripts
 benchmark_token_savings.py
+test_*.py

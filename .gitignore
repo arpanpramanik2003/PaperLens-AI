@@ -1,6 +1,37 @@
 # =============================================================================
-# PAPERLENS AI - PRODUCTION GITIGNORE
+# PAPERLENS AI - PRODUCTION ROOT GITIGNORE
 # =============================================================================
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Configuration
+.vscode/
+.vscode/*
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# AI Coding Agents, Worktrees & Tool Scratchpads
+.agents/
+.gemini/
+.antigravity/
+.claude/
+*.worktrees/
+
+# Local Automation & Runner Scripts
+start.bat
+*.bat
+*.cmd
 
 # Python Virtual Environments
 myenv/
@@ -10,11 +41,11 @@ env/
 ENV/
 env.bak/
 venv.bak/
-.vscode/
-.claude
 
-# Python Bytecode & Runtime Cache
+# Python Bytecode, Caches & Test Runtimes
 .cache/
+backend/.cache/
+**/__pycache__/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -22,51 +53,57 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.coverage
+coverage/
+htmlcov/
+
+# Local Ad-hoc Test Scripts & Benchmarks
+test_*.py
+backend/test_*.py
+benchmark_token_savings.py
+backend/benchmark_token_savings.py
 
 # Environment Variables & Secrets (NEVER commit secrets!)
 .env
 .env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
 *.pem
 *.key
 *.cert
 
-# Local Storage, Database & Temporary Uploads
+# Local Storage, SQLite Database & Temporary Uploads
 uploads/
 backend/uploads/
+**/uploads/
 *.sqlite
 *.sqlite3
 *.db
 *.log
 logs/
-
-# Benchmark Scripts & Temporary Performance Logs
-benchmark_token_savings.py
-backend/benchmark_token_savings.py
+*.pkl
+*.bin
 
 # Frontend Dependencies & Production Build Artifacts
 node_modules/
 frontend/node_modules/
+**/node_modules/
 dist/
 frontend/dist/
 build/
 frontend/build/
+dist-ssr/
 .npm/
 *.tsbuildinfo
 
-# IDE, Agent Customizations & OS System Files
-.idea/
-.vscode/
-.agents/
-.gemini/
-.antigravity/
-.DS_Store
-Thumbs.db
-desktop.ini
-ehthumbs.db
+# Vite & Bundler Temporary Timestamps & Cache
+vite.config.ts.timestamp-*
+*.timestamp-*.mjs
+.eslintcache
 
-# Test Coverage Reports
-.coverage
-coverage/
-htmlcov/
-.hypothesis/
+# Deprecated / Replaced Legacy Components
+frontend/src/components/landing/sections/AgentShowcase/ReasoningFlowCircuit.tsx

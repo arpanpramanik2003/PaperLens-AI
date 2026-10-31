@@ -1,5 +1,5 @@
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,18 +7,28 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies & Build Outputs
+node_modules/
+dist/
+dist-ssr/
+build/
 *.local
 
-# Editor directories and files
+# Environment Secrets
+.env
+.env.*
+!.env.example
+
+# Editor & IDE directories
+.vscode/
 .vscode/*
-!.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# Temporary Vite & Bundler Files
+vite.config.ts.timestamp-*
+*.timestamp-*.mjs
+.eslintcache
+
+# Deprecated Components
+src/components/landing/sections/AgentShowcase/ReasoningFlowCircuit.tsx
