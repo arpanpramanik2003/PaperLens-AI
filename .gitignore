@@ -13,6 +13,7 @@ Thumbs.db
 desktop.ini
 
 # IDE & Editor Configuration
+vscode
 .vscode/
 .vscode/*
 .idea/
